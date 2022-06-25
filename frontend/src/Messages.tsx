@@ -5,6 +5,8 @@ export const Messages = styled.ul`
   flex-direction: column;
   margin: 0;
   padding: 0;
+  overflow: auto;
+  scrollbar-width: thin;
 `
 
 export const MessageTime = styled.div`
@@ -13,6 +15,7 @@ export const MessageTime = styled.div`
   margin-top: auto;
   margin-bottom: auto;
   margin-left: auto;
+  margin-right: 1em;
   font-size: 0.75rem;
   font-weight: var(--normal-weight);
 `

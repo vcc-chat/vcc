@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import styled, { createGlobalStyle } from "styled-components"
 import useWebSocket, { ReadyState } from "react-use-websocket"
 
 import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Messages"
+import { FormList, FormBottom, FormItem, FormSelect, SendButtonContainer } from "./Form"
 
 const VCC_MAGIC = 0x01328e22
 
@@ -38,26 +39,6 @@ interface RequestWithTime {
   req: Request
 }
 
-const FormList = styled.div`
-  display: flex;
-  flex-direction: column;
-`
-const FormItem = styled.div`
-  display: flex;
-`
-const FormSelect = styled.div`
-  display: flex;
-  flex-direction: column;
-`
-const SendButtonContainer = styled.div`
-  display: flex;
-`
-
-const FormBottom = styled.div`
-  visibility: hidden;
-  margin-top: auto;
-`
-
 const GlobalStyle = createGlobalStyle`
   html {
     /* some colors copied from tailwind */
@@ -78,15 +59,29 @@ const GlobalStyle = createGlobalStyle`
     scroll-behavior: smooth;
     font-size: 16px;
     line-height: 1.5;
-    scrollbar-width: thin;
+    overflow: hidden;
     font-family: "Noto Sans SC", "Open Sans", "Gill Sans", Roboto, Arial, Helvetica, sans-serif;
     font-weight: var(--normal-weight);
     letter-spacing: 0.01rem;
     background-color: var(--gray-50);
     color: var(--gray-900)
   }
+  body {
+    margin: 0;
+  }
 
 `
+
+const Root = styled.div`
+  display: flex;
+  flex-direction: column;
+  max-height: 100vh;
+`
+
+function addLeadingZero(a: string | number) {
+  a = a + ""
+  return a.padStart(2, "0")
+}
 
 function App() {
   const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(`ws://${location.hostname}:7000`)
@@ -103,15 +98,8 @@ function App() {
     }
     console.log(lastJsonMessage)
   }, [lastMessage, setMessageHistory])
-  const connectionStatus = {
-    [ReadyState.CONNECTING]: 'Connecting',
-    [ReadyState.OPEN]: 'Open',
-    [ReadyState.CLOSING]: 'Closing',
-    [ReadyState.CLOSED]: 'Closed',
-    [ReadyState.UNINSTANTIATED]: 'Uninstantiated',
-  }[readyState];
   return (
-    <>
+    <Root>
       <GlobalStyle />
       <FormList>
         {!!messageHistory.length && (
@@ -121,7 +109,12 @@ function App() {
               const date = new Date(a.time)
               return (
                 <Message key={a.time}>
-                  <MessageTitle>{req.usrname}<MessageTime>{date.getMonth()}-{date.getDate()} {date.getHours()}:{date.getMinutes()}</MessageTime></MessageTitle>
+                  <MessageTitle>
+                    {req.usrname}
+                    <MessageTime>
+                      {addLeadingZero(date.getMonth())}-{addLeadingZero(date.getDate())} {addLeadingZero(date.getHours())}:{addLeadingZero(date.getMinutes())}
+                    </MessageTime>
+                  </MessageTitle>
                   <MessageBody>{req.msg}</MessageBody>
                 </Message>
               )
@@ -129,9 +122,10 @@ function App() {
           </Messages>
         )}
         <FormBottom />
-        <span>Type: {connectionStatus}</span>
         <FormItem>user name: <input onChange={event => setUsername(event.target.value)} value={username}></input></FormItem>
-        <FormItem>body: <input onChange={event => setMsgBody(event.target.value)} value={msgBody}></input></FormItem>
+        <FormItem>
+          {msgType == REQ.CTL_LOGIN ? "password" : "body"}: <input onChange={event => setMsgBody(event.target.value)} value={msgBody} />
+        </FormItem>
         <FormItem>
           type: 
           <select onChange={event => setMsgType(+event.target.value)} value={msgType}>
@@ -140,7 +134,7 @@ function App() {
           </select>
         </FormItem>
         <SendButtonContainer>
-          <button onClick={() => {
+          <button disabled={readyState !== ReadyState.OPEN} onClick={() => {
             const msg: Request = {
               magic: VCC_MAGIC,
               uid: 0,
@@ -156,11 +150,12 @@ function App() {
                 req: msg
               }))
             }
+            
             sendJsonMessage(msg as any)
           }}>send</button>
         </SendButtonContainer>
       </FormList>
-    </>
+    </Root>
   )
 }
 

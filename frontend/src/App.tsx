@@ -1,43 +1,14 @@
 import { useEffect, useRef, useState } from "react"
 import styled, { createGlobalStyle } from "styled-components"
 import useWebSocket, { ReadyState } from "react-use-websocket"
+import { ReactNotifications } from "react-notifications-component"
+import 'react-notifications-component/dist/theme.css'
 
+
+import { WEBSOCKET_PORT, VCC_MAGIC, REQ, Request, RequestWithTime } from "./config"
 import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Messages"
-import { FormList, FormItem, FormSelect, SendButton, FormInput, Form, FormInputBig, FormInputs } from "./Form"
+import { FormList, FormItem, SendButton, FormInput, Form, FormInputBig, FormInputs, Toolbar } from "./Form"
 
-const VCC_MAGIC = 0x01328e22
-
-const enum REQ {
-  MSG_SEND = 1,
-  MSG_NEW = 2,
-  CTL_USRS = 3,
-  CTL_LOGIN = 4,
-  CTL_NEWSE = 5,
-  CTL_SESS = 6,
-  CTL_JOINS = 7,
-  CTL_UINFO = 8,
-  SYS_SCRINC = 9,
-  REL_MSG = 10,
-  REL_NEW = 11,
-  CTL_IALOG = 12,
-  SYS_INFO = 13,
-  CTL_SENAME = 14
-}
-
-interface Request {
-  magic: number
-  type: number
-  uid: number
-  session: number
-  flags: number
-  usrname: string
-  msg: string
-}
-
-interface RequestWithTime {
-  time: number
-  req: Request
-}
 
 const GlobalStyle = createGlobalStyle`
   html {
@@ -55,6 +26,8 @@ const GlobalStyle = createGlobalStyle`
     /* some font weights */
     --normal-weight: 400;
     --bold-weight: 700;
+    /* fonts */
+    --icon-font: "Material Symbols Outlined";
     /* settings */
     scroll-behavior: smooth;
     font-size: 16px;
@@ -77,7 +50,6 @@ const GlobalStyle = createGlobalStyle`
 
 const Root = styled.div`
   display: flex;
-  flex-direction: column;
   height: 100vh;
 `
 
@@ -86,32 +58,68 @@ function addLeadingZero(a: string | number) {
   return a.padStart(2, "0")
 }
 
-function App() {
-  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(`ws://${location.hostname}:7000`)
+function useMessageWebSocket() {
+  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(`ws://${location.hostname}:${WEBSOCKET_PORT}`)
   const [messageHistory, setMessageHistory] = useState<RequestWithTime[]>([])
-  const [username, setUsername] = useState("")
-  const [msgType, setMsgType] = useState(REQ.MSG_SEND)
-  const [msgBody, setMsgBody] = useState("")
   useEffect(() => {
     if (lastJsonMessage !== null) {
       setMessageHistory(messageHistory.concat({
-        time: +new Date,
+        time: new Date,
         req: lastJsonMessage as unknown as Request
       }))
     }
     console.log(lastJsonMessage)
   }, [lastMessage, setMessageHistory])
+  
+  return {
+    messageHistory,
+    setMessageHistory,
+    sendJsonMessage(req: Request) {
+      sendJsonMessage(req as any)
+    },
+    ready: readyState === ReadyState.OPEN
+  }
+}
+
+function App() {
+  const { messageHistory, setMessageHistory, sendJsonMessage, ready } = useMessageWebSocket()
+  const [username, setUsername] = useState("")
+  const [isLogin, setIsLogin] = useState(true)
+  const [msgBody, setMsgBody] = useState("")
+  const send = () => {
+    const msg: Request = {
+      magic: VCC_MAGIC,
+      uid: 0,
+      session: 0,
+      flags: 0,
+      type: isLogin ? REQ.CTL_LOGIN : REQ.MSG_SEND,
+      usrname: username,
+      msg: msgBody
+    }
+    if (isLogin == false) {
+      setMessageHistory(messageHistory.concat({
+        time: new Date,
+        req: msg
+      }))
+      
+    } else if (isLogin == true) {
+      setIsLogin(false)
+    }
+    setMsgBody("")
+    sendJsonMessage(msg)
+  }
   return (
-    <Root>
+    <Root id="app-root">
       <GlobalStyle />
+      <ReactNotifications />
       <FormList>
         {!!messageHistory.length && (
           <Messages>
             {messageHistory.map(a => {
               const req = a.req
-              const date = new Date(a.time)
+              const date = a.time
               return (
-                <Message key={a.time}>
+                <Message key={+date}>
                   <MessageTitle>
                     {req.usrname}
                     <MessageTime>
@@ -125,40 +133,22 @@ function App() {
           </Messages>
         )}
         <Form>
-          <FormItem>
-            type: 
-            <select onChange={event => setMsgType(+event.target.value)} value={msgType}>
-              <option value={REQ.MSG_SEND}>send</option>
-              <option value={REQ.CTL_LOGIN}>login</option>
-            </select>
-          </FormItem>
           <FormInputs>
             <FormItem>
-              <FormInput required type="text" placeholder="user name" onChange={event => setUsername(event.target.value)} value={username} />
+              <FormInput disabled={isLogin !== true} required type="text" placeholder="user name" onChange={event => setUsername(event.target.value)} value={username} />
             </FormItem>
             <FormItem>
-              <FormInputBig required type="text" placeholder={msgType == REQ.CTL_LOGIN ? "password" : "body"} onChange={event => setMsgBody(event.target.value)} value={msgBody} />
+              <Toolbar sendMessage={sendJsonMessage} msgBody={msgBody} username={username} />
+            </FormItem>
+            <FormItem>
+              <FormInputBig required type="text" placeholder={isLogin == true ? "password" : "body"} onChange={event => setMsgBody(event.target.value)} value={msgBody} onKeyPress={event => {
+                if (event.key == "Enter") {
+                  send()
+                }
+              }} />
             </FormItem>
           </FormInputs>
-          <SendButton disabled={readyState !== ReadyState.OPEN} onClick={() => {
-            const msg: Request = {
-              magic: VCC_MAGIC,
-              uid: 0,
-              session: 0,
-              flags: 0,
-              type: msgType,
-              usrname: username,
-              msg: msgBody
-            }
-            if (msgType == REQ.MSG_SEND) {
-              setMessageHistory(messageHistory.concat({
-                time: +new Date,
-                req: msg
-              }))
-            }
-            
-            sendJsonMessage(msg as any)
-          }}>send</SendButton>
+          <SendButton disabled={!ready} onClick={send}>{isLogin == true ? "login" : "send"}</SendButton>
         </Form>
       </FormList>
     </Root>

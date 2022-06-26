@@ -49,7 +49,8 @@ export const MessageTitle = styled.div`
   display: flex;
   font-size: 1.25rem;
   font-weight: var(--bold-weight);
+  line-break: anywhere;
 `
 export const MessageBody = styled.div`
-  
+  line-break: anywhere;
 `

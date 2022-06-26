@@ -1,4 +1,7 @@
+import { useState } from "react"
 import styled from "styled-components"
+import { Store } from "react-notifications-component"
+import { REQ, Request, VCC_MAGIC } from "./config"
 
 export const FormList = styled.div`
   display: flex;
@@ -6,12 +9,12 @@ export const FormList = styled.div`
   overflow: hidden;
   padding: 0.5em;
   height: 100%;
-
+  flex: 1;
 `
 export const FormItem = styled.div`
   display: flex;
   & + & {
-    margin-top: 0.1em;
+  border-top: 1px solid var(--gray-400);
   }
 `
 
@@ -25,17 +28,15 @@ export const FormInput = styled.input`
   background-color: var(--gray-200);
   width: 100%;
   border: none;
+  &:disabled {
+    color: var(--gray-500)
+  }
 `
 
 export const FormInputBig = styled(FormInput)`
-  border-top: 1px solid var(--gray-400);
   padding-bottom: 4em;
 `
 
-export const FormSelect = styled.div`
-  display: flex;
-  flex-direction: column;
-`
 export const SendButton = styled.button`
   display: flex;
   position: absolute;
@@ -49,6 +50,9 @@ export const SendButton = styled.button`
   letter-spacing: inherit;
   cursor: pointer;
   border-bottom-right-radius: 0.5em;
+  &:disabled {
+    cursor: not-allowed
+  }
 `
 
 export const Form = styled.div`
@@ -68,3 +72,51 @@ export const FormInputs = styled.div`
   border-radius: 0.5em;
   overflow: hidden;
 `
+
+export const ToolbarRoot = styled.div`
+  display: flex;
+  background-color: var(--gray-200);
+  width: 100%;
+  padding: 0.2em;
+  gap: 0.2em;
+`
+
+export const ToolbarIcon = styled.div`
+  font-family: var(--icon-font);
+  font-size: 1.25rem;
+  user-select: none;
+  cursor: pointer;
+`
+
+export function Toolbar({ sendMessage, msgBody, username }: {
+  sendMessage: (arg0: Request) => any,
+  msgBody: string,
+  username: string
+}) {
+  return (
+    <ToolbarRoot>
+      <ToolbarIcon onClick={() => {
+        sendMessage({
+          magic: VCC_MAGIC,
+          type: REQ.CTL_NEWSE,
+          uid: 0,
+          session: 0,
+          flags: 0,
+          usrname: username,
+          msg: msgBody
+        })
+        Store.addNotification({
+          title: "Success",
+          message: "add session successfully",
+          container: "top-right",
+          type: "success",
+          dismiss: {
+            showIcon: true,
+            click: false,
+            duration: 5000
+          }
+        })
+      }}>group_add</ToolbarIcon>
+    </ToolbarRoot>
+  )
+}

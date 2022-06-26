@@ -7,6 +7,20 @@ export const Messages = styled.ul`
   padding: 0;
   overflow: auto;
   scrollbar-width: thin;
+  ::-webkit-scrollbar {
+    width: 7px;
+    background-color: var(--gray-200);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 1px;
+    &:hover {
+      background: var(--gray-400);
+    }
+    &:active {
+      background: var(--gray-500);
+    }
+  }
 `
 
 export const MessageTime = styled.div`
@@ -20,12 +34,16 @@ export const MessageTime = styled.div`
   font-weight: var(--normal-weight);
 `
 
-export const Message = styled.div`
+export const Message = styled.li`
   list-style-type: none;
   margin: 0.1em;
-  :hover ${MessageTime} {
+  &:hover {
+    background-color: var(--gray-100);
+  }
+  &:hover ${MessageTime} {
     display: block;
   }
+  padding: 0.1em;
 `
 export const MessageTitle = styled.div`
   display: flex;

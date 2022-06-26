@@ -3,7 +3,7 @@ import styled, { createGlobalStyle } from "styled-components"
 import useWebSocket, { ReadyState } from "react-use-websocket"
 
 import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Messages"
-import { FormList, FormBottom, FormItem, FormSelect, SendButtonContainer } from "./Form"
+import { FormList, FormItem, FormSelect, SendButton, FormInput, Form, FormInputBig, FormInputs } from "./Form"
 
 const VCC_MAGIC = 0x01328e22
 
@@ -69,13 +69,16 @@ const GlobalStyle = createGlobalStyle`
   body {
     margin: 0;
   }
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
 
 `
 
 const Root = styled.div`
   display: flex;
   flex-direction: column;
-  max-height: 100vh;
+  height: 100vh;
 `
 
 function addLeadingZero(a: string | number) {
@@ -121,20 +124,23 @@ function App() {
             })}
           </Messages>
         )}
-        <FormBottom />
-        <FormItem>user name: <input onChange={event => setUsername(event.target.value)} value={username}></input></FormItem>
-        <FormItem>
-          {msgType == REQ.CTL_LOGIN ? "password" : "body"}: <input onChange={event => setMsgBody(event.target.value)} value={msgBody} />
-        </FormItem>
-        <FormItem>
-          type: 
-          <select onChange={event => setMsgType(+event.target.value)} value={msgType}>
-            <option value={REQ.MSG_SEND}>send</option>
-            <option value={REQ.CTL_LOGIN}>login</option>
-          </select>
-        </FormItem>
-        <SendButtonContainer>
-          <button disabled={readyState !== ReadyState.OPEN} onClick={() => {
+        <Form>
+          <FormItem>
+            type: 
+            <select onChange={event => setMsgType(+event.target.value)} value={msgType}>
+              <option value={REQ.MSG_SEND}>send</option>
+              <option value={REQ.CTL_LOGIN}>login</option>
+            </select>
+          </FormItem>
+          <FormInputs>
+            <FormItem>
+              <FormInput required type="text" placeholder="user name" onChange={event => setUsername(event.target.value)} value={username} />
+            </FormItem>
+            <FormItem>
+              <FormInputBig required type="text" placeholder={msgType == REQ.CTL_LOGIN ? "password" : "body"} onChange={event => setMsgBody(event.target.value)} value={msgBody} />
+            </FormItem>
+          </FormInputs>
+          <SendButton disabled={readyState !== ReadyState.OPEN} onClick={() => {
             const msg: Request = {
               magic: VCC_MAGIC,
               uid: 0,
@@ -152,8 +158,8 @@ function App() {
             }
             
             sendJsonMessage(msg as any)
-          }}>send</button>
-        </SendButtonContainer>
+          }}>send</SendButton>
+        </Form>
       </FormList>
     </Root>
   )

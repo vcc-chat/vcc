@@ -25,6 +25,7 @@ export const FormInput = styled.input`
   padding: 0.5em;
   font-family: inherit;
   letter-spacing: inherit;
+  font-size: inherit;
   background-color: var(--gray-200);
   width: 100%;
   border: none;
@@ -73,34 +74,44 @@ export const FormInputs = styled.div`
   overflow: hidden;
 `
 
-export const ToolbarRoot = styled.div`
-  display: flex;
-  background-color: var(--gray-200);
-  width: 100%;
-  padding: 0.2em;
-  gap: 0.2em;
-`
-
 export const ToolbarIcon = styled.div`
   font-family: var(--icon-font);
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   user-select: none;
   cursor: pointer;
 `
 
-export function Toolbar({ sendMessage, msgBody, username }: {
+export const ToolbarRoot = styled.div<{
+  disabled: boolean
+}>`
+  display: flex;
+  background-color: var(--gray-200);
+  width: 100%;
+  padding: 0.4em;
+  gap: 0.2em;
+  cursor: ${props => props.disabled ? "not-allowed" : "initial"};
+  ${ToolbarIcon} {
+    color: ${props => props.disabled ? "var(--gray-700)" : "inherit"};
+    pointer-events: ${props => props.disabled ? "none" : "auto"};
+  }
+`
+
+export function Toolbar({ sendMessage, msgBody, username, session, setSession, disabled = false }: {
   sendMessage: (arg0: Request) => any,
   msgBody: string,
-  username: string
+  username: string,
+  session: number,
+  setSession: (arg0: number) => void,
+  disabled?: boolean
 }) {
   return (
-    <ToolbarRoot>
+    <ToolbarRoot disabled={disabled}>
       <ToolbarIcon onClick={() => {
         sendMessage({
           magic: VCC_MAGIC,
           type: REQ.CTL_NEWSE,
           uid: 0,
-          session: 0,
+          session,
           flags: 0,
           usrname: username,
           msg: msgBody
@@ -108,6 +119,30 @@ export function Toolbar({ sendMessage, msgBody, username }: {
         Store.addNotification({
           title: "Success",
           message: "add session successfully",
+          container: "top-right",
+          type: "success",
+          dismiss: {
+            showIcon: true,
+            click: false,
+            duration: 5000
+          }
+        })
+      }}>add</ToolbarIcon>
+      <ToolbarIcon onClick={() => {
+        const newSession = parseInt(msgBody)
+        sendMessage({
+          magic: VCC_MAGIC,
+          type: REQ.CTL_JOINS,
+          uid: 0,
+          session: newSession,
+          flags: 0,
+          usrname: username,
+          msg: msgBody
+        })
+        setSession(newSession)
+        Store.addNotification({
+          title: "Success",
+          message: "join session successfully",
           container: "top-right",
           type: "success",
           dismiss: {

@@ -86,30 +86,30 @@ function App() {
   const [username, setUsername] = useState("")
   const [isLogin, setIsLogin] = useState(true)
   const [msgBody, setMsgBody] = useState("")
+  const [session, setSession] = useState(0)
   const send = () => {
     const msg: Request = {
       magic: VCC_MAGIC,
       uid: 0,
-      session: 0,
+      session,
       flags: 0,
       type: isLogin ? REQ.CTL_LOGIN : REQ.MSG_SEND,
       usrname: username,
       msg: msgBody
     }
-    if (isLogin == false) {
+    if (isLogin) {
+      setIsLogin(false)
+    } else {
       setMessageHistory(messageHistory.concat({
         time: new Date,
         req: msg
       }))
-      
-    } else if (isLogin == true) {
-      setIsLogin(false)
     }
     setMsgBody("")
     sendJsonMessage(msg)
   }
   return (
-    <Root id="app-root">
+    <Root>
       <GlobalStyle />
       <ReactNotifications />
       <FormList>
@@ -135,20 +135,20 @@ function App() {
         <Form>
           <FormInputs>
             <FormItem>
-              <FormInput disabled={isLogin !== true} required type="text" placeholder="user name" onChange={event => setUsername(event.target.value)} value={username} />
+              <FormInput disabled={!isLogin} required type="text" placeholder="user name" onChange={event => setUsername(event.target.value)} value={username} />
             </FormItem>
             <FormItem>
-              <Toolbar sendMessage={sendJsonMessage} msgBody={msgBody} username={username} />
+              <Toolbar sendMessage={sendJsonMessage} msgBody={msgBody} username={username} session={session} setSession={setSession} disabled={isLogin || !ready} />
             </FormItem>
             <FormItem>
-              <FormInputBig required type="text" placeholder={isLogin == true ? "password" : "body"} onChange={event => setMsgBody(event.target.value)} value={msgBody} onKeyPress={event => {
+              <FormInputBig required type="text" placeholder={isLogin ? "password" : "body"} onChange={event => setMsgBody(event.target.value)} value={msgBody} onKeyPress={event => {
                 if (event.key == "Enter") {
                   send()
                 }
               }} />
             </FormItem>
           </FormInputs>
-          <SendButton disabled={!ready} onClick={send}>{isLogin == true ? "login" : "send"}</SendButton>
+          <SendButton disabled={!ready} onClick={send}>{isLogin ? "login" : "send"}</SendButton>
         </Form>
       </FormList>
     </Root>

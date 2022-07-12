@@ -3,7 +3,7 @@ export const WEBSOCKET_PORT = 7000
 export const VCC_MAGIC = 0x01328e22
 
 export const enum REQ {
-  MSG_SEND = 1,
+  MSG_SEND = 1, 
   MSG_NEW = 2,
   CTL_USRS = 3,
   CTL_LOGIN = 4,

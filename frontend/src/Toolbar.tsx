@@ -26,7 +26,6 @@ const ToolbarRoot = styled(SpeedDial)`
 `
 
 function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, open, setOpen }: {
-  username: string,
   afterJoin: (arg0: number) => void,
   sendJsonMessage: (arg0: Request) => void,
   typeNumber: REQ,
@@ -56,12 +55,13 @@ function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, ope
       <DialogActions>
         <Button onClick={() => setOpen(false)}>close</Button>
         <Button onClick={() => {
-          let session
+          let session: number
           try {
             session = parseInt(dialogValue)
           } catch (e) {
             return
           }
+          if (session === null) return
           sendJsonMessage({
             magic: VCC_MAGIC,
             uid: 0,
@@ -79,6 +79,47 @@ function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, ope
   )
 }
 
+export function CreateSessionDialog({ sendJsonMessage, open, setOpen }: {
+  sendJsonMessage: (arg0: Request) => void,
+  open: boolean,
+  setOpen: (arg0: boolean) => void
+}) {
+  const [sessionName, setSessionName] = useState("")
+  const session = useSelector(state => state.session.value)
+  return (
+    <Dialog open={open}>
+      <DialogTitle>Create session</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          Enter the name of the session you want to create.
+        </DialogContentText>
+        <TextField 
+          autoFocus 
+          label="Session name" 
+          margin="dense" 
+          value={sessionName} 
+          onChange={ev => setSessionName(ev.target.value)}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setOpen(false)}>close</Button>
+        <Button onClick={() => {
+          if (sessionName === "") return
+          sendJsonMessage({
+            magic: VCC_MAGIC,
+            uid: 0,
+            session,
+            flags: 0,
+            type: REQ.CTL_NEWSE,
+            usrname: sessionName,
+            msg: ""
+          })
+          setOpen(false)
+        }}>create</Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
 
 
 export function Toolbar({ sendJsonMessage }: {
@@ -86,13 +127,13 @@ export function Toolbar({ sendJsonMessage }: {
 }) {
   const [joinSessionDialogOpen, setJoinSessionDialogOpen] = useState(false)
   const [quitSessionDialogOpen, setQuitSessionDialogOpen] = useState(false)
+  const [createSessionDialogOpen, setCreateSessionDialogOpen] = useState(false)
   const dispatch = useDispatch()
   const session = useSelector(state => state.session.value)
   const username = useSelector(state => state.username.value)
   return (
     <>
       <ToolbarDialog
-        username={username} 
         afterJoin={sess => {
           dispatch(changeSession(sess))
         }} 
@@ -103,7 +144,6 @@ export function Toolbar({ sendJsonMessage }: {
         setOpen={setJoinSessionDialogOpen}
       />
       <ToolbarDialog
-        username={username} 
         afterJoin={(sess) => {
           if (session == sess) {
             dispatch(changeSession(0))
@@ -115,6 +155,7 @@ export function Toolbar({ sendJsonMessage }: {
         open={quitSessionDialogOpen}
         setOpen={setQuitSessionDialogOpen}
       />
+      <CreateSessionDialog sendJsonMessage={sendJsonMessage} open={createSessionDialogOpen} setOpen={setCreateSessionDialogOpen} />
 
       <ToolbarRoot ariaLabel="toolbar" icon={<SpeedDialIcon />}>
         <SpeedDialAction icon={<GroupAddOutlinedIcon />} tooltipTitle="join session" onClick={() => {
@@ -122,6 +163,9 @@ export function Toolbar({ sendJsonMessage }: {
         }} />
         <SpeedDialAction icon={<GroupRemoveOutlinedIcon />} tooltipTitle="quit session" onClick={() => {
           setQuitSessionDialogOpen(true)
+        }} />
+        <SpeedDialAction icon={<AddCircleOutlineOutlinedIcon />} tooltipTitle="create session" onClick={() => {
+          setCreateSessionDialogOpen(true)
         }} />
       </ToolbarRoot>
     </>

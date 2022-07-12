@@ -74,7 +74,7 @@ function useMessageWebSocket() {
         } else {
           dispatch(success())
         }
-      } else if (message.type == REQ.MSG_NEW) {
+      } else if (message.type == REQ.MSG_NEW || message.type === REQ.REL_NEW) {
         setMessageHistory(messageHistory.concat({
           time: new Date,
           req: message

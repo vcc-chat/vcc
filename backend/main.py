@@ -16,6 +16,37 @@ USERNAME_SIZE = 32
 MSG_SIZE = REQ_SIZE - 5 * 4 - USERNAME_SIZE
 
 VCC_REQUEST_FORMAT = f"<iiiii{USERNAME_SIZE}s{MSG_SIZE}s"
+VCC_RELAY_HEADER_FORMAT = f"<iiIii{USERNAME_SIZE}s{USERNAME_SIZE}s"
+
+class RawRelayHeader(NamedTuple):
+    magic: int
+    type: int
+    size: int
+    uid: int
+    session: int
+    usrname: bytes
+    visible: bytes
+
+class RawRelay(NamedTuple):
+    magic: int
+    type: int
+    size: int
+    uid: int
+    session: int
+    usrname: bytes
+    visible: bytes
+    msg: bytes
+
+class Relay(NamedTuple):
+    magic: int
+    type: int
+    size: int
+    uid: int
+    session: int
+    usrname: str
+    visible: str
+    msg: str
+
 
 class RawRequest(NamedTuple):
     magic: int
@@ -43,9 +74,24 @@ def bytes_to_json(a: bytes) -> str:
         socket.ntohl(raw_req.type), 
         socket.ntohl(raw_req.uid), 
         socket.ntohl(raw_req.session), 
-        socket.ntohl(raw_req.flags), 
+        raw_req.flags, 
         raw_req.usrname.split(b"\0", 2)[0].decode(errors="ignore"),
         raw_req.msg.split(b"\0", 2)[0].decode(errors="ignore")
+    )
+    return json.dumps(req._asdict())
+
+def relay_bytes_to_json(a: bytes, size: int) -> str:
+    raw_req = RawRelay(*struct.unpack(VCC_RELAY_HEADER_FORMAT + f"{size}s", a))
+    req = Relay(
+        socket.ntohl(raw_req.magic),
+        socket.ntohl(raw_req.type),
+        socket.ntohl(raw_req.size),
+        socket.ntohl(raw_req.uid),
+        socket.ntohl(raw_req.session),
+        raw_req.usrname.split(b"\0", 2)[0].decode(errors="ignore"),
+        raw_req.visible.split(b"\0", 2)[0].decode(errors="ignore"),
+        raw_req.msg.split(b"\0", 2)[0].decode(errors="ignore"),
+        
     )
     return json.dumps(req._asdict())
 
@@ -56,7 +102,7 @@ def json_to_bytes(a: str) -> bytes:
         socket.htonl(req.type), 
         socket.htonl(req.uid), 
         socket.htonl(req.session), 
-        socket.htonl(req.flags), 
+        req.flags, 
         req.usrname.encode(errors="ignore") + b"\0",
         req.msg.encode(errors="ignore") + b"\0"
     )
@@ -66,15 +112,20 @@ async def recv_loop(websocket, connection: socket.SocketType, cancel_func):
     loop = asyncio.get_event_loop()
     try:
         while True:
-            raw_msg = await loop.sock_recv(connection, REQ_SIZE)
-            json_msg = bytes_to_json(raw_msg)
+            raw_relay_header_bytes = await loop.sock_recv(connection, struct.calcsize(VCC_RELAY_HEADER_FORMAT))
+            raw_relay_header = RawRelayHeader(*struct.unpack(VCC_RELAY_HEADER_FORMAT, raw_relay_header_bytes))
+            if socket.ntohl(raw_relay_header.magic) != VCC_MAGIC:
+                size = socket.ntohl(raw_relay_header.size) - struct.calcsize(VCC_RELAY_HEADER_FORMAT)
+                print(size)
+                json_msg = relay_bytes_to_json(raw_relay_header_bytes + await loop.sock_recv(connection, size), size)
+            else:
+                raw_msg = raw_relay_header_bytes + await loop.sock_recv(connection, REQ_SIZE - struct.calcsize(VCC_RELAY_HEADER_FORMAT))
+                print(len(raw_msg))
+                json_msg = bytes_to_json(raw_msg)
             await websocket.send(json_msg)
     except asyncio.CancelledError:
         pass
     except socket.gaierror:
-        cancel_func()
-    except Exception as e:
-        logging.info(e)
         cancel_func()
 
 

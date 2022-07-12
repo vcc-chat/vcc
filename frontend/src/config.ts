@@ -13,8 +13,8 @@ export const enum REQ {
   CTL_UINFO = 8,
   SYS_SCRINC = 9,
   REL_MSG = 10,
-  REL_NEW = 11,
-  CTL_IALOG = 12,
+  CTL_IALOG = 11,
+  REL_NEW = 12,
   SYS_INFO = 13,
   CTL_SENAME = 14,
   CTL_QUITS = 15

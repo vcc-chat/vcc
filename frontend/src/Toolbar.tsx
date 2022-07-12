@@ -6,6 +6,7 @@ import SpeedDialIcon from '@mui/material/SpeedDialIcon'
 import SpeedDialAction from '@mui/material/SpeedDialAction'
 import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined'
 import GroupRemoveOutlinedIcon from '@mui/icons-material/GroupRemoveOutlined'
+import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
@@ -14,8 +15,9 @@ import DialogTitle from '@mui/material/DialogTitle'
 import TextField from "@mui/material/TextField"
 import Button from '@mui/material/Button'
 
-
 import { Request, REQ, VCC_MAGIC } from "./config"
+import { useDispatch, useSelector } from "./store"
+import { change as changeSession } from "./state/session"
 
 const ToolbarRoot = styled(SpeedDial)`
   position: fixed;
@@ -23,7 +25,7 @@ const ToolbarRoot = styled(SpeedDial)`
   right: 16px;
 `
 
-function ToolbarDialog({ afterJoin, sendJsonMessage, username, typeNumber, typeString, open, setOpen }: {
+function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, open, setOpen }: {
   username: string,
   afterJoin: (arg0: number) => void,
   sendJsonMessage: (arg0: Request) => void,
@@ -34,6 +36,7 @@ function ToolbarDialog({ afterJoin, sendJsonMessage, username, typeNumber, typeS
 }) {
   const [dialogValue, setDialogValue] = useState("")
   const title = typeString[0].toUpperCase() + typeString.slice(1)
+  const username = useSelector(state => state.username.value)
   return (
     <Dialog open={open}>
       <DialogTitle>{title} session</DialogTitle>
@@ -76,19 +79,23 @@ function ToolbarDialog({ afterJoin, sendJsonMessage, username, typeNumber, typeS
   )
 }
 
-export function Toolbar({ session, setSession, sendJsonMessage, username }: {
-  session: number,
-  username: string,
-  setSession: (arg0: number) => void
+
+
+export function Toolbar({ sendJsonMessage }: {
   sendJsonMessage: (arg0: Request) => void
 }) {
   const [joinSessionDialogOpen, setJoinSessionDialogOpen] = useState(false)
   const [quitSessionDialogOpen, setQuitSessionDialogOpen] = useState(false)
+  const dispatch = useDispatch()
+  const session = useSelector(state => state.session.value)
+  const username = useSelector(state => state.username.value)
   return (
     <>
       <ToolbarDialog
         username={username} 
-        afterJoin={setSession} 
+        afterJoin={sess => {
+          dispatch(changeSession(sess))
+        }} 
         sendJsonMessage={sendJsonMessage} 
         typeNumber={REQ.CTL_JOINS}
         typeString="join"
@@ -98,8 +105,9 @@ export function Toolbar({ session, setSession, sendJsonMessage, username }: {
       <ToolbarDialog
         username={username} 
         afterJoin={(sess) => {
-          if (session == sess)
-            setSession(0)
+          if (session == sess) {
+            dispatch(changeSession(0))
+          }
         }} 
         sendJsonMessage={sendJsonMessage} 
         typeNumber={REQ.CTL_QUITS}

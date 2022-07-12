@@ -8,6 +8,9 @@ import { WEBSOCKET_PORT, VCC_MAGIC, REQ, Request, RequestWithTime } from "./conf
 import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Messages"
 import { FormList, FormItem, FormInput, Form, FormInputs, Button, LoginDialog, LoginErrorDialog } from "./Form"
 import { Toolbar } from "./Toolbar"
+import { Notification, notify } from "./Notification"
+import { useSelector, useDispatch } from './store'
+import { success, failed } from "./state/login"
 
 
 const GlobalStyle = createGlobalStyle`
@@ -61,22 +64,23 @@ function addLeadingZero(a: string | number) {
 function useMessageWebSocket() {
   const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(`ws://${location.hostname}:${WEBSOCKET_PORT}`)
   const [messageHistory, setMessageHistory] = useState<RequestWithTime[]>([])
-  const [loginError, setLoginError] = useState(false)
-  const [loginSuccess, setLoginSuccess] = useState(false)
+  const dispatch = useDispatch()
   useEffect(() => {
     const message = lastJsonMessage as unknown as Request
     if (lastJsonMessage !== null) {
       if (message.type == REQ.CTL_LOGIN) {
         if (message.uid == 0) {
-          setLoginError(true)
+          dispatch(failed())
         } else {
-          setLoginSuccess(true)
+          dispatch(success())
         }
+      } else if (message.type == REQ.MSG_NEW) {
+        setMessageHistory(messageHistory.concat({
+          time: new Date,
+          req: message
+        }))
+        notify(message.usrname, message.msg)
       }
-      setMessageHistory(messageHistory.concat({
-        time: new Date,
-        req: message
-      }))
     }
     console.log(lastJsonMessage)
   }, [lastMessage, setMessageHistory])
@@ -87,21 +91,15 @@ function useMessageWebSocket() {
     sendJsonMessage(req: Request) {
       sendJsonMessage(req as any)
     },
-    ready: readyState === ReadyState.OPEN,
-    loginError,
-    loginSuccess,
-    clear() {
-      setLoginSuccess(false)
-      setLoginError(false)
-    }
+    ready: readyState === ReadyState.OPEN
   }
 }
 
 function App() {
-  const { messageHistory, setMessageHistory, sendJsonMessage, ready, loginError, loginSuccess, clear } = useMessageWebSocket()
-  const [username, setUsername] = useState("")
+  const { messageHistory, setMessageHistory, sendJsonMessage, ready } = useMessageWebSocket()
   const [msgBody, setMsgBody] = useState("")
-  const [session, setSession] = useState(0)
+  const username = useSelector(state => state.username.value)
+  const session = useSelector(state => state.session.value)
   const send = () => {
     if (!msgBody)
       return
@@ -125,7 +123,8 @@ function App() {
     <Root>
       <GlobalStyle />
       <CssBaseline />
-      <LoginDialog username={username} setUsername={setUsername} session={session} sendJsonMessage={sendJsonMessage} loginError={loginError} loginSuccess={loginSuccess} clear={clear}/>
+      <Notification />
+      <LoginDialog sendJsonMessage={sendJsonMessage} />
       <FormList>
         {!!messageHistory.length && (
           <Messages>
@@ -148,18 +147,14 @@ function App() {
         )}
         <Form>
           <FormInputs>
-            {/* <FormItem>
-              <Toolbar sendMessage={sendJsonMessage} msgBody={msgBody} username={username} session={session} setSession={setSession} disabled={isLogin || !ready} />
-            </FormItem> */}
             <FormItem>
               <FormInput required multiline type="text" label="message" variant="filled" fullWidth onChange={event => setMsgBody(event.target.value)} value={msgBody} />
             </FormItem>
           </FormInputs>
-          {/* <SendButton></SendButton> */}
           <Button disabled={!ready} onClick={send}>send</Button>
         </Form>
       </FormList>
-      <Toolbar session={session} setSession={setSession} username={username} sendJsonMessage={sendJsonMessage} />
+      <Toolbar sendJsonMessage={sendJsonMessage} />
     </Root>
   )
 }

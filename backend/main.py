@@ -7,6 +7,7 @@ import json
 import logging
 
 import websockets
+import uvloop
 
 VCC_MAGIC = 0x01328e22
 
@@ -122,4 +123,5 @@ async def main():
         logging.info("started: ws://localhost:7000")
         await asyncio.Future()
 
+uvloop.install()
 asyncio.run(main())

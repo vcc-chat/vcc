@@ -11,6 +11,9 @@ import CircularProgress from '@mui/material/CircularProgress'
 import Backdrop from '@mui/material/Backdrop'
 
 import { REQ, Request, VCC_MAGIC } from "./config"
+import { useSelector, useDispatch } from './store'
+import { change as changeUsername } from "./state/username"
+import { reset, startGet, LoginType } from "./state/login"
 
 export const FormList = styled.div`
   display: flex;
@@ -77,10 +80,10 @@ const MyBackdrop = styled(Backdrop)`
   color: #fff;
 `
 
-export function LoginErrorDialog({ open, clear }: {
-  open: boolean,
-  clear: () => void
+export function LoginErrorDialog({ open }: {
+  open: boolean
 }) {
+  const dispatch = useDispatch()
   return (
     <Dialog open={open}>
       <DialogTitle>Login failed</DialogTitle>
@@ -88,23 +91,20 @@ export function LoginErrorDialog({ open, clear }: {
         <DialogContentText>Wrong username or password, maybe you can try it again later. </DialogContentText>
       </DialogContent>
       <DialogActions>
-        <PureButton size="medium" color="error" onClick={() => clear()}>retry</PureButton>
+        <PureButton size="medium" color="error" onClick={() => dispatch(reset())}>retry</PureButton>
       </DialogActions>
     </Dialog>
   )
 }
 
-export function LoginDialog({ session, username, setUsername, sendJsonMessage, loginError, loginSuccess, clear }: {
-  session: number,
-  username: string,
-  setUsername: (arg0: string) => void,
-  sendJsonMessage: (req: Request) => void,
-  loginError: boolean,
-  loginSuccess: boolean,
-  clear: () => void
+export function LoginDialog({ sendJsonMessage }: {
+  sendJsonMessage: (req: Request) => void
 }) {
-  const [isLogin, setIsLogin] = useState(false)
   const [password, setPassword] = useState("")
+  const username = useSelector(state => state.username.value)
+  const session = useSelector(state => state.session.value)
+  const loginStatus = useSelector(state => state.login.type)
+  const dispatch = useDispatch()
   function loginCallback() {
     const msg: Request = {
       magic: VCC_MAGIC,
@@ -116,11 +116,11 @@ export function LoginDialog({ session, username, setUsername, sendJsonMessage, l
       msg: password
     }
     sendJsonMessage(msg)
-    setIsLogin(true)
+    dispatch(startGet())
   }
   return (
     <>
-      <Dialog open={!isLogin}>
+      <Dialog open={loginStatus == LoginType.NOT_LOGIN}>
         <DialogTitle>Login</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -135,7 +135,7 @@ export function LoginDialog({ session, username, setUsername, sendJsonMessage, l
             variant="standard"
             value={username}
             onChange={ev => {
-              setUsername(ev.target.value)
+              dispatch(changeUsername(ev.target.value))
             }}
           />
           <TextField
@@ -155,13 +155,10 @@ export function LoginDialog({ session, username, setUsername, sendJsonMessage, l
           <LoginButton size="medium" onClick={loginCallback}>Login</LoginButton>
         </DialogActions>
       </Dialog>
-      <MyBackdrop open={isLogin && !loginSuccess && !loginError}>
+      <MyBackdrop open={loginStatus == LoginType.LOGIN_LOADING}>
         <CircularProgress color="inherit" />
       </MyBackdrop>
-      <LoginErrorDialog open={isLogin && loginError} clear={() => {
-        clear()
-        setIsLogin(false)
-      }}></LoginErrorDialog>
+      <LoginErrorDialog open={loginStatus == LoginType.LOGIN_FAILED}></LoginErrorDialog>
     </>
   )
 }

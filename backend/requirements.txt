@@ -1,1 +1,2 @@
+uvloop==0.16.0
 websockets==10.3

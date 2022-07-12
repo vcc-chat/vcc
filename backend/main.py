@@ -4,6 +4,7 @@ import asyncio
 import socket
 import struct
 import json
+import logging
 
 import websockets
 
@@ -66,12 +67,15 @@ async def recv_loop(websocket, connection: socket.SocketType, cancel_func):
         while True:
             raw_msg = await loop.sock_recv(connection, REQ_SIZE)
             json_msg = bytes_to_json(raw_msg)
-            print(json_msg)
             await websocket.send(json_msg)
-    except socket.gaierror:
-        cancel_func()
     except asyncio.CancelledError:
         pass
+    except socket.gaierror:
+        cancel_func()
+    except Exception as e:
+        logging.info(e)
+        cancel_func()
+
 
 async def send_loop(websocket, connection: socket.SocketType, cancel_func):
     loop = asyncio.get_event_loop()
@@ -80,22 +84,22 @@ async def send_loop(websocket, connection: socket.SocketType, cancel_func):
             json_msg = await websocket.recv()
             raw_msg = json_to_bytes(json_msg)
             await loop.sock_sendall(connection, raw_msg)
+    except asyncio.CancelledError:
+        pass
     except TypeError as e:
         cancel_func()
     except websockets.ConnectionClosedOK as e:
         cancel_func()
-    except websockets.ConnectionClosedError as e:
-        print(e)
+    except Exception as e:
+        logging.info(e)
         cancel_func()
-    except asyncio.CancelledError:
-        pass
 
 async def loop(websocket):
     loop = asyncio.get_event_loop()
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setblocking(False)
     sock.bind(("0.0.0.0", 0))
-    await loop.sock_connect(sock, ("127.0.0.1", 46))
+    await loop.sock_connect(sock, ("124.223.105.230", 46))
     send_loop_task: asyncio.Task[None]
     recv_loop_task: asyncio.Task[None]
     cancel_func = lambda: (
@@ -111,8 +115,9 @@ async def loop(websocket):
         sock.close()
 
 async def main():
-    async with websockets.serve(loop, "localhost", 7000):
-        print("started: ws://localhost:7000")
+    logging.basicConfig(level=logging.INFO)
+    async with websockets.serve(loop, "", 7000):
+        logging.info("started: ws://localhost:7000")
         await asyncio.Future()
 
 asyncio.run(main())

@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react"
+import CssBaseline from '@mui/material/CssBaseline'
 import styled, { createGlobalStyle } from "styled-components"
 import useWebSocket, { ReadyState } from "react-use-websocket"
-import { ReactNotifications } from "react-notifications-component"
-import 'react-notifications-component/dist/theme.css'
 
 
 import { WEBSOCKET_PORT, VCC_MAGIC, REQ, Request, RequestWithTime } from "./config"
 import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Messages"
-import { FormList, FormItem, SendButton, FormInput, Form, FormInputBig, FormInputs, Toolbar } from "./Form"
+import { FormList, FormItem, FormInput, Form, FormInputs, Button, LoginDialog } from "./Form"
+import { Toolbar } from "./Toolbar"
 
 
 const GlobalStyle = createGlobalStyle`
@@ -84,34 +84,32 @@ function useMessageWebSocket() {
 function App() {
   const { messageHistory, setMessageHistory, sendJsonMessage, ready } = useMessageWebSocket()
   const [username, setUsername] = useState("")
-  const [isLogin, setIsLogin] = useState(true)
   const [msgBody, setMsgBody] = useState("")
   const [session, setSession] = useState(0)
   const send = () => {
+    if (!msgBody)
+      return
     const msg: Request = {
       magic: VCC_MAGIC,
       uid: 0,
       session,
       flags: 0,
-      type: isLogin ? REQ.CTL_LOGIN : REQ.MSG_SEND,
+      type: REQ.MSG_SEND,
       usrname: username,
       msg: msgBody
     }
-    if (isLogin) {
-      setIsLogin(false)
-    } else {
-      setMessageHistory(messageHistory.concat({
-        time: new Date,
-        req: msg
-      }))
-    }
+    setMessageHistory(messageHistory.concat({
+      time: new Date,
+      req: msg
+    }))
     setMsgBody("")
     sendJsonMessage(msg)
   }
   return (
     <Root>
       <GlobalStyle />
-      <ReactNotifications />
+      <CssBaseline />
+      <LoginDialog username={username} setUsername={setUsername} session={session} sendJsonMessage={sendJsonMessage} />
       <FormList>
         {!!messageHistory.length && (
           <Messages>
@@ -134,23 +132,18 @@ function App() {
         )}
         <Form>
           <FormInputs>
-            <FormItem>
-              <FormInput disabled={!isLogin} required type="text" placeholder="user name" onChange={event => setUsername(event.target.value)} value={username} />
-            </FormItem>
-            <FormItem>
+            {/* <FormItem>
               <Toolbar sendMessage={sendJsonMessage} msgBody={msgBody} username={username} session={session} setSession={setSession} disabled={isLogin || !ready} />
-            </FormItem>
+            </FormItem> */}
             <FormItem>
-              <FormInputBig required type="text" placeholder={isLogin ? "password" : "body"} onChange={event => setMsgBody(event.target.value)} value={msgBody} onKeyPress={event => {
-                if (event.key == "Enter") {
-                  send()
-                }
-              }} />
+              <FormInput required multiline type="text" label="message" variant="filled" fullWidth onChange={event => setMsgBody(event.target.value)} value={msgBody} />
             </FormItem>
           </FormInputs>
-          <SendButton disabled={!ready} onClick={send}>{isLogin ? "login" : "send"}</SendButton>
+          {/* <SendButton></SendButton> */}
+          <Button disabled={!ready} onClick={send}>send</Button>
         </Form>
       </FormList>
+      <Toolbar session={session} setSession={setSession} username={username} sendJsonMessage={sendJsonMessage} />
     </Root>
   )
 }

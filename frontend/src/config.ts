@@ -16,7 +16,8 @@ export const enum REQ {
   REL_NEW = 11,
   CTL_IALOG = 12,
   SYS_INFO = 13,
-  CTL_SENAME = 14
+  CTL_SENAME = 14,
+  CTL_QUITS = 15
 }
 
 export interface Request {

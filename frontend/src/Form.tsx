@@ -1,6 +1,13 @@
 import { useState } from "react"
 import styled from "styled-components"
-import { Store } from "react-notifications-component"
+import PureButton from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
+
 import { REQ, Request, VCC_MAGIC } from "./config"
 
 export const FormList = styled.div`
@@ -14,35 +21,14 @@ export const FormList = styled.div`
 export const FormItem = styled.div`
   display: flex;
   & + & {
-  border-top: 1px solid var(--gray-400);
+    border-top: 1px solid var(--gray-400);
   }
 `
 
-export const FormInput = styled.input`
-  outline: none;
-  border-width: 1px;
-  border-color: var(--gray-400);
-  padding: 0.5em;
-  font-family: inherit;
-  letter-spacing: inherit;
-  font-size: inherit;
-  background-color: var(--gray-200);
-  width: 100%;
-  border: none;
-  &:disabled {
-    color: var(--gray-500)
-  }
-`
-
-export const FormInputBig = styled(FormInput)`
-  padding-bottom: 4em;
-`
+export const FormInput = styled(TextField)``
 
 export const SendButton = styled.button`
   display: flex;
-  position: absolute;
-  bottom: 0;
-  right: 0;
   border: none;
   padding: 0.5em;
   border-radius: 0.2em;
@@ -74,84 +60,73 @@ export const FormInputs = styled.div`
   overflow: hidden;
 `
 
-export const ToolbarIcon = styled.div`
-  font-family: var(--icon-font);
-  font-size: 1.5rem;
-  user-select: none;
-  cursor: pointer;
+export const Button = styled(PureButton)`
+  position: absolute;
+  bottom: 0;
+  right: 0;
 `
 
-export const ToolbarRoot = styled.div<{
-  disabled: boolean
-}>`
-  display: flex;
-  background-color: var(--gray-200);
-  width: 100%;
-  padding: 0.4em;
-  gap: 0.2em;
-  cursor: ${props => props.disabled ? "not-allowed" : "initial"};
-  ${ToolbarIcon} {
-    color: ${props => props.disabled ? "var(--gray-700)" : "inherit"};
-    pointer-events: ${props => props.disabled ? "none" : "auto"};
-  }
+const LoginButton = styled(PureButton)`
+  margin: 0.25em;
+  margin-top: 0;
 `
 
-export function Toolbar({ sendMessage, msgBody, username, session, setSession, disabled = false }: {
-  sendMessage: (arg0: Request) => any,
-  msgBody: string,
-  username: string,
+export function LoginDialog({ session, username, setUsername, sendJsonMessage }: {
   session: number,
-  setSession: (arg0: number) => void,
-  disabled?: boolean
+  username: string,
+  setUsername: (arg0: string) => void,
+  sendJsonMessage: (req: Request) => void
 }) {
+  const [isLogin, setIsLogin] = useState(false)
+  const [password, setPassword] = useState("")
+  function loginCallback() {
+    const msg: Request = {
+      magic: VCC_MAGIC,
+      uid: 0,
+      session,
+      flags: 0,
+      type: REQ.CTL_LOGIN,
+      usrname: username,
+      msg: password
+    }
+    sendJsonMessage(msg)
+    setIsLogin(true)
+  }
   return (
-    <ToolbarRoot disabled={disabled}>
-      <ToolbarIcon onClick={() => {
-        sendMessage({
-          magic: VCC_MAGIC,
-          type: REQ.CTL_NEWSE,
-          uid: 0,
-          session,
-          flags: 0,
-          usrname: username,
-          msg: msgBody
-        })
-        Store.addNotification({
-          title: "Success",
-          message: "add session successfully",
-          container: "top-right",
-          type: "success",
-          dismiss: {
-            showIcon: true,
-            click: false,
-            duration: 5000
-          }
-        })
-      }}>add</ToolbarIcon>
-      <ToolbarIcon onClick={() => {
-        const newSession = parseInt(msgBody)
-        sendMessage({
-          magic: VCC_MAGIC,
-          type: REQ.CTL_JOINS,
-          uid: 0,
-          session: newSession,
-          flags: 0,
-          usrname: username,
-          msg: msgBody
-        })
-        setSession(newSession)
-        Store.addNotification({
-          title: "Success",
-          message: "join session successfully",
-          container: "top-right",
-          type: "success",
-          dismiss: {
-            showIcon: true,
-            click: false,
-            duration: 5000
-          }
-        })
-      }}>group_add</ToolbarIcon>
-    </ToolbarRoot>
+    <Dialog open={!isLogin}>
+      <DialogTitle>Login</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          To send messages, you must login first.
+        </DialogContentText>
+        <TextField
+          autoFocus
+          margin="dense"
+          label="User name"
+          type="text"
+          fullWidth
+          variant="standard"
+          value={username}
+          onChange={ev => {
+            setUsername(ev.target.value)
+          }}
+        />
+        <TextField
+          autoFocus
+          margin="dense"
+          label="Password"
+          type="password"
+          fullWidth
+          variant="standard"
+          value={password}
+          onChange={ev => {
+            setPassword(ev.target.value)
+          }}
+        />
+      </DialogContent>
+      <DialogActions>
+        <LoginButton size="medium" onClick={loginCallback}>Login</LoginButton>
+      </DialogActions>
+    </Dialog>
   )
 }

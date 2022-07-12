@@ -20,6 +20,12 @@ export const enum REQ {
   CTL_QUITS = 15
 }
 
+export const enum LoginType {
+  NOT_LOGIN = 0,
+  LOGIN_FAILED = 1,
+  LOGIN_SUCCESS = 2
+}
+
 export interface Request {
   magic: number
   type: number

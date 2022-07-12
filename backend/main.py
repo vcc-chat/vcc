@@ -106,6 +106,8 @@ async def loop(websocket):
         send_loop_task.cancel(),
         recv_loop_task.cancel()
     )
+    remote_ip = websocket.remote_address[0]
+    logging.info(f"{remote_ip} connected")
     try:
         send_loop_task = asyncio.create_task(send_loop(websocket, sock, cancel_func))
         recv_loop_task = asyncio.create_task(recv_loop(websocket, sock, cancel_func))

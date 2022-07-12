@@ -6,7 +6,7 @@ import useWebSocket, { ReadyState } from "react-use-websocket"
 
 import { WEBSOCKET_PORT, VCC_MAGIC, REQ, Request, RequestWithTime } from "./config"
 import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Messages"
-import { FormList, FormItem, FormInput, Form, FormInputs, Button, LoginDialog } from "./Form"
+import { FormList, FormItem, FormInput, Form, FormInputs, Button, LoginDialog, LoginErrorDialog } from "./Form"
 import { Toolbar } from "./Toolbar"
 
 
@@ -61,11 +61,21 @@ function addLeadingZero(a: string | number) {
 function useMessageWebSocket() {
   const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(`ws://${location.hostname}:${WEBSOCKET_PORT}`)
   const [messageHistory, setMessageHistory] = useState<RequestWithTime[]>([])
+  const [loginError, setLoginError] = useState(false)
+  const [loginSuccess, setLoginSuccess] = useState(false)
   useEffect(() => {
+    const message = lastJsonMessage as unknown as Request
     if (lastJsonMessage !== null) {
+      if (message.type == REQ.CTL_LOGIN) {
+        if (message.uid == 0) {
+          setLoginError(true)
+        } else {
+          setLoginSuccess(true)
+        }
+      }
       setMessageHistory(messageHistory.concat({
         time: new Date,
-        req: lastJsonMessage as unknown as Request
+        req: message
       }))
     }
     console.log(lastJsonMessage)
@@ -77,12 +87,18 @@ function useMessageWebSocket() {
     sendJsonMessage(req: Request) {
       sendJsonMessage(req as any)
     },
-    ready: readyState === ReadyState.OPEN
+    ready: readyState === ReadyState.OPEN,
+    loginError,
+    loginSuccess,
+    clear() {
+      setLoginSuccess(false)
+      setLoginError(false)
+    }
   }
 }
 
 function App() {
-  const { messageHistory, setMessageHistory, sendJsonMessage, ready } = useMessageWebSocket()
+  const { messageHistory, setMessageHistory, sendJsonMessage, ready, loginError, loginSuccess, clear } = useMessageWebSocket()
   const [username, setUsername] = useState("")
   const [msgBody, setMsgBody] = useState("")
   const [session, setSession] = useState(0)
@@ -109,7 +125,7 @@ function App() {
     <Root>
       <GlobalStyle />
       <CssBaseline />
-      <LoginDialog username={username} setUsername={setUsername} session={session} sendJsonMessage={sendJsonMessage} />
+      <LoginDialog username={username} setUsername={setUsername} session={session} sendJsonMessage={sendJsonMessage} loginError={loginError} loginSuccess={loginSuccess} clear={clear}/>
       <FormList>
         {!!messageHistory.length && (
           <Messages>

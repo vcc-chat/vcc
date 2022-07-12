@@ -7,6 +7,8 @@ import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
+import CircularProgress from '@mui/material/CircularProgress'
+import Backdrop from '@mui/material/Backdrop'
 
 import { REQ, Request, VCC_MAGIC } from "./config"
 
@@ -71,11 +73,35 @@ const LoginButton = styled(PureButton)`
   margin-top: 0;
 `
 
-export function LoginDialog({ session, username, setUsername, sendJsonMessage }: {
+const MyBackdrop = styled(Backdrop)`
+  color: #fff;
+`
+
+export function LoginErrorDialog({ open, clear }: {
+  open: boolean,
+  clear: () => void
+}) {
+  return (
+    <Dialog open={open}>
+      <DialogTitle>Login failed</DialogTitle>
+      <DialogContent>
+        <DialogContentText>Wrong username or password, maybe you can try it again later. </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <PureButton size="medium" color="error" onClick={() => clear()}>retry</PureButton>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
+export function LoginDialog({ session, username, setUsername, sendJsonMessage, loginError, loginSuccess, clear }: {
   session: number,
   username: string,
   setUsername: (arg0: string) => void,
-  sendJsonMessage: (req: Request) => void
+  sendJsonMessage: (req: Request) => void,
+  loginError: boolean,
+  loginSuccess: boolean,
+  clear: () => void
 }) {
   const [isLogin, setIsLogin] = useState(false)
   const [password, setPassword] = useState("")
@@ -93,40 +119,49 @@ export function LoginDialog({ session, username, setUsername, sendJsonMessage }:
     setIsLogin(true)
   }
   return (
-    <Dialog open={!isLogin}>
-      <DialogTitle>Login</DialogTitle>
-      <DialogContent>
-        <DialogContentText>
-          To send messages, you must login first.
-        </DialogContentText>
-        <TextField
-          autoFocus
-          margin="dense"
-          label="User name"
-          type="text"
-          fullWidth
-          variant="standard"
-          value={username}
-          onChange={ev => {
-            setUsername(ev.target.value)
-          }}
-        />
-        <TextField
-          autoFocus
-          margin="dense"
-          label="Password"
-          type="password"
-          fullWidth
-          variant="standard"
-          value={password}
-          onChange={ev => {
-            setPassword(ev.target.value)
-          }}
-        />
-      </DialogContent>
-      <DialogActions>
-        <LoginButton size="medium" onClick={loginCallback}>Login</LoginButton>
-      </DialogActions>
-    </Dialog>
+    <>
+      <Dialog open={!isLogin}>
+        <DialogTitle>Login</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            To send messages, you must login first.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="User name"
+            type="text"
+            fullWidth
+            variant="standard"
+            value={username}
+            onChange={ev => {
+              setUsername(ev.target.value)
+            }}
+          />
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Password"
+            type="password"
+            fullWidth
+            variant="standard"
+            value={password}
+            onChange={ev => {
+              setPassword(ev.target.value)
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <LoginButton size="medium" onClick={loginCallback}>Login</LoginButton>
+        </DialogActions>
+      </Dialog>
+      <MyBackdrop open={isLogin && !loginSuccess && !loginError}>
+        <CircularProgress color="inherit" />
+      </MyBackdrop>
+      <LoginErrorDialog open={isLogin && loginError} clear={() => {
+        clear()
+        setIsLogin(false)
+      }}></LoginErrorDialog>
+    </>
   )
 }

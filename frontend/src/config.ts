@@ -1,8 +1,9 @@
 export const WEBSOCKET_PORT = 7000
 
 export const VCC_MAGIC = 0x01328e22
+export const VCC_MAGIC_RL = 0x01328e36
 
-export const enum REQ {
+export const enum RequestType {
   MSG_SEND = 1, 
   MSG_NEW = 2,
   CTL_USRS = 3,
@@ -21,13 +22,22 @@ export const enum REQ {
 }
 
 
-export interface Request {
-  magic: number
-  type: number
+export type Request = {
+  magic: typeof VCC_MAGIC
+  type: RequestType
   uid: number
   session: number
   flags: number
   usrname: string
+  msg: string
+} | {
+  magic: typeof VCC_MAGIC_RL
+  type: RequestType
+  size: number
+  uid: number
+  session: number
+  usrname: string
+  visible: string
   msg: string
 }
 

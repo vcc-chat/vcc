@@ -15,7 +15,7 @@ import DialogTitle from '@mui/material/DialogTitle'
 import TextField from "@mui/material/TextField"
 import Button from '@mui/material/Button'
 
-import { Request, REQ, VCC_MAGIC } from "./config"
+import { Request, RequestType, VCC_MAGIC } from "./config"
 import { useDispatch, useSelector } from "./store"
 import { change as changeSession } from "./state/session"
 
@@ -28,7 +28,7 @@ const ToolbarRoot = styled(SpeedDial)`
 function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, open, setOpen }: {
   afterJoin: (arg0: number) => void,
   sendJsonMessage: (arg0: Request) => void,
-  typeNumber: REQ,
+  typeNumber: RequestType,
   typeString: string,
   open: boolean,
   setOpen: (arg0: boolean) => void
@@ -110,7 +110,7 @@ export function CreateSessionDialog({ sendJsonMessage, open, setOpen }: {
             uid: 0,
             session,
             flags: 0,
-            type: REQ.CTL_NEWSE,
+            type: RequestType.CTL_NEWSE,
             usrname: sessionName,
             msg: ""
           })
@@ -138,7 +138,7 @@ export function Toolbar({ sendJsonMessage }: {
           dispatch(changeSession(sess))
         }} 
         sendJsonMessage={sendJsonMessage} 
-        typeNumber={REQ.CTL_JOINS}
+        typeNumber={RequestType.CTL_JOINS}
         typeString="join"
         open={joinSessionDialogOpen}
         setOpen={setJoinSessionDialogOpen}
@@ -150,7 +150,7 @@ export function Toolbar({ sendJsonMessage }: {
           }
         }} 
         sendJsonMessage={sendJsonMessage} 
-        typeNumber={REQ.CTL_QUITS}
+        typeNumber={RequestType.CTL_QUITS}
         typeString="quit"
         open={quitSessionDialogOpen}
         setOpen={setQuitSessionDialogOpen}

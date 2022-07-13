@@ -10,7 +10,7 @@ import DialogTitle from '@mui/material/DialogTitle'
 import CircularProgress from '@mui/material/CircularProgress'
 import Backdrop from '@mui/material/Backdrop'
 
-import { REQ, Request, VCC_MAGIC } from "./config"
+import { RequestType, Request, VCC_MAGIC } from "./config"
 import { useSelector, useDispatch } from './store'
 import { change as changeUsername } from "./state/username"
 import { reset, startGet, LoginType } from "./state/login"
@@ -111,7 +111,7 @@ export function LoginDialog({ sendJsonMessage }: {
       uid: 0,
       session,
       flags: 0,
-      type: REQ.CTL_LOGIN,
+      type: RequestType.CTL_LOGIN,
       usrname: username,
       msg: password
     }

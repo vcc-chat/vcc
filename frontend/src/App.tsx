@@ -4,7 +4,7 @@ import styled, { createGlobalStyle } from "styled-components"
 import useWebSocket, { ReadyState } from "react-use-websocket"
 
 
-import { WEBSOCKET_PORT, VCC_MAGIC, REQ, Request, RequestWithTime } from "./config"
+import { WEBSOCKET_PORT, VCC_MAGIC, RequestType, Request, RequestWithTime } from "./config"
 import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Messages"
 import { FormList, FormItem, FormInput, Form, FormInputs, Button, LoginDialog, LoginErrorDialog } from "./Form"
 import { Toolbar } from "./Toolbar"
@@ -68,13 +68,13 @@ function useMessageWebSocket() {
   useEffect(() => {
     const message = lastJsonMessage as unknown as Request
     if (lastJsonMessage !== null) {
-      if (message.type == REQ.CTL_LOGIN) {
+      if (message.type == RequestType.CTL_LOGIN) {
         if (message.uid == 0) {
           dispatch(failed())
         } else {
           dispatch(success())
         }
-      } else if (message.type == REQ.MSG_NEW || message.type === REQ.REL_NEW) {
+      } else if (message.type == RequestType.MSG_NEW || message.type === RequestType.REL_NEW) {
         setMessageHistory(messageHistory.concat({
           time: new Date,
           req: message
@@ -108,7 +108,7 @@ function App() {
       uid: 0,
       session,
       flags: 0,
-      type: REQ.MSG_SEND,
+      type: RequestType.MSG_SEND,
       usrname: username,
       msg: msgBody
     }
@@ -136,7 +136,8 @@ function App() {
                   <MessageTitle>
                     {req.usrname}
                     <MessageTime>
-                      {addLeadingZero(date.getMonth())}-{addLeadingZero(date.getDate())} {addLeadingZero(date.getHours())}:{addLeadingZero(date.getMinutes())}
+                      {addLeadingZero(date.getMonth())}-{addLeadingZero(date.getDate())} 
+                      {addLeadingZero(date.getHours())}:{addLeadingZero(date.getMinutes())}
                     </MessageTime>
                   </MessageTitle>
                   <MessageBody>{req.msg}</MessageBody>

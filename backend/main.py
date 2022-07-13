@@ -127,6 +127,9 @@ async def recv_loop(websocket, connection: socket.SocketType, cancel_func):
         pass
     except socket.gaierror:
         cancel_func()
+    except Exception as e:
+        logging.info(e)
+        cancel_func()
 
 
 async def send_loop(websocket, connection: socket.SocketType, cancel_func):

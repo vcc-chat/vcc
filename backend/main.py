@@ -116,11 +116,9 @@ async def recv_loop(websocket, connection: socket.SocketType, cancel_func):
             raw_relay_header = RawRelayHeader(*struct.unpack(VCC_RELAY_HEADER_FORMAT, raw_relay_header_bytes))
             if socket.ntohl(raw_relay_header.magic) != VCC_MAGIC:
                 size = socket.ntohl(raw_relay_header.size) - struct.calcsize(VCC_RELAY_HEADER_FORMAT)
-                print(size)
                 json_msg = relay_bytes_to_json(raw_relay_header_bytes + await loop.sock_recv(connection, size), size)
             else:
                 raw_msg = raw_relay_header_bytes + await loop.sock_recv(connection, REQ_SIZE - struct.calcsize(VCC_RELAY_HEADER_FORMAT))
-                print(len(raw_msg))
                 json_msg = bytes_to_json(raw_msg)
             await websocket.send(json_msg)
     except asyncio.CancelledError:

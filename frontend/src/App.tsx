@@ -112,8 +112,9 @@ function App() {
       usrname: username,
       msg: msgBody
     }
+    const date = new Date
     setMessageHistory(messageHistory.concat({
-      time: new Date,
+      time: date,
       req: msg
     }))
     setMsgBody("")
@@ -136,7 +137,7 @@ function App() {
                   <MessageTitle>
                     {req.usrname}
                     <MessageTime>
-                      {addLeadingZero(date.getMonth())}-{addLeadingZero(date.getDate())} 
+                      {addLeadingZero(date.getMonth() + 1)}-{addLeadingZero(date.getDate())}&nbsp;
                       {addLeadingZero(date.getHours())}:{addLeadingZero(date.getMinutes())}
                     </MessageTime>
                   </MessageTitle>
@@ -149,7 +150,27 @@ function App() {
         <Form>
           <FormInputs>
             <FormItem>
-              <FormInput required multiline type="text" label="message" variant="filled" fullWidth onChange={event => setMsgBody(event.target.value)} value={msgBody} />
+              <FormInput 
+                required multiline 
+                type="text" 
+                label="message" 
+                variant="filled" 
+                fullWidth 
+                onChange={event => {
+                  setMsgBody(event.target.value)
+                }} 
+                onKeyDown={event => {
+                  if (event.keyCode == 10 || event.keyCode == 13) {
+                    if (event.ctrlKey || event.metaKey) {
+                      setMsgBody(msgBody + "\n")
+                    } else {
+                      send()
+                      event.preventDefault()
+                    }
+                  }
+                }}
+                value={msgBody} 
+              />
             </FormItem>
           </FormInputs>
           <Button disabled={!ready} onClick={send}>send</Button>

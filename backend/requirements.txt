@@ -1,2 +1,3 @@
+ipython==8.4.0
 uvloop==0.16.0
 websockets==10.3

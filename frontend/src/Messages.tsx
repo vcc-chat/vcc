@@ -53,5 +53,6 @@ export const MessageTitle = styled.div`
 `
 export const MessageBody = styled.div`
   line-break: anywhere;
+  white-space: pre-wrap;
 `
 

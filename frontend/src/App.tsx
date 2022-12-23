@@ -62,7 +62,7 @@ function addLeadingZero(a: string | number) {
 }
 
 function useMessageWebSocket() {
-  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(`ws://${location.hostname}:${WEBSOCKET_PORT}`)
+  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(`ws://${location.hostname}:7000/`)
   const [messageHistory, setMessageHistory] = useState<RequestWithTime[]>([])
   const dispatch = useDispatch()
   useEffect(() => {
@@ -112,11 +112,6 @@ function App() {
       usrname: username,
       msg: msgBody
     }
-    const date = new Date
-    setMessageHistory(messageHistory.concat({
-      time: date,
-      req: msg
-    }))
     setMsgBody("")
     sendJsonMessage(msg)
   }
@@ -153,7 +148,7 @@ function App() {
               <FormInput 
                 required multiline 
                 type="text" 
-                label="message" 
+                label="Message" 
                 variant="filled" 
                 fullWidth 
                 onChange={event => {

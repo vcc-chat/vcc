@@ -38,8 +38,8 @@ class RpcServiceFactory(ClientFactory):
     def buildProtocol(self, addr):
         return Service(self)
 
-    def __init__(self,services):
-        self.services = services
+    def __init__(self):
+        self.services = {}
         self.done = Deferred()
 
     def clientConnectionFailed(self, connector, reason):
@@ -50,18 +50,13 @@ class RpcServiceFactory(ClientFactory):
         log.debug(reason)
         self.done.callback(None)
 
-class RpcServer:
-    def __init__(self):
-        self._fields = {}
-
     def register(self, instance):
-        self._fields.update({i: getattr(instance, i) for i in dir(instance) if i[0] != "_"})
+        self.services.update({i: getattr(instance, i) for i in dir(instance) if i[0] != "_"})
 
-    def connect(self, protocol="tcp", port=2474):
+    def connect(self, port=2474):
         def main(reactor):
-            factory = RpcServiceFactory(self._fields)
-            reactor.connectTCP("localhost", port, factory)
-            return factory.done
+            reactor.connectTCP("localhost", port, self)
+            return self.done
 
         task.react(main)
         

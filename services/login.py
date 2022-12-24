@@ -31,6 +31,6 @@ class Main:
 
 if __name__ == "__main__":
     db.create_tables([User])
-    server = base.RpcServer()
+    server = base.RpcServiceFactory()
     server.register(Main())
     server.connect()

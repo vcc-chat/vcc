@@ -57,7 +57,7 @@ class RpcServer:
     def register(self, instance):
         self._fields.update({i: getattr(instance, i) for i in dir(instance) if i[0] != "_"})
 
-    def connect(self, protocol="tcp", port=274):
+    def connect(self, protocol="tcp", port=2474):
         def main(reactor):
             factory = RpcServiceFactory(self._fields)
             reactor.connectTCP("localhost", port, factory)

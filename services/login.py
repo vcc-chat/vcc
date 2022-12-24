@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 
+import uuid
+
+import peewee
+
 import base
 
-from peewee import *
 
-db = SqliteDatabase("users.db") # just for test
+db = peewee。SqliteDatabase("users.db") # just for test
 
-class BaseModel(Model):
+class BaseModel(peewee.Model):
     class Meta:
         database = db
 
 class User(BaseModel):
+    id=peewee.UUIDField
     name = CharField(max_length=16, unique=True)
     password = CharField(max_length=16)
 
@@ -24,7 +28,7 @@ class Main:
     
     def register(self, username, password):
         try:
-            User.create(name=username, password=password)
+            User.create(id=uuid.uuid4(),username=username, password=password)
             return True
         except:
             return False

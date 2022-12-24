@@ -9,15 +9,10 @@ import redis.asyncio as redis
 import websockets
 import uvloop
 
-VCC_MAGIC = 0x01328e22
-
 
 class Request(NamedTuple):
-    magic: int
     type: int
     uid: int
-    session: int
-    flags: int
     usrname: str
     msg: str
 
@@ -31,7 +26,7 @@ class Exchanger:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setblocking(False)
         sock.bind(("0.0.0.0", 0))
-        await loop.sock_connect(sock, ("127.0.0.1", 274))
+        await loop.sock_connect(sock, ("127.0.0.1", 2474))
         await loop.sock_sendall(sock, b'{"type": "handshake","role": "client"}')
         self._jobid = json.loads((await loop.sock_recv(sock, 65536)).decode())["initial_jobid"]
         self._sock = sock
@@ -61,7 +56,7 @@ class Exchanger:
                 json_content = json.loads(raw_message["data"].decode())
             except:
                 raw_message = None
-        return Request(magic=VCC_MAGIC,type=2,uid=0,session=0,flags=0,usrname=json_content["username"],msg=json_content["msg"])
+        return Request(type=2, uid=0, usrname=json_content["username"], msg=json_content["msg"])
 
     async def login(self, username, password):
         loop = asyncio.get_event_loop()
@@ -74,20 +69,19 @@ class Exchanger:
             },
             "jobid": self._jobid
         }).encode())
+        await loop.sock_recv(self._sock, 65536)
         login_success: bool = json.loads((await loop.sock_recv(self._sock, 65536)).decode())["data"]
         logging.info(f"login_success: {login_success}")
-        return Request(magic=VCC_MAGIC,type=4,uid=int(login_success),session=0,flags=0, usrname="", msg="")
+        return Request(type=4, uid=int(login_success), usrname="", msg="")
         
 
 websocket_list = []
 
 async def recv_loop(exchanger: Exchanger):
-    loop = asyncio.get_event_loop()
     try:
         while True:
             json_msg = json.dumps((await exchanger.recv_msg())._asdict())
-            for websocket in websocket_list:
-                await websocket.send(json_msg)
+            websockets.broadcast([websocket for (websocket, authorized) in websocket_list if authorized], json_msg)
     except asyncio.CancelledError:
         pass
     except socket.gaierror:
@@ -97,37 +91,34 @@ async def recv_loop(exchanger: Exchanger):
         raise
 
 
-async def send_loop(websocket, exchanger: Exchanger, cancel_func):
-    loop = asyncio.get_event_loop()
+async def send_loop(websocket, exchanger: Exchanger):
+    authorized: bool = False
+    websocket_list.append((websocket, authorized))
     try:
-        while True:
-            json_msg = await websocket.recv()
+        async for json_msg in websocket:
             json_result = json.loads(json_msg)
             if json_result["type"] == 4:
                 login_result = await exchanger.login(json_result["usrname"], json_result["msg"])
+                if login_result.uid:
+                    authorized = True
+                    websocket_list[websocket_list.index((websocket, False))] = (websocket, authorized)
                 await websocket.send(json.dumps(login_result._asdict()))
             else:
-                await exchanger.send_msg(json_result["usrname"], json_result["msg"])
-    except asyncio.CancelledError:
-        websocket_list.remove(websocket)
+                if authorized:
+                    await exchanger.send_msg(json_result["usrname"], json_result["msg"])
     except TypeError:
-        websocket_list.remove(websocket)
+        websocket_list.remove((websocket, authorized))
     except websockets.ConnectionClosedOK:
-        websocket_list.remove(websocket)
+        websocket_list.remove((websocket, authorized))
     except Exception as e:
         logging.info(e)
-        websocket_list.remove(websocket)
-        cancel_func()
+        websocket_list.remove((websocket, authorized))
 
 async def loop(websocket, exchanger: Exchanger):
     send_loop_task: asyncio.Task[None]
-    websocket_list.append(websocket)
-    cancel_func = lambda: (
-        send_loop_task.cancel()
-    )
     remote_ip = websocket.remote_address[0]
     logging.info(f"{remote_ip} connected")
-    send_loop_task = asyncio.create_task(send_loop(websocket, exchanger, cancel_func))
+    send_loop_task = asyncio.create_task(send_loop(websocket, exchanger))
     await send_loop_task
 
 async def main():

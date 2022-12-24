@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import CssBaseline from '@mui/material/CssBaseline'
 import styled, { createGlobalStyle } from "styled-components"
 import useWebSocket, { ReadyState } from "react-use-websocket"
@@ -6,11 +6,11 @@ import useWebSocket, { ReadyState } from "react-use-websocket"
 
 import { WEBSOCKET_PORT, VCC_MAGIC, RequestType, Request, RequestWithTime } from "./config"
 import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Messages"
-import { FormList, FormItem, FormInput, Form, FormInputs, Button, LoginDialog, LoginErrorDialog } from "./Form"
-import { Toolbar } from "./Toolbar"
+import { FormList, FormItem, FormInput, Form, FormInputs, Button, LoginDialog } from "./Form"
+// import { Toolbar } from "./Toolbar"
 import { Notification, notify } from "./Notification"
 import { useSelector, useDispatch } from './store'
-import { success, failed } from "./state/login"
+import { success, failed, LoginType } from "./state/login"
 
 
 const GlobalStyle = createGlobalStyle`
@@ -62,9 +62,10 @@ function addLeadingZero(a: string | number) {
 }
 
 function useMessageWebSocket() {
-  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(`ws://${location.hostname}:7000/`)
+  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = (useWebSocket(import.meta.env.DEV ? `ws://${location.hostname}:${WEBSOCKET_PORT}/` : `ws://${location.hostname}/ws/`))
   const [messageHistory, setMessageHistory] = useState<RequestWithTime[]>([])
   const dispatch = useDispatch()
+  const loginStatus = useSelector(state => state.login.type)
   useEffect(() => {
     const message = lastJsonMessage as unknown as Request
     if (lastJsonMessage !== null) {
@@ -75,11 +76,13 @@ function useMessageWebSocket() {
           dispatch(success())
         }
       } else if (message.type == RequestType.MSG_NEW || message.type === RequestType.REL_NEW) {
-        setMessageHistory(messageHistory.concat({
-          time: new Date,
-          req: message
-        }))
-        notify(message.usrname, message.msg)
+        if (loginStatus == LoginType.LOGIN_SUCCESS) {
+            setMessageHistory(messageHistory.concat({
+              time: new Date,
+              req: message
+            }))
+            notify(message.usrname, message.msg)
+        }
       }
     }
     console.log(lastJsonMessage)
@@ -104,10 +107,7 @@ function App() {
     if (!msgBody)
       return
     const msg: Request = {
-      magic: VCC_MAGIC,
       uid: 0,
-      session,
-      flags: 0,
       type: RequestType.MSG_SEND,
       usrname: username,
       msg: msgBody
@@ -171,7 +171,8 @@ function App() {
           <Button disabled={!ready} onClick={send}>send</Button>
         </Form>
       </FormList>
-      <Toolbar sendJsonMessage={sendJsonMessage} />
+      {/* <Toolbar sendJsonMessage={sendJsonMessage} /> */}
+      {/* cannot work now */}
     </Root>
   )
 }

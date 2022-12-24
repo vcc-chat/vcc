@@ -107,10 +107,7 @@ export function LoginDialog({ sendJsonMessage }: {
   const dispatch = useDispatch()
   function loginCallback() {
     const msg: Request = {
-      magic: VCC_MAGIC,
       uid: 0,
-      session,
-      flags: 0,
       type: RequestType.CTL_LOGIN,
       usrname: username,
       msg: password

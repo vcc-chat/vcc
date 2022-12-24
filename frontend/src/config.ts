@@ -23,21 +23,9 @@ export const enum RequestType {
 
 
 export type Request = {
-  magic: typeof VCC_MAGIC
   type: RequestType
   uid: number
-  session: number
-  flags: number
   usrname: string
-  msg: string
-} | {
-  magic: typeof VCC_MAGIC_RL
-  type: RequestType
-  size: number
-  uid: number
-  session: number
-  usrname: string
-  visible: string
   msg: string
 }
 

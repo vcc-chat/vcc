@@ -63,10 +63,7 @@ function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, ope
           }
           if (session === null) return
           sendJsonMessage({
-            magic: VCC_MAGIC,
             uid: 0,
-            session,
-            flags: 0,
             type: typeNumber,
             usrname: username,
             msg: ""
@@ -106,10 +103,7 @@ export function CreateSessionDialog({ sendJsonMessage, open, setOpen }: {
         <Button onClick={() => {
           if (sessionName === "") return
           sendJsonMessage({
-            magic: VCC_MAGIC,
-            uid: 0,
-            session,
-            flags: 0,
+            uid: session,
             type: RequestType.CTL_NEWSE,
             usrname: sessionName,
             msg: ""

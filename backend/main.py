@@ -71,11 +71,9 @@ class Exchanger:
         }).encode())
         next_jobid=json.loads((await loop.sock_recv(self._sock, 65536)).decode())['next_jobid']
         ret = json.loads((await loop.sock_recv(self._sock, 65536)).decode())
-        login_success=true
-        if ret['jobid']==self._jobid and ret['data']:
-            login_success=true
+        login_success = ret['jobid'] == self._jobid and ret['data']
         self._jobid=next_jobid
-        logging.info(f"login_success: {login_success}")
+        logging.info(f"{login_success=}")
         return Request(type=4, uid=int(login_success), usrname="", msg="")
         
 

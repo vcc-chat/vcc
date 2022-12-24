@@ -62,7 +62,8 @@ function addLeadingZero(a: string | number) {
 }
 
 function useMessageWebSocket() {
-  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = (useWebSocket(import.meta.env.DEV ? `ws://${location.hostname}:${WEBSOCKET_PORT}/` : `ws://${location.hostname}/ws/`))
+  const protocol = location.protocol == "http" ? "ws" : "wss"
+  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = (useWebSocket(import.meta.env.DEV ? `${protocol}://${location.hostname}:${WEBSOCKET_PORT}/` : `${protocol}://${location.hostname}/ws/`))
   const [messageHistory, setMessageHistory] = useState<RequestWithTime[]>([])
   const dispatch = useDispatch()
   const loginStatus = useSelector(state => state.login.type)

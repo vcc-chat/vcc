@@ -121,17 +121,22 @@ class RpcExchangerClient:
         self.check_authorized()
         if chat not in self._chat_list:
             raise ChatNotJoinedError()
+        if self._username is None:
+            raise NotAuthorizedError()
         await self._exchanger.send_msg(self._username, msg, chat)    
     
     async def recv(self, ignore_self_messages: bool=False) -> tuple[str, str, int]:
         raw_message: Any = None
+        username = ""
+        msg = ""
+        chat = -1
         while raw_message is None:
             raw_message = await self._pubsub.get_message(ignore_subscribe_messages=True)
             try:
                 json_content = json.loads(raw_message["data"].decode())
-                username: str = json_content["username"]
-                msg: str = json_content["msg"]
-                chat: int = int(raw_message["channel"][9:])
+                username = json_content["username"]
+                msg = json_content["msg"]
+                chat = int(raw_message["channel"][9:])
                 if ignore_self_messages and username == self._username:
                     raw_message = None
             except:
@@ -150,7 +155,7 @@ class RpcExchangerClient:
         self.check_authorized()
         return await self._rpc.chat_get_users(id=id)
 
-    async def chat_join(self, id: int) -> list[int]:
+    async def chat_join(self, id: int) -> None:
         self.check_authorized()
         if id in self._chat_list:
             raise ChatAlreadyJoinedError()
@@ -159,7 +164,7 @@ class RpcExchangerClient:
         self._pubsub.subscribe(f"messages:{id}")
         self._chat_list.add(id)
     
-    async def chat_quit(self, id: int) -> list[int]:
+    async def chat_quit(self, id: int) -> None:
         self.check_authorized()
         if id not in self._chat_list:
             raise ChatNotJoinedError()
@@ -168,13 +173,14 @@ class RpcExchangerClient:
         self._pubsub.unsubscribe(f"messages:{id}")
         self._chat_list.remove(id)
 
-    async def __aenter__(self) -> None:
+    async def __aenter__(self) -> RpcExchangerClient:
         self._pubsub = await self._pubsub_raw.__aenter__()
+        return self
 
     async def __aexit__(self, *args) -> None:
         await self._pubsub_raw.__aexit__(None, None, None)
         for i in self._chat_list:
-            self.chat_quit(i)
+            await self.chat_quit(i)
         return None
 
 

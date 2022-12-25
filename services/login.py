@@ -3,20 +3,10 @@
 from peewee import *
 
 import base
-
+import models
 
 db = SqliteDatabase("db.db") # just for test
-
-class BaseModel(Model):
-    class _Meta:
-        def __init__(self):
-            print(123)
-        database = db
-    Meta=_Meta()
-class User(BaseModel):
-    id = BigAutoField(primary_key=True)
-    name = CharField(max_length=16, unique=True)
-    password = CharField(max_length=16)
+User=models.bind_model(models.User,db)
 
 class Main:
     def login(self, username, password):

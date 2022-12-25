@@ -6,28 +6,16 @@ from peewee import *
 
 import base
 import warnings
-from login import User
-
+import models
+from models import User,Chat,ChatUser,bind_model
 
 db = SqliteDatabase("db.db")
-
-class BaseModel(Model):
-    class Meta:
-        database = db
-
-class Chat(BaseModel):
-    id = BigAutoField(primary_key=True)
-    name = CharField(max_length=20)
-
-
-class ChatUser(BaseModel):
-    id = BigAutoField(primary_key=True)
-    user = ForeignKeyField(User, backref="chat_users")
-    chat = ForeignKeyField(Chat, backref="chat_users")
-
+User=bind_model(User,db)
+Chat=bind_model(Chat,db)
+ChatUser=bind_model(ChatUser,db)
 class Main:
     def chat_create(self, name: str) -> int:
-        return Chat.create(name=name).id
+        return models.Chat.create(name=name).id
 
     def chat_get_name(self, id: int) -> str | None:
         chat = Chat.get_or_none(id=id)
@@ -69,7 +57,7 @@ class Main:
         
 
 if __name__ == "__main__":
-    db.create_tables([User, Chat, ChatUser])
+    db.create_tables([User, Chat,ChatUser])
     server = base.RpcServiceFactory()
     server.register(Main())
     server.connect()

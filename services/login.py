@@ -8,9 +8,11 @@ import base
 db = SqliteDatabase("db.db") # just for test
 
 class BaseModel(Model):
-    class Meta:
+    class _Meta:
+        def __init__(self):
+            print(123)
         database = db
-
+    Meta=_Meta()
 class User(BaseModel):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=16, unique=True)

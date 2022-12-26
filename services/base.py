@@ -1,4 +1,5 @@
 import json
+import os
 import logging
 
 from twisted.internet import task
@@ -71,9 +72,15 @@ class RpcServiceFactory(ClientFactory):
             for key2, value2 in value1.__annotations__.items() if key2 != "return"
         } for key1, value1 in self.services.items()})
 
+    def get_host(self):
+        if "RPCHOST" in os.environ:
+            host=os.environ["RPCHOST"].split(":")
+            host[1]=int(host[1])
+            return host
+        else:
+            return ("localhost",2474)
     def connect(self, host="localhost", port=2474):
         def main(reactor):
             reactor.connectTCP(host, port, self)
             return self.done
-
         task.react(main)

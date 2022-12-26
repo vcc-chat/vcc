@@ -1,13 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit'
 import { TypedUseSelectorHook, useDispatch as useRawDispatch, useSelector as useRawSelector } from 'react-redux'
 import loginReducer from "./state/login"
-import sessionReducer from "./state/session"
+import chatReducer from "./state/chat"
 import usernameReducer from './state/username'
 
 const store = configureStore({
   reducer: {
     login: loginReducer,
-    session: sessionReducer,
+    chat: chatReducer,
     username: usernameReducer
   }
 })

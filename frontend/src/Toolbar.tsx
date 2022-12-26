@@ -15,9 +15,9 @@ import DialogTitle from '@mui/material/DialogTitle'
 import TextField from "@mui/material/TextField"
 import Button from '@mui/material/Button'
 
-import { Request, RequestType, VCC_MAGIC } from "./config"
+import { Request, RequestType } from "./config"
 import { useDispatch, useSelector } from "./store"
-import { change as changeSession } from "./state/session"
+import { changeValue as changeChat, add as addChat, remove as removeChat } from "./state/chat"
 
 const ToolbarRoot = styled(SpeedDial)`
   position: fixed;
@@ -38,14 +38,14 @@ function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, ope
   const username = useSelector(state => state.username.value)
   return (
     <Dialog open={open}>
-      <DialogTitle>{title} session</DialogTitle>
+      <DialogTitle>{title} chat</DialogTitle>
       <DialogContent>
         <DialogContentText>
-          Enter the session number you want to {typeString}.
+          Enter the chat number you want to {typeString}.
         </DialogContentText>
         <TextField 
           autoFocus 
-          label="Session id" 
+          label="Chat id" 
           inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }} 
           margin="dense" 
           value={dialogValue} 
@@ -55,57 +55,57 @@ function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, ope
       <DialogActions>
         <Button onClick={() => setOpen(false)}>close</Button>
         <Button onClick={() => {
-          let session: number
+          let chat: number
           try {
-            session = parseInt(dialogValue)
+            chat = parseInt(dialogValue)
           } catch (e) {
             return
           }
-          if (session === null) return
+          if (chat === null) return
           sendJsonMessage({
-            uid: 0,
+            uid: chat,
             type: typeNumber,
             usrname: username,
             msg: ""
           })
           setOpen(false)
-          afterJoin(session)
+          afterJoin(chat)
         }}>{typeString}</Button>
       </DialogActions>
     </Dialog>
   )
 }
 
-export function CreateSessionDialog({ sendJsonMessage, open, setOpen }: {
+export function CreateChatDialog({ sendJsonMessage, open, setOpen }: {
   sendJsonMessage: (arg0: Request) => void,
   open: boolean,
   setOpen: (arg0: boolean) => void
 }) {
-  const [sessionName, setSessionName] = useState("")
-  const session = useSelector(state => state.session.value)
+  const [chatName, setChatName] = useState("")
+  const chat = useSelector(state => state.chat.value)
   return (
     <Dialog open={open}>
-      <DialogTitle>Create session</DialogTitle>
+      <DialogTitle>Create chat</DialogTitle>
       <DialogContent>
         <DialogContentText>
-          Enter the name of the session you want to create.
+          Enter the name of the chat you want to create.
         </DialogContentText>
         <TextField 
           autoFocus 
-          label="Session name" 
+          label="Chat name" 
           margin="dense" 
-          value={sessionName} 
-          onChange={ev => setSessionName(ev.target.value)}
+          value={chatName} 
+          onChange={ev => setChatName(ev.target.value)}
         />
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setOpen(false)}>close</Button>
         <Button onClick={() => {
-          if (sessionName === "") return
+          if (chatName === "") return
           sendJsonMessage({
-            uid: session,
+            uid: chat,
             type: RequestType.CTL_NEWSE,
-            usrname: sessionName,
+            usrname: chatName,
             msg: ""
           })
           setOpen(false)
@@ -119,47 +119,50 @@ export function CreateSessionDialog({ sendJsonMessage, open, setOpen }: {
 export function Toolbar({ sendJsonMessage }: {
   sendJsonMessage: (arg0: Request) => void
 }) {
-  const [joinSessionDialogOpen, setJoinSessionDialogOpen] = useState(false)
-  const [quitSessionDialogOpen, setQuitSessionDialogOpen] = useState(false)
-  const [createSessionDialogOpen, setCreateSessionDialogOpen] = useState(false)
+  const [joinChatDialogOpen, setJoinChatDialogOpen] = useState(false)
+  const [quitChatDialogOpen, setQuitChatDialogOpen] = useState(false)
+  const [createChatDialogOpen, setCreateChatDialogOpen] = useState(false)
   const dispatch = useDispatch()
-  const session = useSelector(state => state.session.value)
+  const chat = useSelector(state => state.chat.value)
+  const chats = useSelector(state => state.chat.values)
   const username = useSelector(state => state.username.value)
   return (
     <>
       <ToolbarDialog
         afterJoin={sess => {
-          dispatch(changeSession(sess))
+          dispatch(addChat(sess))
+          dispatch(changeChat(sess))
         }} 
         sendJsonMessage={sendJsonMessage} 
         typeNumber={RequestType.CTL_JOINS}
         typeString="join"
-        open={joinSessionDialogOpen}
-        setOpen={setJoinSessionDialogOpen}
+        open={joinChatDialogOpen}
+        setOpen={setJoinChatDialogOpen}
       />
       <ToolbarDialog
-        afterJoin={(sess) => {
-          if (session == sess) {
-            dispatch(changeSession(0))
+        afterJoin={(chat2) => {
+          dispatch(removeChat(chat2))
+          if (chat == chat2) {
+            dispatch(changeChat(chats[0]))
           }
         }} 
         sendJsonMessage={sendJsonMessage} 
         typeNumber={RequestType.CTL_QUITS}
         typeString="quit"
-        open={quitSessionDialogOpen}
-        setOpen={setQuitSessionDialogOpen}
+        open={quitChatDialogOpen}
+        setOpen={setQuitChatDialogOpen}
       />
-      <CreateSessionDialog sendJsonMessage={sendJsonMessage} open={createSessionDialogOpen} setOpen={setCreateSessionDialogOpen} />
+      <CreateChatDialog sendJsonMessage={sendJsonMessage} open={createChatDialogOpen} setOpen={setCreateChatDialogOpen} />
 
       <ToolbarRoot ariaLabel="toolbar" icon={<SpeedDialIcon />}>
-        <SpeedDialAction icon={<GroupAddOutlinedIcon />} tooltipTitle="join session" onClick={() => {
-          setJoinSessionDialogOpen(true)
+        <SpeedDialAction icon={<GroupAddOutlinedIcon />} tooltipTitle="join chat" onClick={() => {
+          setJoinChatDialogOpen(true)
         }} />
-        <SpeedDialAction icon={<GroupRemoveOutlinedIcon />} tooltipTitle="quit session" onClick={() => {
-          setQuitSessionDialogOpen(true)
+        <SpeedDialAction icon={<GroupRemoveOutlinedIcon />} tooltipTitle="quit chat" onClick={() => {
+          setQuitChatDialogOpen(true)
         }} />
-        <SpeedDialAction icon={<AddCircleOutlineOutlinedIcon />} tooltipTitle="create session" onClick={() => {
-          setCreateSessionDialogOpen(true)
+        <SpeedDialAction icon={<AddCircleOutlineOutlinedIcon />} tooltipTitle="create chat" onClick={() => {
+          setCreateChatDialogOpen(true)
         }} />
       </ToolbarRoot>
     </>

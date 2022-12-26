@@ -3,14 +3,21 @@ import CssBaseline from '@mui/material/CssBaseline'
 import styled, { createGlobalStyle } from "styled-components"
 import useWebSocket, { ReadyState } from "react-use-websocket"
 
+import Snackbar from "@mui/material/Snackbar"
+import Alert from "@mui/material/Alert"
+import AlertTitle from "@mui/material/AlertTitle"
+import AppBar from "@mui/material/AppBar"
+import Typography from "@mui/material/Typography"
+import Toolbar2 from "@mui/material/Toolbar"
 
-import { WEBSOCKET_PORT, VCC_MAGIC, RequestType, Request, RequestWithTime } from "./config"
+import { WEBSOCKET_PORT, RequestType, Request, RequestWithTime, WEBSOCKET_USE_PATH } from "./config"
 import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Messages"
 import { FormList, FormItem, FormInput, Form, FormInputs, Button, LoginDialog } from "./Form"
-// import { Toolbar } from "./Toolbar"
+import { Toolbar } from "./Toolbar"
 import { Notification, notify } from "./Notification"
 import { useSelector, useDispatch } from './store'
 import { success, failed, LoginType } from "./state/login"
+import { changeName } from "./state/chat"
 
 
 const GlobalStyle = createGlobalStyle`
@@ -54,6 +61,11 @@ const GlobalStyle = createGlobalStyle`
 const Root = styled.div`
   display: flex;
   height: 100vh;
+  flex-direction: column;
+`
+
+const MyAlert = styled(Alert)`
+  width: 100%;
 `
 
 function addLeadingZero(a: string | number) {
@@ -61,54 +73,107 @@ function addLeadingZero(a: string | number) {
   return a.padStart(2, "0")
 }
 
-function useMessageWebSocket() {
+function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
   const protocol = location.protocol == "http:" ? "ws" : "wss"
-  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = (useWebSocket(import.meta.env.DEV ? `${protocol}://${location.hostname}:${WEBSOCKET_PORT}/` : `${protocol}://${location.hostname}/ws/`))
+  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = (useWebSocket<Request>(
+    !WEBSOCKET_USE_PATH
+    ? `${protocol}://${location.hostname}:${WEBSOCKET_PORT}/` 
+    : `${protocol}://${location.hostname}/ws/`
+  ))
   const [messageHistory, setMessageHistory] = useState<RequestWithTime[]>([])
   const dispatch = useDispatch()
   const loginStatus = useSelector(state => state.login.type)
-  useEffect(() => {
-    const message = lastJsonMessage as unknown as Request
-    if (lastJsonMessage !== null) {
-      if (message.type == RequestType.CTL_LOGIN) {
-        if (message.uid == 0) {
-          dispatch(failed())
-        } else {
-          dispatch(success())
-        }
-      } else if (message.type == RequestType.MSG_NEW || message.type === RequestType.REL_NEW) {
-        if (loginStatus == LoginType.LOGIN_SUCCESS) {
-            setMessageHistory(messageHistory.concat({
-              time: new Date,
-              req: message
-            }))
-            notify(message.usrname, message.msg)
-        }
-      }
+
+  const [severity, setSeverity] = useState<any>("info")
+  const [alertTitle, setAlertTitle] = useState("")
+  const [alertContent, setAlertContent] = useState("")
+
+  function configureAlert(successContent: string, errorContent: string) {
+    setAlertOpen(true)
+    if (lastJsonMessage.uid) {
+      setSeverity("success")
+      setAlertTitle("Success")
+      setAlertContent(successContent)
+    } else {
+      setSeverity("error")
+      setAlertTitle("Error")
+      setAlertContent(errorContent)
     }
-    console.log(lastJsonMessage)
+  }
+
+  useEffect(() => {
+    const message = lastJsonMessage
+    console.log(message)
+    if (message == null) return
+
+    switch (message.type) {
+      case RequestType.CTL_LOGIN:
+        dispatch(message.uid ? success() : failed())
+        break
+      case RequestType.MSG_SEND:
+        if (loginStatus != LoginType.LOGIN_SUCCESS) break
+        setMessageHistory(messageHistory.concat({
+          time: new Date,
+          req: message
+        }))
+        notify(message.usrname, message.msg)
+        break
+      case RequestType.CTL_JOINS:
+        if (message.uid) {
+          dispatch(changeName(message.usrname))
+        }
+        configureAlert("You have joined the chat successfully. ", "No such chat. ")
+        break
+      case RequestType.CTL_NEWSE:
+        configureAlert(
+          `You have created the chat successfully, join it with id ${message.uid}. `, 
+          "Unexpected error: You haven't created the chat successfully. "
+        )
+        break
+      case RequestType.CTL_QUITS:
+        configureAlert(
+          "You have quit the chat successfully. ", 
+          "Unexpected error: You haven't quit the chat successfully. "
+        )
+        break
+    }
   }, [lastMessage, setMessageHistory])
+
+  useEffect(() => {
+    if (readyState !== ReadyState.CLOSED) return
+    setAlertOpen(true)
+    setSeverity("error")
+    setAlertTitle("Error")
+    setAlertContent("An unexpected error occurred. ")
+    
+  }, [readyState])
   
   return {
     messageHistory,
-    setMessageHistory,
     sendJsonMessage(req: Request) {
       sendJsonMessage(req as any)
     },
-    ready: readyState === ReadyState.OPEN
+    ready: readyState === ReadyState.OPEN,
+    severity,
+    alertTitle,
+    alertContent
   }
 }
 
 function App() {
-  const { messageHistory, setMessageHistory, sendJsonMessage, ready } = useMessageWebSocket()
+  const [alertOpen, setAlertOpen] = useState(false)
+  const { messageHistory, sendJsonMessage, ready, severity, alertTitle, alertContent } = useMessageWebSocket(setAlertOpen)
   const [msgBody, setMsgBody] = useState("")
   const username = useSelector(state => state.username.value)
-  const session = useSelector(state => state.session.value)
+  const chat = useSelector(state => state.chat.value)
+  const chatName = useSelector(state => state.chat.name)
   const send = () => {
     if (!msgBody)
       return
+    if (!ready)
+      return
     const msg: Request = {
-      uid: 1,
+      uid: chat,
       type: RequestType.MSG_SEND,
       usrname: username,
       msg: msgBody
@@ -116,12 +181,30 @@ function App() {
     setMsgBody("")
     sendJsonMessage(msg)
   }
+  const handleClose = () => {
+    setAlertOpen(false)
+  }
   return (
     <Root>
       <GlobalStyle />
       <CssBaseline />
       <Notification />
       <LoginDialog sendJsonMessage={sendJsonMessage} />
+      <Snackbar open={alertOpen} autoHideDuration={6000} onClose={handleClose}>
+        <MyAlert onClose={handleClose} severity={severity}>
+          <AlertTitle>{alertTitle}</AlertTitle>
+          {alertContent}
+        </MyAlert>
+      </Snackbar>
+      <div>
+        <AppBar position="static">
+          <Toolbar2>
+            <Typography variant="h6" component="div">
+              {chatName}
+            </Typography>
+          </Toolbar2>
+        </AppBar>
+      </div>
       <FormList>
         {!!messageHistory.length && (
           <Messages>
@@ -172,8 +255,7 @@ function App() {
           <Button disabled={!ready} onClick={send}>send</Button>
         </Form>
       </FormList>
-      {/* <Toolbar sendJsonMessage={sendJsonMessage} /> */}
-      {/* cannot work now */}
+      <Toolbar sendJsonMessage={sendJsonMessage} />
     </Root>
   )
 }

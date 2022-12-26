@@ -10,7 +10,7 @@ import DialogTitle from '@mui/material/DialogTitle'
 import CircularProgress from '@mui/material/CircularProgress'
 import Backdrop from '@mui/material/Backdrop'
 
-import { RequestType, Request, VCC_MAGIC } from "./config"
+import { RequestType, Request } from "./config"
 import { useSelector, useDispatch } from './store'
 import { change as changeUsername } from "./state/username"
 import { reset, startGet, LoginType } from "./state/login"
@@ -102,7 +102,7 @@ export function LoginDialog({ sendJsonMessage }: {
 }) {
   const [password, setPassword] = useState("")
   const username = useSelector(state => state.username.value)
-  const session = useSelector(state => state.session.value)
+  const chat = useSelector(state => state.chat.value)
   const loginStatus = useSelector(state => state.login.type)
   const dispatch = useDispatch()
   function loginCallback() {

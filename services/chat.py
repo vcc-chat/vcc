@@ -7,19 +7,16 @@ from peewee import *
 
 import base
 import warnings
-import models
-from models import User,Chat,ChatUser,bind_model
+from models import *
 
-if "DATABASE" in os.environ:
-    db=eval(os.environ["DATABASE"])
-else:
-    db = SqliteDatabase("db.db")
-User=bind_model(User,db)
-Chat=bind_model(Chat,db)
-ChatUser=bind_model(ChatUser,db)
+db = get_database()
+
+bind_model(User,db)
+bind_model(Chat,db)
+bind_model(ChatUser,db)
 class Main:
     def chat_create(self, name: str) -> int:
-        return models.Chat.create(name=name).id
+        return Chat.create(name=name).id
 
     def chat_get_name(self, id: int) -> str | None:
         chat = Chat.get_or_none(id=id)

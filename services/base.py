@@ -11,7 +11,7 @@ log.addHandler(logging.NullHandler())
 
 class Service(Protocol):
     def __init__(self, factory):
-        self.factory = factory
+        self.factory: RpcServiceFactory = factory
 
     def send(self, obj):
         self.transport.write(bytes(json.dumps(obj), "UTF8"))
@@ -22,6 +22,7 @@ class Service(Protocol):
                 "type": "handshake",
                 "role": "service",
                 "services": list(self.factory.services.keys()),
+                "annotations": self.factory.annotations
             }
         )
 
@@ -47,6 +48,7 @@ class Service(Protocol):
 class RpcServiceFactory(ClientFactory):
     def __init__(self):
         self.services = {}
+        self.annotations = {}
         self.done = Deferred()
 
     def buildProtocol(self, addr):
@@ -64,6 +66,10 @@ class RpcServiceFactory(ClientFactory):
         self.services.update(
             {i: getattr(instance, i) for i in dir(instance) if i[0] != "_"}
         )
+        self.annotations.update({key1: {
+            key2: str(value2) if str(value2)[0] != "<" else value2.__name__ 
+            for key2, value2 in value1.__annotations__.items() if key2 != "return"
+        } for key1, value1 in self.services.items()})
 
     def connect(self, host="localhost", port=2474):
         def main(reactor):

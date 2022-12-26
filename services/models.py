@@ -1,4 +1,5 @@
 from peewee import *
+import os
 
 def bind_model(model,db):
     model.bind(db)
@@ -17,3 +18,11 @@ class ChatUser(Model):
     id = BigAutoField(primary_key=True)
     user = ForeignKeyField(User, backref="chat_users")
     chat = ForeignKeyField(Chat, backref="chat_users")
+
+def get_database():
+    if "DATABASE" in os.environ:
+        return eval(os.environ["DATABASE"])
+    else:
+        return SqliteDatabase("db.db")
+
+__all__ = ["bind_model", "User", "Chat", "ChatUser", "get_database"]

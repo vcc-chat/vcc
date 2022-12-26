@@ -31,7 +31,9 @@ class RpcExchangerRpcHandler:
 
     def __getattr__(self, service: str) -> Callable[..., Awaitable[Any]]:
         async def func(**data):
-            return await self._exchanger.rpc_request(service, data)
+            result = await self._exchanger.rpc_request(service, data)
+            log.debug(f"{result=}")
+            return result
         return func
 
 class RpcExchanger:
@@ -65,10 +67,12 @@ class RpcExchanger:
         self._sock.close()
 
     async def send_msg(self, username: str, msg: str, chat: int) -> None:
+        log.debug(f"messages:{chat}")
         await self._redis.publish(f"messages:{chat}", json.dumps({
             "username": username,
             "msg": msg
         }))
+        log.debug(f"{username=} {msg=} {chat=}")
 
     async def rpc_request(self, service: str, data: Any) -> Any:
         loop = asyncio.get_event_loop()
@@ -79,8 +83,13 @@ class RpcExchanger:
                 "data": data,
                 "jobid": self._jobid
             }).encode())
-            self._jobid = json.loads((await loop.sock_recv(self._sock, 65536)).decode())["next_jobid"]
-            return json.loads((await loop.sock_recv(self._sock, 65536)).decode())["data"]
+            log.debug(f"{service=} {data=}")
+            decode_str = (await loop.sock_recv(self._sock, 67)).decode()
+            log.debug(f"{decode_str=}")
+            self._jobid = json.loads(decode_str)["next_jobid"]
+            decode_str = (await loop.sock_recv(self._sock, 65536)).decode()
+            log.debug(f"{decode_str=}")
+            return json.loads(decode_str)["data"]
 
     def get_redis_instance(self) -> redis.Redis:
         return self._redis
@@ -106,6 +115,8 @@ class RpcExchangerClient:
         self._rpc = self._exchanger.rpc
 
     async def login(self, username: str, password: str) -> int | None:
+        if self._uid is not None or self._username is not None:
+            return self._uid
         uid: int | None = await self._rpc.login(username=username, password=password)
         log.debug(f"{uid=}")
         if uid is not None:
@@ -123,6 +134,7 @@ class RpcExchangerClient:
             raise ChatNotJoinedError()
         if self._username is None:
             raise NotAuthorizedError()
+        log.debug(f"{self._chat_list=}")
         await self._exchanger.send_msg(self._username, msg, chat)    
     
     async def recv(self, ignore_self_messages: bool=False) -> tuple[str, str, int]:
@@ -131,15 +143,22 @@ class RpcExchangerClient:
         msg = ""
         chat = -1
         while raw_message is None:
+            while not self._chat_list:
+                await asyncio.sleep(1)
             raw_message = await self._pubsub.get_message(ignore_subscribe_messages=True)
+            if raw_message is None:
+                continue
+            log.debug(f"{raw_message['data']=} {raw_message['channel']=}")
             try:
                 json_content = json.loads(raw_message["data"].decode())
                 username = json_content["username"]
                 msg = json_content["msg"]
                 chat = int(raw_message["channel"][9:])
+                log.debug(f"{username=} {msg=} {chat=}")
                 if ignore_self_messages and username == self._username:
                     raw_message = None
-            except:
+            except Exception as e:
+                log.debug(e, exc_info=True)
                 raw_message = None
         return username, msg, chat
 
@@ -161,7 +180,8 @@ class RpcExchangerClient:
             raise ChatAlreadyJoinedError()
         if not await self._rpc.chat_join(chat_id=id, user_id=self._uid):
             raise UnknownError()
-        self._pubsub.subscribe(f"messages:{id}")
+        log.debug(f"messages:{id}")
+        await self._pubsub.subscribe(f"messages:{id}")
         self._chat_list.add(id)
     
     async def chat_quit(self, id: int) -> None:
@@ -170,7 +190,8 @@ class RpcExchangerClient:
             raise ChatNotJoinedError()
         if not await self._rpc.chat_quit(chat_id=id, user_id=self._uid):
             raise UnknownError()
-        self._pubsub.unsubscribe(f"messages:{id}")
+        log.debug(f"messages:{id}")
+        await self._pubsub.unsubscribe(f"messages:{id}")
         self._chat_list.remove(id)
 
     async def __aenter__(self) -> RpcExchangerClient:

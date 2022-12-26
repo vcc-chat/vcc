@@ -144,6 +144,12 @@ export function Toolbar({ sendJsonMessage }: {
           dispatch(removeChat(chat2))
           if (chat == chat2) {
             dispatch(changeChat(chats[0]))
+            sendJsonMessage({
+              uid: chats[0],
+              type: RequestType.CTL_SNAME,
+              usrname: "",
+              msg: ""
+            })
           }
         }} 
         sendJsonMessage={sendJsonMessage} 

@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
+import { DEFAULT_CHAT } from "../config"
 
 // session before
 interface ChatType {
@@ -9,9 +10,9 @@ interface ChatType {
 }
 
 const chatState: ChatType = {
-  value: 1,
-  name: "Default",
-  values: [1]
+  value: DEFAULT_CHAT,
+  name: "Chat",
+  values: [DEFAULT_CHAT]
 }
 
 const chatSlice = createSlice({

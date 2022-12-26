@@ -10,7 +10,7 @@ import AppBar from "@mui/material/AppBar"
 import Typography from "@mui/material/Typography"
 import Toolbar2 from "@mui/material/Toolbar"
 
-import { WEBSOCKET_PORT, RequestType, Request, RequestWithTime, WEBSOCKET_USE_PATH } from "./config"
+import { WEBSOCKET_PORT, RequestType, Request, RequestWithTime, WEBSOCKET_USE_PATH, DEFAULT_CHAT } from "./config"
 import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Messages"
 import { FormList, FormItem, FormInput, Form, FormInputs, Button, LoginDialog } from "./Form"
 import { Toolbar } from "./Toolbar"
@@ -109,6 +109,13 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
     switch (message.type) {
       case RequestType.CTL_LOGIN:
         dispatch(message.uid ? success() : failed())
+        if (message.uid)
+          sendJsonMessage({
+            uid: DEFAULT_CHAT,
+            type: RequestType.CTL_SNAME,
+            usrname: "",
+            msg: ""
+          })
         break
       case RequestType.MSG_SEND:
         if (loginStatus != LoginType.LOGIN_SUCCESS) break
@@ -136,6 +143,8 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
           "Unexpected error: You haven't quit the chat successfully. "
         )
         break
+      case RequestType.CTL_SNAME:
+        dispatch(changeName(message.usrname))
     }
   }, [lastMessage, setMessageHistory])
 

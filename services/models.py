@@ -1,10 +1,9 @@
 from peewee import *
 
-
-
 def bind_model(model,db):
     model.bind(db)
     return model
+
 class User(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=16, unique=True)

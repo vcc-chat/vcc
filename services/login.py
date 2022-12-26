@@ -5,7 +5,11 @@ from peewee import *
 import base
 import models
 
-db = SqliteDatabase("db.db") # just for test
+if "DATABASE" in os.environ:
+    db=eval(os.environ["DATABASE"])
+else:
+    db = SqliteDatabase("db.db")
+
 User=models.bind_model(models.User,db)
 
 class Main:

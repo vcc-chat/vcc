@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import datetime
+import os
 
 from peewee import *
 
@@ -9,7 +10,10 @@ import warnings
 import models
 from models import User,Chat,ChatUser,bind_model
 
-db = SqliteDatabase("db.db")
+if "DATABASE" in os.environ:
+    db=eval(os.environ["DATABASE"])
+else:
+    db = SqliteDatabase("db.db")
 User=bind_model(User,db)
 Chat=bind_model(Chat,db)
 ChatUser=bind_model(ChatUser,db)
@@ -35,12 +39,12 @@ class Main:
         try:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
-            
+
             ChatUser.get_or_create(chat=chat, user=user)
             return True
         except:
             return False
-    
+
     def chat_quit(self, chat_id: int, user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
@@ -54,7 +58,7 @@ class Main:
     def chat_list(self) -> list[int]:
         warnings.warn(DeprecationWarning("chat_list is slow so that it shouldn't be used"))
         return [i.id for i in Chat.select()]
-        
+
 
 if __name__ == "__main__":
     db.create_tables([User, Chat,ChatUser])

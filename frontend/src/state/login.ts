@@ -21,16 +21,16 @@ const loginSlice = createSlice({
   name: "login",
   initialState: loginState,
   reducers: {
-    success: (state: LoginObjectType) => {
+    success(state: LoginObjectType) {
       state.type = LoginType.LOGIN_SUCCESS
     },
-    failed: (state: LoginObjectType) => {
+    failed(state: LoginObjectType) {
       state.type = LoginType.LOGIN_FAILED
     },
-    startGet: (state: LoginObjectType) => {
+    startGet(state: LoginObjectType) {
       state.type = LoginType.LOGIN_LOADING
     },
-    reset: (state: LoginObjectType) => {
+    reset(state: LoginObjectType) {
       state.type = LoginType.NOT_LOGIN
     },
   }

@@ -62,7 +62,7 @@ function addLeadingZero(a: string | number) {
 }
 
 function useMessageWebSocket() {
-  const protocol = location.protocol == "http" ? "ws" : "wss"
+  const protocol = location.protocol == "http:" ? "ws" : "wss"
   const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = (useWebSocket(import.meta.env.DEV ? `${protocol}://${location.hostname}:${WEBSOCKET_PORT}/` : `${protocol}://${location.hostname}/ws/`))
   const [messageHistory, setMessageHistory] = useState<RequestWithTime[]>([])
   const dispatch = useDispatch()
@@ -108,7 +108,7 @@ function App() {
     if (!msgBody)
       return
     const msg: Request = {
-      uid: 0,
+      uid: 1,
       type: RequestType.MSG_SEND,
       usrname: username,
       msg: msgBody
@@ -147,7 +147,7 @@ function App() {
           <FormInputs>
             <FormItem>
               <FormInput 
-                required multiline 
+                multiline 
                 type="text" 
                 label="Message" 
                 variant="filled" 

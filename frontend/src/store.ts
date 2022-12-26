@@ -4,7 +4,7 @@ import loginReducer from "./state/login"
 import sessionReducer from "./state/session"
 import usernameReducer from './state/username'
 
-const store =  configureStore({
+const store = configureStore({
   reducer: {
     login: loginReducer,
     session: sessionReducer,

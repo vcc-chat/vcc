@@ -14,7 +14,7 @@ const sessionSlice = createSlice({
   name: "session",
   initialState: sessionState,
   reducers: {
-    change: (state: SessionType, action: PayloadAction<number>) => {
+    change(state: SessionType, action: PayloadAction<number>) {
       state.value = action.payload
     }
   }

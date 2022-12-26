@@ -14,7 +14,7 @@ const usernameSlice = createSlice({
   name: "username",
   initialState: usernameState,
   reducers: {
-    change: (state: UsernameType, action: PayloadAction<string>) => {
+    change(state: UsernameType, action: PayloadAction<string>) {
       state.value = action.payload
     }
   }

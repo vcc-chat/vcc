@@ -29,12 +29,13 @@ class RpcExchangerRpcHandler:
     def __init__(self, exchanger: RpcExchanger) -> None:
         self._exchanger = exchanger
 
-    def __getattr__(self, service: str) -> Callable[..., Awaitable[Any]]:
-        async def func(**data):
-            result = await self._exchanger.rpc_request(service, data)
-            log.debug(f"{result=}")
-            return result
-        return func
+    def __getattr__(self, provider: str):
+        def wrapper(service):
+            async def func(**data):
+                result = await self._exchanger.rpc_request(provider+"/"+service, data)
+                log.debug(f"{result=}")
+                return result
+        return type(provider,(),{"__getattr__":lambda self,service:wrapper})
 
 class RpcExchanger:
     """Low-level api which is hard to use"""
@@ -118,7 +119,7 @@ class RpcExchangerClient:
     async def login(self, username: str, password: str) -> int | None:
         if self._uid is not None or self._username is not None:
             return self._uid
-        uid: int | None = await self._rpc.login(username=username, password=password)
+        uid: int | None = await self._rpc.login.login(username=username, password=password)
         log.debug(f"{uid=}")
         if uid is not None:
             self._uid = uid
@@ -165,21 +166,21 @@ class RpcExchangerClient:
 
     async def chat_create(self, name: str) -> int:
         self.check_authorized()
-        return await self._rpc.chat_create(name=name)
+        return await self._rpc.chat.chat_create(name=name)
 
     async def chat_get_name(self, id: int) -> str:
         self.check_authorized()
-        return await self._rpc.chat_get_name(id=id)
+        return await self._rpc.chat.chat_get_name(id=id)
 
     async def chat_get_users(self, id: int) -> list[int]:
         self.check_authorized()
-        return await self._rpc.chat_get_users(id=id)
+        return await self._rpc.chat.chat_get_users(id=id)
 
     async def chat_join(self, id: int) -> bool:
         self.check_authorized()
         if id in self._chat_list:
             raise ChatAlreadyJoinedError()
-        if not await self._rpc.chat_join(chat_id=id, user_id=self._uid):
+        if not await self._rpc.chat.chat_join(chat_id=id, user_id=self._uid):
             return False
         log.debug(f"messages:{id}")
         await self._pubsub.subscribe(f"messages:{id}")
@@ -191,7 +192,7 @@ class RpcExchangerClient:
         self.check_authorized()
         if id not in self._chat_list:
             raise ChatNotJoinedError()
-        if not await self._rpc.chat_quit(chat_id=id, user_id=self._uid):
+        if not await self._rpc.chat.chat_quit(chat_id=id, user_id=self._uid):
             return False
         log.debug(f"messages:{id}")
         await self._pubsub.unsubscribe(f"messages:{id}")

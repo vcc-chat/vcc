@@ -36,7 +36,8 @@ class RpcExchangerRpcHandler:
                 log.debug(f"{result=}")
                 return result
             return func
-        return type(provider,(),{"__getattr__":lambda self,service:wrapper()})()
+            
+        return type(provider,(),{"__getattr__":lambda self,service:wrapper(service)})()
 
 class RpcExchanger:
     """Low-level api which is hard to use"""
@@ -118,7 +119,7 @@ class RpcExchangerClient:
         self._chat_list_lock = asyncio.Lock()
 
     async def login(self, username: str, password: str) -> int | None:
-        if self._uid is not None or self._username is not None:
+        if self._uid is not None and self._username is not None:
             return self._uid
         uid: int | None = await self._rpc.login.login(username=username, password=password)
         log.debug(f"{uid=}")
@@ -126,6 +127,11 @@ class RpcExchangerClient:
             self._uid = uid
             self._username = username
         return uid
+
+    async def register(self, username: str, password: str) -> bool:
+        # Note: this only register, won't login
+        success = await self._rpc.login.register(username=username, password=password)
+        return success
 
     def check_authorized(self) -> None:
         if self._uid is None or self._username is None:
@@ -201,6 +207,18 @@ class RpcExchangerClient:
             self._chat_list.remove(id)
         return True
 
+    async def chat_list_somebody_joined(self) -> list[tuple[int, str]]:
+        self.check_authorized()
+        result: list[tuple[int, str]] = [
+            tuple(i) for i in await self._rpc.chat.chat_list_somebody_joined(id=self._uid)
+        ]
+        async with self._chat_list_lock:
+            for value, name in result:
+                if value not in self._chat_list:
+                    await self._pubsub.subscribe(f"messages:{value}")
+                    self._chat_list.add(value)
+        return result
+
     def __aiter__(self) -> RpcExchangerClient:
         return self
 
@@ -213,9 +231,6 @@ class RpcExchangerClient:
 
     async def __aexit__(self, *args) -> None:
         await self._pubsub_raw.__aexit__(None, None, None)
-        async with self._chat_list_lock:
-            for i in self._chat_list.copy():
-                await self.chat_quit(i)
         return None
 
 

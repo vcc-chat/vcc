@@ -57,11 +57,13 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                 case "login":
                     login_result = await client.login(username, msg)
                     await send(
-                        type="login",
+                        "login",
                         uid=int(login_result)
                     )
                     if login_result is not None:
-                        await client.chat_join(1)
+                        value = await client.chat_list_somebody_joined()
+                        logging.debug(f"{value=}")
+                        await send("chat_list_somebody_joined", msg=value)
                 case "message":
                     await client.send(msg, uid)
                 case "chat_create":
@@ -76,6 +78,9 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                     await send("chat_quit", uid=int(await client.chat_quit(uid)))
                 case "chat_get_name":
                     await send("chat_get_name", username=await client.chat_get_name(uid))
+                case "chat_list_somebody_joined":
+                    value = await client.chat_list_somebody_joined()
+                    await send("chat_list_somebody_joined", msg=value)
                 case _:
                     await websocket.close(1008)
                     return

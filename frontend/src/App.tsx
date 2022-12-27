@@ -15,9 +15,10 @@ import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Mes
 import { FormList, FormItem, FormInput, Form, FormInputs, Button, LoginDialog } from "./Form"
 import { Toolbar } from "./Toolbar"
 import { Notification, notify } from "./Notification"
+import { MainLayout } from "./Sidebar"
 import { useSelector, useDispatch } from './store'
 import { success, failed, LoginType } from "./state/login"
-import { changeName } from "./state/chat"
+import { changeName, changeAll } from "./state/chat"
 
 
 const GlobalStyle = createGlobalStyle`
@@ -47,20 +48,25 @@ const GlobalStyle = createGlobalStyle`
     font-weight: var(--normal-weight);
     letter-spacing: 0.01rem;
     background-color: var(--gray-50);
-    color: var(--gray-900)
+    color: var(--gray-900);
+    height: 100%;
   }
   body {
     margin: 0;
+    height: 100%;
   }
   *, *::before, *::after {
     box-sizing: border-box;
   }
-
+  #root {
+    height: 100%;
+    display: flex;
+  }
 `
 
 const Root = styled.div`
   display: flex;
-  height: 100vh;
+  flex: 1;
   flex-direction: column;
 `
 
@@ -109,13 +115,6 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
     switch (message.type) {
       case RequestType.CTL_LOGIN:
         dispatch(message.uid ? success() : failed())
-        if (message.uid)
-          sendJsonMessage({
-            uid: DEFAULT_CHAT,
-            type: RequestType.CTL_SNAME,
-            usrname: "",
-            msg: ""
-          })
         break
       case RequestType.MSG_SEND:
         if (loginStatus != LoginType.LOGIN_SUCCESS) break
@@ -144,7 +143,12 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
         )
         break
       case RequestType.CTL_SNAME:
+        // This should be deprecated: use RequestType.CTL_LJOIN instead
         dispatch(changeName(message.usrname))
+        break
+      case RequestType.CTL_LJOIN:
+        dispatch(changeAll(message.msg as any))
+        break
     }
   }, [lastMessage, setMessageHistory])
 
@@ -181,6 +185,8 @@ function App() {
       return
     if (!ready)
       return
+    if (chat == null)
+      return
     const msg: Request = {
       uid: chat,
       type: RequestType.MSG_SEND,
@@ -205,65 +211,60 @@ function App() {
           {alertContent}
         </MyAlert>
       </Snackbar>
-      <div>
-        <AppBar position="static">
-          <Toolbar2>
-            <Typography variant="h6" component="div">
-              {chatName}
-            </Typography>
-          </Toolbar2>
-        </AppBar>
-      </div>
-      <FormList>
-        {!!messageHistory.length && (
-          <Messages>
-            {messageHistory.map(a => {
-              const req = a.req
-              const date = a.time
-              return (
-                <Message key={+date}>
-                  <MessageTitle>
-                    {req.usrname}
-                    <MessageTime>
-                      {addLeadingZero(date.getMonth() + 1)}-{addLeadingZero(date.getDate())}&nbsp;
-                      {addLeadingZero(date.getHours())}:{addLeadingZero(date.getMinutes())}
-                    </MessageTime>
-                  </MessageTitle>
-                  <MessageBody>{req.msg}</MessageBody>
-                </Message>
-              )
-            })}
-          </Messages>
-        )}
-        <Form>
-          <FormInputs>
-            <FormItem>
-              <FormInput 
-                multiline 
-                type="text" 
-                label="Message" 
-                variant="filled" 
-                fullWidth 
-                onChange={event => {
-                  setMsgBody(event.target.value)
-                }} 
-                onKeyDown={event => {
-                  if (event.keyCode == 10 || event.keyCode == 13) {
-                    if (event.ctrlKey || event.metaKey) {
-                      setMsgBody(msgBody + "\n")
-                    } else {
-                      send()
-                      event.preventDefault()
+      <MainLayout sendJsonMessage={sendJsonMessage}>
+        <FormList>
+          {!!messageHistory.length && (
+            <Messages>
+              {messageHistory.filter(a => a.req.uid == chat).map(a => {
+                const req = a.req
+                const date = a.time
+                return (
+                  <Message key={+date}>
+                    <MessageTitle>
+                      {req.usrname}
+                      <MessageTime>
+                        {addLeadingZero(date.getMonth() + 1)}-{addLeadingZero(date.getDate())}&nbsp;
+                        {addLeadingZero(date.getHours())}:{addLeadingZero(date.getMinutes())}
+                      </MessageTime>
+                    </MessageTitle>
+                    <MessageBody>{req.msg}</MessageBody>
+                  </Message>
+                )
+              })}
+            </Messages>
+          )}
+          <Form>
+            <FormInputs>
+              <FormItem>
+                <FormInput 
+                  multiline 
+                  type="text" 
+                  label="Message" 
+                  variant="filled" 
+                  disabled={!ready || chat == null}
+                  fullWidth 
+                  onChange={event => {
+                    setMsgBody(event.target.value)
+                  }} 
+                  onKeyDown={event => {
+                    if (event.keyCode == 10 || event.keyCode == 13) {
+                      if (event.ctrlKey || event.metaKey) {
+                        setMsgBody(msgBody + "\n")
+                      } else {
+                        send()
+                        event.preventDefault()
+                      }
                     }
-                  }
-                }}
-                value={msgBody} 
-              />
-            </FormItem>
-          </FormInputs>
-          <Button disabled={!ready} onClick={send}>send</Button>
-        </Form>
-      </FormList>
+                  }}
+                  value={msgBody} 
+                />
+              </FormItem>
+            </FormInputs>
+            <Button disabled={!ready || chat == null} onClick={send}>send</Button>
+          </Form>
+        </FormList>
+      </MainLayout>
+      
       <Toolbar sendJsonMessage={sendJsonMessage} />
     </Root>
   )

@@ -103,7 +103,7 @@ export function CreateChatDialog({ sendJsonMessage, open, setOpen }: {
         <Button onClick={() => {
           if (chatName === "") return
           sendJsonMessage({
-            uid: chat,
+            uid: 0,
             type: RequestType.CTL_NEWSE,
             usrname: chatName,
             msg: ""
@@ -130,8 +130,13 @@ export function Toolbar({ sendJsonMessage }: {
     <>
       <ToolbarDialog
         afterJoin={sess => {
-          dispatch(addChat(sess))
           dispatch(changeChat(sess))
+          sendJsonMessage({
+            uid: 0,
+            type: RequestType.CTL_LJOIN,
+            usrname: "",
+            msg: ""
+          })
         }} 
         sendJsonMessage={sendJsonMessage} 
         typeNumber={RequestType.CTL_JOINS}
@@ -145,8 +150,8 @@ export function Toolbar({ sendJsonMessage }: {
           if (chat == chat2) {
             dispatch(changeChat(chats[0]))
             sendJsonMessage({
-              uid: chats[0],
-              type: RequestType.CTL_SNAME,
+              uid: 0,
+              type: RequestType.CTL_LJOIN,
               usrname: "",
               msg: ""
             })
@@ -160,7 +165,7 @@ export function Toolbar({ sendJsonMessage }: {
       />
       <CreateChatDialog sendJsonMessage={sendJsonMessage} open={createChatDialogOpen} setOpen={setCreateChatDialogOpen} />
 
-      <ToolbarRoot ariaLabel="toolbar" icon={<SpeedDialIcon />}>
+      <ToolbarRoot ariaLabel="toolbar" icon={<SpeedDialIcon />} hidden={chat == null}>
         <SpeedDialAction icon={<GroupAddOutlinedIcon />} tooltipTitle="join chat" onClick={() => {
           setJoinChatDialogOpen(true)
         }} />

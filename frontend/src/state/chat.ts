@@ -4,15 +4,17 @@ import { DEFAULT_CHAT } from "../config"
 
 // session before
 interface ChatType {
-  value: number,
-  name: string,
-  values: number[]
+  value: number | null,
+  name: string | null,
+  values: number[],
+  names: string[]
 }
 
 const chatState: ChatType = {
-  value: DEFAULT_CHAT,
-  name: "Chat",
-  values: [DEFAULT_CHAT]
+  value: null,
+  name: null,
+  values: [],
+  names: []
 }
 
 const chatSlice = createSlice({
@@ -33,10 +35,26 @@ const chatSlice = createSlice({
       const index = state.values.indexOf(action.payload)
       if (!~index) return
       state.values.splice(index, 1)
+    },
+    changeAll(state: ChatType, action: PayloadAction<[number, string][]>) {
+      const { payload } = action
+      state.values = payload.map(value => value[0])
+      state.names = payload.map(value => value[1])
+      if (state.name == null || state.value == null) {
+        if (payload) {
+          state.value = state.values[0]
+          state.name = state.names[0]
+        }
+        return
+      }
+      if (!payload.includes([state.value, state.name])) {
+        state.value = state.values[0]
+        state.name = state.names[0]
+      }
     }
   }
 })
 
-export const { changeName, changeValue, add, remove } = chatSlice.actions
+export const { changeName, changeValue, add, remove, changeAll } = chatSlice.actions
 
 export default chatSlice.reducer

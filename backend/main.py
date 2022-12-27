@@ -58,12 +58,14 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                     login_result = await client.login(username, msg)
                     await send(
                         "login",
-                        uid=int(login_result)
+                        uid=None if login_result is None else int(login_result)
                     )
                     if login_result is not None:
                         value = await client.chat_list_somebody_joined()
                         logging.debug(f"{value=}")
                         await send("chat_list_somebody_joined", msg=value)
+                case "register":
+                    await send("register", uid=int(await client.register(username, msg)))
                 case "message":
                     await client.send(msg, uid)
                 case "chat_create":
@@ -105,6 +107,7 @@ async def loop(websocket: WebSocketServerProtocol, exchanger: RpcExchanger) -> N
 
 async def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger("websockets.server").setLevel(logging.INFO)
     async with RpcExchanger() as exchanger:
         async with websocket_serve(lambda ws: loop(ws, exchanger), "", 7000):
             logging.info("started: ws://localhost:7000")

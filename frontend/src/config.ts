@@ -7,7 +7,8 @@ export const enum RequestType {
   CTL_JOINS = "chat_join",
   CTL_QUITS = "chat_quit",
   CTL_SNAME = "chat_get_name",
-  CTL_LJOIN = "chat_list_somebody_joined"
+  CTL_LJOIN = "chat_list_somebody_joined",
+  CTL_REGIS = "register"
 }
 
 export type Request = {

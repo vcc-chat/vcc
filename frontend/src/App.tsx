@@ -130,11 +130,31 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
         }
         configureAlert("You have joined the chat successfully. ", "No such chat. ")
         break
+      case RequestType.CTL_REGIS:
+        configureAlert(
+          "The account has been registered successfully. \nYou can login now. ", 
+          "Operation failed. "
+        )
+        break
       case RequestType.CTL_NEWSE:
         configureAlert(
-          `You have created the chat successfully, join it with id ${message.uid}. `, 
+          `You have created the chat successfully. `, 
           "Unexpected error: You haven't created the chat successfully. "
         )
+        if (message.uid) {
+          sendJsonMessage({
+            uid: message.uid,
+            type: RequestType.CTL_JOINS,
+            usrname: "",
+            msg: ""
+          })
+          sendJsonMessage({
+            uid: 0,
+            type: RequestType.CTL_LJOIN,
+            usrname: "",
+            msg: ""
+          })
+        }
         break
       case RequestType.CTL_QUITS:
         configureAlert(

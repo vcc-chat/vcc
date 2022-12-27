@@ -13,7 +13,7 @@ import Backdrop from '@mui/material/Backdrop'
 import { RequestType, Request } from "./config"
 import { useSelector, useDispatch } from './store'
 import { change as changeUsername } from "./state/username"
-import { reset, startGet, LoginType } from "./state/login"
+import { reset, startGet, register, LoginType } from "./state/login"
 
 export const FormList = styled.div`
   display: flex;
@@ -80,6 +80,10 @@ const MyBackdrop = styled(Backdrop)`
   color: #fff;
 `
 
+export const MyDialog = styled(Dialog)`
+  backdrop-filter: blur(4px);
+`
+
 export function LoginErrorDialog({ open }: {
   open: boolean
 }) {
@@ -102,7 +106,6 @@ export function LoginDialog({ sendJsonMessage }: {
 }) {
   const [password, setPassword] = useState("")
   const username = useSelector(state => state.username.value)
-  const chat = useSelector(state => state.chat.value)
   const loginStatus = useSelector(state => state.login.type)
   const dispatch = useDispatch()
   function loginCallback() {
@@ -115,9 +118,12 @@ export function LoginDialog({ sendJsonMessage }: {
     sendJsonMessage(msg)
     dispatch(startGet())
   }
+  function registerCallback() {
+    dispatch(register())
+  }
   return (
     <>
-      <Dialog open={loginStatus == LoginType.NOT_LOGIN}>
+      <MyDialog open={loginStatus == LoginType.NOT_LOGIN}>
         <DialogTitle>Login</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -149,13 +155,77 @@ export function LoginDialog({ sendJsonMessage }: {
           />
         </DialogContent>
         <DialogActions>
+          <LoginButton size="medium" onClick={registerCallback}>Register</LoginButton>
           <LoginButton size="medium" onClick={loginCallback}>Login</LoginButton>
         </DialogActions>
-      </Dialog>
+      </MyDialog>
       <MyBackdrop open={loginStatus == LoginType.LOGIN_LOADING}>
         <CircularProgress color="inherit" />
       </MyBackdrop>
       <LoginErrorDialog open={loginStatus == LoginType.LOGIN_FAILED}></LoginErrorDialog>
+      <RegisterDialog sendJsonMessage={sendJsonMessage} />
+    </>
+  )
+}
+
+export function RegisterDialog({ sendJsonMessage }: {
+  sendJsonMessage: (req: Request) => void
+}) {
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const dispatch = useDispatch()
+  const loginStatus = useSelector(state => state.login.type)
+  function loginCallback() {
+    dispatch(reset())
+  }
+  function registerCallback() {
+    const msg: Request = {
+      uid: 0,
+      type: RequestType.CTL_REGIS,
+      usrname: username,
+      msg: password
+    }
+    sendJsonMessage(msg)
+    dispatch(reset())
+  }
+  return (
+    <>
+      <MyDialog open={loginStatus == LoginType.REGISTER}>
+        <DialogTitle>Register</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Don't have an account? Register one! You don't need any personal information.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="User name"
+            type="text"
+            fullWidth
+            variant="standard"
+            value={username}
+            onChange={ev => {
+              setUsername(ev.target.value)
+            }}
+          />
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Password"
+            type="password"
+            fullWidth
+            variant="standard"
+            value={password}
+            onChange={ev => {
+              setPassword(ev.target.value)
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+        <LoginButton size="medium" onClick={loginCallback}>Go to Login</LoginButton>
+          <LoginButton size="medium" onClick={registerCallback}>Register</LoginButton>
+        </DialogActions>
+      </MyDialog>
     </>
   )
 }

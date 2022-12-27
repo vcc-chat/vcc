@@ -18,6 +18,7 @@ import Button from '@mui/material/Button'
 import { Request, RequestType } from "./config"
 import { useDispatch, useSelector } from "./store"
 import { changeValue as changeChat, add as addChat, remove as removeChat } from "./state/chat"
+import { LoginType } from "./state/login"
 
 const ToolbarRoot = styled(SpeedDial)`
   position: fixed;
@@ -25,7 +26,7 @@ const ToolbarRoot = styled(SpeedDial)`
   right: 16px;
 `
 
-function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, open, setOpen }: {
+export function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, open, setOpen }: {
   afterJoin: (arg0: number) => void,
   sendJsonMessage: (arg0: Request) => void,
   typeNumber: RequestType,
@@ -65,7 +66,7 @@ function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, ope
           sendJsonMessage({
             uid: chat,
             type: typeNumber,
-            usrname: username,
+            usrname: "",
             msg: ""
           })
           setOpen(false)
@@ -82,7 +83,6 @@ export function CreateChatDialog({ sendJsonMessage, open, setOpen }: {
   setOpen: (arg0: boolean) => void
 }) {
   const [chatName, setChatName] = useState("")
-  const chat = useSelector(state => state.chat.value)
   return (
     <Dialog open={open}>
       <DialogTitle>Create chat</DialogTitle>
@@ -119,61 +119,33 @@ export function CreateChatDialog({ sendJsonMessage, open, setOpen }: {
 export function Toolbar({ sendJsonMessage }: {
   sendJsonMessage: (arg0: Request) => void
 }) {
-  const [joinChatDialogOpen, setJoinChatDialogOpen] = useState(false)
-  const [quitChatDialogOpen, setQuitChatDialogOpen] = useState(false)
-  const [createChatDialogOpen, setCreateChatDialogOpen] = useState(false)
   const dispatch = useDispatch()
   const chat = useSelector(state => state.chat.value)
   const chats = useSelector(state => state.chat.values)
-  const username = useSelector(state => state.username.value)
+  const loginStatus = useSelector(state => state.login.type)
   return (
     <>
-      <ToolbarDialog
-        afterJoin={sess => {
-          dispatch(changeChat(sess))
+      <ToolbarRoot ariaLabel="toolbar" icon={<SpeedDialIcon />} hidden={loginStatus != LoginType.LOGIN_SUCCESS || chat == null}>
+        <SpeedDialAction icon={<GroupRemoveOutlinedIcon />} tooltipTitle="quit chat" onClick={() => {
+          if (chat == null) return
+          dispatch(removeChat(chat))
+          if (chats.length) {
+            dispatch(changeChat(chats[0]))
+          } else {
+            dispatch(changeChat(null))
+          }
+          sendJsonMessage({
+            uid: chat,
+            type: RequestType.CTL_QUITS,
+            usrname: "",
+            msg: ""
+          })
           sendJsonMessage({
             uid: 0,
             type: RequestType.CTL_LJOIN,
             usrname: "",
             msg: ""
           })
-        }} 
-        sendJsonMessage={sendJsonMessage} 
-        typeNumber={RequestType.CTL_JOINS}
-        typeString="join"
-        open={joinChatDialogOpen}
-        setOpen={setJoinChatDialogOpen}
-      />
-      <ToolbarDialog
-        afterJoin={(chat2) => {
-          dispatch(removeChat(chat2))
-          if (chat == chat2) {
-            dispatch(changeChat(chats[0]))
-            sendJsonMessage({
-              uid: 0,
-              type: RequestType.CTL_LJOIN,
-              usrname: "",
-              msg: ""
-            })
-          }
-        }} 
-        sendJsonMessage={sendJsonMessage} 
-        typeNumber={RequestType.CTL_QUITS}
-        typeString="quit"
-        open={quitChatDialogOpen}
-        setOpen={setQuitChatDialogOpen}
-      />
-      <CreateChatDialog sendJsonMessage={sendJsonMessage} open={createChatDialogOpen} setOpen={setCreateChatDialogOpen} />
-
-      <ToolbarRoot ariaLabel="toolbar" icon={<SpeedDialIcon />} hidden={chat == null}>
-        <SpeedDialAction icon={<GroupAddOutlinedIcon />} tooltipTitle="join chat" onClick={() => {
-          setJoinChatDialogOpen(true)
-        }} />
-        <SpeedDialAction icon={<GroupRemoveOutlinedIcon />} tooltipTitle="quit chat" onClick={() => {
-          setQuitChatDialogOpen(true)
-        }} />
-        <SpeedDialAction icon={<AddCircleOutlineOutlinedIcon />} tooltipTitle="create chat" onClick={() => {
-          setCreateChatDialogOpen(true)
         }} />
       </ToolbarRoot>
     </>

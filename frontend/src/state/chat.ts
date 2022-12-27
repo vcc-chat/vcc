@@ -24,7 +24,7 @@ const chatSlice = createSlice({
     changeName(state: ChatType, action: PayloadAction<string>) {
       state.name = action.payload
     },
-    changeValue(state: ChatType, action: PayloadAction<number>) {
+    changeValue(state: ChatType, action: PayloadAction<number | null>) {
       state.value = action.payload
     },
     add(state: ChatType, action: PayloadAction<number>) {

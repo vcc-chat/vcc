@@ -43,7 +43,8 @@ export const Message = styled.li`
   &:hover ${MessageTime} {
     display: block;
   }
-  padding: 0.1em;
+  padding: 0.3em;
+  border-radius: 0.2em;
 `
 export const MessageTitle = styled.div`
   display: flex;

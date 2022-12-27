@@ -2,24 +2,27 @@ import { useEffect, useState } from "react"
 import CssBaseline from '@mui/material/CssBaseline'
 import styled, { createGlobalStyle } from "styled-components"
 import useWebSocket, { ReadyState } from "react-use-websocket"
+import localforage from "localforage"
+import {
+  Route,
+  BrowserRouter,
+  Routes
+} from "react-router-dom"
 
 import Snackbar from "@mui/material/Snackbar"
 import Alert from "@mui/material/Alert"
 import AlertTitle from "@mui/material/AlertTitle"
-import AppBar from "@mui/material/AppBar"
-import Typography from "@mui/material/Typography"
-import Toolbar2 from "@mui/material/Toolbar"
 
-import { WEBSOCKET_PORT, RequestType, Request, RequestWithTime, WEBSOCKET_USE_PATH, DEFAULT_CHAT } from "./config"
-import { Messages, MessageBody, MessageTitle, Message, MessageTime } from "./Messages"
-import { FormList, FormItem, FormInput, Form, FormInputs, Button, LoginDialog } from "./Form"
-import { Toolbar } from "./Toolbar"
+import { WEBSOCKET_PORT, RequestType, Request, RequestWithTime, WEBSOCKET_USE_PATH } from "./config"
+import { LoginDialog } from "./Form"
 import { Notification, notify } from "./Notification"
-import { MainLayout } from "./Sidebar"
 import { useSelector, useDispatch } from './store'
-import { success, failed, LoginType } from "./state/login"
+import { success, failed, LoginType, reset } from "./state/login"
+import { change as changeUsername } from "./state/username"
 import { changeName, changeAll } from "./state/chat"
 
+import Home from "./pages/Home"
+import Invite from "./pages/Invite"
 
 const GlobalStyle = createGlobalStyle`
   html {
@@ -74,10 +77,6 @@ const MyAlert = styled(Alert)`
   width: 100%;
 `
 
-function addLeadingZero(a: string | number) {
-  a = a + ""
-  return a.padStart(2, "0")
-}
 
 function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
   const protocol = location.protocol == "http:" ? "ws" : "wss"
@@ -109,12 +108,26 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
 
   useEffect(() => {
     const message = lastJsonMessage
-    console.log(message)
+    console.log({ message })
     if (message == null) return
 
     switch (message.type) {
       case RequestType.CTL_LOGIN:
-        dispatch(message.uid ? success() : failed())
+        if (message.uid) {
+          dispatch(success())
+          localforage.setItem("token", message.msg)
+        } else {
+          dispatch(failed())
+        }
+        break
+      case RequestType.CTL_TOKEN:
+        if (message.uid != null) {
+          dispatch(changeUsername(message.usrname))
+          dispatch(success())
+        } else {
+          localforage.removeItem("token")
+          dispatch(reset())
+        }
         break
       case RequestType.MSG_SEND:
         if (loginStatus != LoginType.LOGIN_SUCCESS) break
@@ -196,26 +209,6 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
 function App() {
   const [alertOpen, setAlertOpen] = useState(false)
   const { messageHistory, sendJsonMessage, ready, severity, alertTitle, alertContent } = useMessageWebSocket(setAlertOpen)
-  const [msgBody, setMsgBody] = useState("")
-  const username = useSelector(state => state.username.value)
-  const chat = useSelector(state => state.chat.value)
-  const chatName = useSelector(state => state.chat.name)
-  const send = () => {
-    if (!msgBody)
-      return
-    if (!ready)
-      return
-    if (chat == null)
-      return
-    const msg: Request = {
-      uid: chat,
-      type: RequestType.MSG_SEND,
-      usrname: username,
-      msg: msgBody
-    }
-    setMsgBody("")
-    sendJsonMessage(msg)
-  }
   const handleClose = () => {
     setAlertOpen(false)
   }
@@ -231,61 +224,12 @@ function App() {
           {alertContent}
         </MyAlert>
       </Snackbar>
-      <MainLayout sendJsonMessage={sendJsonMessage}>
-        <FormList>
-          {!!messageHistory.length && (
-            <Messages>
-              {messageHistory.filter(a => a.req.uid == chat).map(a => {
-                const req = a.req
-                const date = a.time
-                return (
-                  <Message key={+date}>
-                    <MessageTitle>
-                      {req.usrname}
-                      <MessageTime>
-                        {addLeadingZero(date.getMonth() + 1)}-{addLeadingZero(date.getDate())}&nbsp;
-                        {addLeadingZero(date.getHours())}:{addLeadingZero(date.getMinutes())}
-                      </MessageTime>
-                    </MessageTitle>
-                    <MessageBody>{req.msg}</MessageBody>
-                  </Message>
-                )
-              })}
-            </Messages>
-          )}
-          <Form>
-            <FormInputs>
-              <FormItem>
-                <FormInput 
-                  multiline 
-                  type="text" 
-                  label="Message" 
-                  variant="filled" 
-                  disabled={!ready || chat == null}
-                  fullWidth 
-                  onChange={event => {
-                    setMsgBody(event.target.value)
-                  }} 
-                  onKeyDown={event => {
-                    if (event.keyCode == 10 || event.keyCode == 13) {
-                      if (event.ctrlKey || event.metaKey) {
-                        setMsgBody(msgBody + "\n")
-                      } else {
-                        send()
-                        event.preventDefault()
-                      }
-                    }
-                  }}
-                  value={msgBody} 
-                />
-              </FormItem>
-            </FormInputs>
-            <Button disabled={!ready || chat == null} onClick={send}>send</Button>
-          </Form>
-        </FormList>
-      </MainLayout>
-      
-      <Toolbar sendJsonMessage={sendJsonMessage} />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home sendJsonMessage={sendJsonMessage} messageHistory={messageHistory} ready={ready} />} />
+          <Route path="/chat/invite/:id" element={<Invite sendJsonMessage={sendJsonMessage} ready={ready} />} />
+        </Routes>
+      </BrowserRouter>
     </Root>
   )
 }

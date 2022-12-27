@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { createSlice } from "@reduxjs/toolkit"
 
 // login
 
@@ -7,7 +7,8 @@ export const enum LoginType {
   LOGIN_LOADING = 1,
   LOGIN_FAILED = 2,
   LOGIN_SUCCESS = 3,
-  REGISTER = 4
+  REGISTER = 4,
+  TOKEN_LOGIN = 5
 }
 
 interface LoginObjectType {
@@ -15,7 +16,7 @@ interface LoginObjectType {
 }
 
 const loginState: LoginObjectType = {
-  type: LoginType.NOT_LOGIN
+  type: LoginType.TOKEN_LOGIN
 }
 
 const loginSlice = createSlice({
@@ -36,10 +37,13 @@ const loginSlice = createSlice({
     },
     register(state: LoginObjectType) {
       state.type = LoginType.REGISTER
+    },
+    tokenLogin(state: LoginObjectType) {
+      state.type = LoginType.TOKEN_LOGIN
     }
   }
 })
 
-export const { success, failed, startGet, reset, register } = loginSlice.actions
+export const { success, failed, startGet, reset, register, tokenLogin } = loginSlice.actions
 
 export default loginSlice.reducer

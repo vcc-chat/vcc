@@ -8,7 +8,8 @@ export const enum RequestType {
   CTL_QUITS = "chat_quit",
   CTL_SNAME = "chat_get_name",
   CTL_LJOIN = "chat_list_somebody_joined",
-  CTL_REGIS = "register"
+  CTL_REGIS = "register",
+  CTL_TOKEN = "token_login"
 }
 
 export type Request = {
@@ -22,7 +23,5 @@ export interface RequestWithTime {
   time: Date
   req: Request
 }
-
-export const DEFAULT_CHAT = 1
 
 export const WEBSOCKET_USE_PATH = import.meta.env.PROD

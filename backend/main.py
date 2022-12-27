@@ -3,14 +3,20 @@ from typing import NamedTuple
 import asyncio
 import json
 import logging
+
 import redis.asyncio as redis
+import uvloop
+import jwt
+
 from functools import partial
 
 from websockets.server import WebSocketServerProtocol, serve as websocket_serve
 from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
-import uvloop
-
 from vcc import RpcExchanger, RpcExchangerClient
+
+with open("config.json") as config_file:
+    config = json.load(config_file)
+    key = config["key"]
 
 async def recv_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClient) -> None:
     try:
@@ -56,14 +62,44 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
             match json_result["type"]:
                 case "login":
                     login_result = await client.login(username, msg)
+                    if login_result is not None:
+                        token = jwt.encode({
+                            "username": username,
+                            "uid": login_result
+                        }, key, "HS512")
+                    else:
+                        token = ""
                     await send(
                         "login",
-                        uid=None if login_result is None else int(login_result)
+                        uid=None if login_result is None else int(login_result),
+                        msg=token
                     )
                     if login_result is not None:
                         value = await client.chat_list_somebody_joined()
                         logging.debug(f"{value=}")
                         await send("chat_list_somebody_joined", msg=value)
+                case "token_login":
+                    try:
+                        result = jwt.decode(msg, key, ["HS512"])
+                        new_username: str = result["username"]
+                        new_uid: str = result["uid"]
+                        await send(
+                            "token_login",
+                            uid=new_uid,
+                            username=new_username
+                        )
+                        # Dangerous! Don't do it in your own project.
+                        client._uid = new_uid
+                        client._username = new_username
+                        value = await client.chat_list_somebody_joined()
+                        logging.debug(f"{value=}")
+                        await send("chat_list_somebody_joined", msg=value)
+                    except (jwt.DecodeError, KeyError):
+                        await send(
+                            "token_login",
+                            uid=None,
+                            username=""
+                        )
                 case "register":
                     await send("register", uid=int(await client.register(username, msg)))
                 case "message":

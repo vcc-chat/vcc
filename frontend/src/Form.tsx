@@ -1,19 +1,20 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import styled from "styled-components"
-import PureButton from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
-import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
-import DialogContent from '@mui/material/DialogContent'
-import DialogContentText from '@mui/material/DialogContentText'
-import DialogTitle from '@mui/material/DialogTitle'
-import CircularProgress from '@mui/material/CircularProgress'
-import Backdrop from '@mui/material/Backdrop'
+import localforage from "localforage"
+import PureButton from "@mui/material/Button"
+import TextField from "@mui/material/TextField"
+import Dialog from "@mui/material/Dialog"
+import DialogActions from "@mui/material/DialogActions"
+import DialogContent from "@mui/material/DialogContent"
+import DialogContentText from "@mui/material/DialogContentText"
+import DialogTitle from "@mui/material/DialogTitle"
+import CircularProgress from "@mui/material/CircularProgress"
+import Backdrop from "@mui/material/Backdrop"
 
 import { RequestType, Request } from "./config"
-import { useSelector, useDispatch } from './store'
+import { useSelector, useDispatch } from "./store"
 import { change as changeUsername } from "./state/username"
-import { reset, startGet, register, LoginType } from "./state/login"
+import { reset, startGet, register, LoginType, tokenLogin } from "./state/login"
 
 export const FormList = styled.div`
   display: flex;
@@ -121,6 +122,21 @@ export function LoginDialog({ sendJsonMessage }: {
   function registerCallback() {
     dispatch(register())
   }
+  useEffect(() => {
+    (async () => {
+      const token = await localforage.getItem("token")
+      if (typeof token == "string") {
+        sendJsonMessage({
+          type: RequestType.CTL_TOKEN,
+          uid: 0,
+          usrname: "",
+          msg: token
+        })
+      } else {
+        dispatch(reset())
+      }
+    })()
+  }, [])
   return (
     <>
       <MyDialog open={loginStatus == LoginType.NOT_LOGIN}>
@@ -222,7 +238,7 @@ export function RegisterDialog({ sendJsonMessage }: {
           />
         </DialogContent>
         <DialogActions>
-        <LoginButton size="medium" onClick={loginCallback}>Go to Login</LoginButton>
+          <LoginButton size="medium" onClick={loginCallback}>Back to Login</LoginButton>
           <LoginButton size="medium" onClick={registerCallback}>Register</LoginButton>
         </DialogActions>
       </MyDialog>

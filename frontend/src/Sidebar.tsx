@@ -1,14 +1,15 @@
 import styled from "styled-components"
+import { ReactNode, useState, useEffect } from "react"
+import localforage from "localforage"
 
 import AppBar from "@mui/material/AppBar"
 import Typography from "@mui/material/Typography"
 import Toolbar from "@mui/material/Toolbar"
 import IconButton from "@mui/material/IconButton"
-import MenuIcon from "@mui/icons-material/Menu"
-import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined'
-import GroupRemoveOutlinedIcon from '@mui/icons-material/GroupRemoveOutlined'
-import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined'
-import Drawer from "@mui/material/Drawer"
+import Button from "@mui/material/Button"
+import GroupAddOutlinedIcon from "@mui/icons-material/GroupAddOutlined"
+import AddCircleOutlineOutlinedIcon from "@mui/icons-material/AddCircleOutlineOutlined"
+import AccountCircle from "@mui/icons-material/AccountCircle"
 import Divider from "@mui/material/Divider"
 import List from "@mui/material/List"
 import ListItem from "@mui/material/ListItem"
@@ -16,53 +17,91 @@ import ListItemButton from "@mui/material/ListItemButton"
 import ListItemIcon from "@mui/material/ListItemIcon"
 import ListItemText from "@mui/material/ListItemText"
 import ListSubheader from "@mui/material/ListSubheader"
+import Tooltip from "@mui/material/Tooltip"
+import Menu from "@mui/material/Menu"
+import MenuItem from "@mui/material/MenuItem"
 
-import { ReactNode, useState, useEffect } from "react"
 import { useSelector, useDispatch } from "./store"
 import { Request, RequestType } from "./config"
 import { ToolbarDialog, CreateChatDialog } from "./Toolbar"
 import { changeName, changeValue } from "./state/chat"
+import { reset } from "./state/login"
 
-export function NavBar({ open, setOpen }: {
-  open: boolean,
-  setOpen: (arg: boolean) => void
+const RightIconButton = styled(IconButton)`
+  margin-left: auto;
+  color: white;
+`
+
+const PaddingTypography = styled(Typography)`
+  padding-right: 0.5em;
+` as any
+
+export function NavBar({ onChange }: {
+  onChange: (arg0: number) => void
 }) {
   const chatName = useSelector(state => state.chat.name)
-  
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
+  const menuOpen = !!anchorEl
+  const dispatch = useDispatch()
+  // 0 is chat, 1 is settings
   return (
     <AppBar position="static">
       <Toolbar>
-        <IconButton color="inherit" aria-label="Open sidebar" onClick={() => {
-          setOpen(!open)
-        }}>
-          <MenuIcon />
-        </IconButton>
-        <Typography variant="h6" component="div">
+        <PaddingTypography variant="h6" component="div">
           {chatName}
-        </Typography>
+        </PaddingTypography>
+        <Button color="inherit" onClick={() => {
+          onChange(0)
+        }}>
+          Chat
+        </Button>
+        <Button color="inherit" onClick={() => {
+          onChange(1)
+        }}>
+          Settings
+        </Button>
+        <RightIconButton 
+          size="large"
+          aria-haspopup="true"
+          onClick={event => {
+            setAnchorEl(event.currentTarget)
+          }}
+        >
+          <AccountCircle />
+        </RightIconButton>
+        <Menu
+          anchorEl={anchorEl}
+          open={menuOpen}
+          onClose={() => {
+            setAnchorEl(null)
+          }}
+          MenuListProps={{
+            'aria-labelledby': 'basic-button',
+          }}
+        >
+          <MenuItem onClick={() => {
+            (async () => {
+              await localforage.removeItem("token")
+              dispatch(reset())
+              setAnchorEl(null)
+            })()
+          }}>Logout</MenuItem>
+        </Menu>
       </Toolbar>
     </AppBar>
   )
 }
 
-interface SidebarRootPropsType {
-  open: boolean
-  openDelayed: boolean
-}
-
 const SidebarRoot = styled.div`
-  max-width: ${(props: SidebarRootPropsType) => props.open ? "14em": "1px"};
-  margin-right: ${(props: SidebarRootPropsType) => props.open ? "0": "-1px"};
-  visibility: ${(props: SidebarRootPropsType) => props.openDelayed ? "visible": "hidden"};
+  max-width: 14em;
+  visibility: visible;
   overflow: hidden;
   width: 100%;
   transition: max-width 0.3s ease;
 `
 
 
-export function Sidebar({ open, setOpen, sendJsonMessage }: {
-  open: boolean,
-  setOpen: (arg: boolean) => void,
+export function Sidebar({ sendJsonMessage }: {
   sendJsonMessage: (arg: Request) => void
 }) {
   const dispatch = useDispatch()
@@ -70,7 +109,6 @@ export function Sidebar({ open, setOpen, sendJsonMessage }: {
   const chatValues = useSelector(state => state.chat.values)
   const chatNames = useSelector(state => state.chat.names)
 
-  const [openDelayed, setOpenDelayed] = useState(false)
   const [joinChatDialogOpen, setJoinChatDialogOpen] = useState(false)
   const [createChatDialogOpen, setCreateChatDialogOpen] = useState(false)
   
@@ -78,20 +116,8 @@ export function Sidebar({ open, setOpen, sendJsonMessage }: {
     return function () {
       dispatch(changeValue(value))
       dispatch(changeName(name))
-      setOpen(false)
     }
   }
-  useEffect(() => {
-    if (open) {
-      setOpenDelayed(true)
-    } else {
-      const timeout = setTimeout(() => {
-        setOpenDelayed(false)
-      }, 300)
-      return () => clearTimeout(timeout)
-    }
-
-  }, [open])
   return (
     <>
       <ToolbarDialog
@@ -111,7 +137,7 @@ export function Sidebar({ open, setOpen, sendJsonMessage }: {
         setOpen={setJoinChatDialogOpen}
       />
       <CreateChatDialog sendJsonMessage={sendJsonMessage} open={createChatDialogOpen} setOpen={setCreateChatDialogOpen} />
-      <SidebarRoot open={open} openDelayed={openDelayed} aria-hidden={!open}>
+      <SidebarRoot>
         <List subheader={
           <ListSubheader component="div">
             Action
@@ -119,7 +145,6 @@ export function Sidebar({ open, setOpen, sendJsonMessage }: {
         }>
           <ListItem disablePadding>
             <ListItemButton onClick={() => {
-              setOpen(false)
               setCreateChatDialogOpen(true)
             }}>
               <ListItemIcon>
@@ -130,7 +155,6 @@ export function Sidebar({ open, setOpen, sendJsonMessage }: {
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton onClick={() => {
-              setOpen(false)
               setJoinChatDialogOpen(true)
             }}>
               <ListItemIcon>
@@ -148,9 +172,11 @@ export function Sidebar({ open, setOpen, sendJsonMessage }: {
         }>
           {chatValues.map((value, index) => (
             <ListItem disablePadding key={value}>
-              <ListItemButton onClick={clickHandler(value, chatNames[index])} selected={value === chatValue}>
-                <ListItemText primary={chatNames[index]} />
-              </ListItemButton> 
+              <Tooltip title={`id: ${value}`}>
+                <ListItemButton onClick={clickHandler(value, chatNames[index])} selected={value === chatValue}>
+                  <ListItemText primary={chatNames[index]} />
+                </ListItemButton> 
+              </Tooltip>
             </ListItem>
           ))}
         </List>
@@ -170,17 +196,22 @@ const Container = styled.div`
   flex: 1;
 `
 
-export function MainLayout({ children, sendJsonMessage }: {
-  children: ReactNode,
+export function MainLayout({ chat, settings, sendJsonMessage }: {
+  chat: ReactNode,
+  settings: ReactNode,
   sendJsonMessage: (arg: Request) => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [index, setIndex] = useState(0)
   return (
     <Root>
-      <Sidebar open={open} setOpen={setOpen} sendJsonMessage={sendJsonMessage} />
+      <Sidebar sendJsonMessage={sendJsonMessage} />
       <Container>
-        <NavBar open={open} setOpen={setOpen} />
-        {children}
+        <NavBar onChange={(newIndex) => {
+          setIndex(newIndex)
+        }} />
+        {{
+          0: chat
+        }[index]}
       </Container>
     </Root>
   )

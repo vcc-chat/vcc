@@ -1,6 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-
-import { DEFAULT_CHAT } from "../config"
+import { createSlice, PayloadAction } from "@reduxjs/toolkit"
 
 // session before
 interface ChatType {

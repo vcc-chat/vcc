@@ -56,6 +56,15 @@ class Main:
         warnings.warn(DeprecationWarning("chat_list is slow so that it shouldn't be used"))
         return [i.id for i in Chat.select()]
 
+    def chat_list_somebody_joined(self, id: int) -> list[tuple[int, str]]:
+        # after json.dumps, tuple returned will become json Array
+        try:
+            user = User.get_by_id(id)
+            chat_users = user.chat_users
+            return [(chat_user.chat.id, chat_user.chat.name) for chat_user in chat_users]
+        except:
+            return []
+
 
 if __name__ == "__main__":
     db.create_tables([User, Chat,ChatUser])

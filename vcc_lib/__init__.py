@@ -35,7 +35,8 @@ class RpcExchangerRpcHandler:
                 result = await self._exchanger.rpc_request(provider+"/"+service, data)
                 log.debug(f"{result=}")
                 return result
-        return type(provider,(),{"__getattr__":lambda self,service:wrapper})()
+            return func
+        return type(provider,(),{"__getattr__":lambda self,service:wrapper()})()
 
 class RpcExchanger:
     """Low-level api which is hard to use"""

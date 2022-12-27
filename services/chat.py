@@ -68,7 +68,7 @@ class Main:
 
 if __name__ == "__main__":
     db.create_tables([User, Chat,ChatUser])
-    server = base.RpcServiceFactory()
+    server = base.RpcServiceFactory("chat")
     server.register(Main())
     host=server.get_host()
     server.connect(host=host[0],port=host[1])

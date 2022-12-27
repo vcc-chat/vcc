@@ -1,5 +1,7 @@
 import json
 import uuid
+import sys
+import traceback
 from functools import reduce
 from itertools import zip_longest
 from twisted.internet import protocol, reactor, endpoints
@@ -7,16 +9,14 @@ from twisted.internet import protocol, reactor, endpoints
 
 class RpcProtocol(protocol.Protocol):
     def __init__(self, factory):
-        print(1)
         self.factory: RpcServer = factory
-
+        self.name=None
     def send(self, data):
         self.transport.write(bytes(json.dumps(data), "UTF8"))
 
     def dataReceived(self, data):
         try:
             data = json.loads(data)
-            print(data)
         except json.JSONDecodeError:
             self.send({"res": "error","error": "not json"})
             return
@@ -25,7 +25,6 @@ class RpcProtocol(protocol.Protocol):
         match data["type"]:
             case "handshake":
                 self.do_handshake(data)
-                print(self.factory.services)
             case "respond" if self.role == "service":
                 self.factory.make_respond(data["jobid"], data["data"])
             case "request" if self.role == "client":
@@ -34,7 +33,8 @@ class RpcProtocol(protocol.Protocol):
                         self, data["service"], data["data"], data["jobid"]
                     )
                     ret = "ok"
-                except (KeyError, TypeError):
+                except (KeyError, TypeError) as e:
+                    print(e)
                     ret = "err"
 
                 ret = {"res": ret, "next_jobid": str(uuid.uuid4())}
@@ -48,8 +48,9 @@ class RpcProtocol(protocol.Protocol):
             initial_jobid = uuid.uuid4()
             self.send({"res": "ok", "initial_jobid": str(initial_jobid)})
         elif data["role"] == "service":
-            self.factory.services.update({i: self for i in data["services"]})
-            self.factory.annotations.update(data["annotations"])
+            self.name=data['name']
+            self.factory.services[self.name]=data["services"]
+            self.factory.providers[self.name]=self
             self.send({"res": "ok"})
 
     def make_request(self, service, data, jobid):
@@ -62,21 +63,23 @@ class RpcProtocol(protocol.Protocol):
 
 
 class RpcServer(protocol.Factory):
-    annotations = {}
     services = {}
+    providers = {}
     promises = {}
 
-    def make_request(self, client, service, data, jobid):
+    def make_request(self, client:RpcProtocol, service:str, data:dict, jobid:str):
+        service=service.split("/")
         try:
             # verify type
             valid: bool = reduce(
-                lambda a, b: a and b[0][0] == b[1][0] and b[0][1] == type(b[1][1]).__name__, 
-                zip_longest(*[sorted(c.items()) for c in [self.annotations[service], data]]), True, 
+                lambda a, b: a and b[0][0] == b[1][0] and b[0][1] == type(b[1][1]).__name__,
+                zip_longest(*[sorted(c.items()) for c in [self.services[service[0]][service[1]], data]]), True,
             )
             if not valid:
                 raise TypeError("Invalid request data type")
-            self.services[service].make_request(service, data, jobid)
-        except KeyError:
+            self.providers[service[0]].make_request(service[1], data, jobid)
+        except KeyError as e:
+            print(traceback.format_exc())
             raise KeyError("No such service")
         self.promises[jobid] = client
 

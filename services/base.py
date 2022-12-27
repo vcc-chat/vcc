@@ -22,8 +22,8 @@ class Service(Protocol):
             {
                 "type": "handshake",
                 "role": "service",
-                "services": list(self.factory.services.keys()),
-                "annotations": self.factory.annotations
+                "name": self.factory.name,
+                "services": self.factory.services,
             }
         )
 
@@ -38,7 +38,7 @@ class Service(Protocol):
             return
         if data["type"] == "call":
             log.debug(1)
-            func = self.factory.services[data["service"]]
+            func = self.factory.funcs[data["service"]]
             try:
                 resp = func(**data["data"])
             except TypeError:
@@ -47,9 +47,10 @@ class Service(Protocol):
 
 
 class RpcServiceFactory(ClientFactory):
-    def __init__(self):
+    def __init__(self,name):
+        self.name=name
         self.services = {}
-        self.annotations = {}
+        self.funcs = {}
         self.done = Deferred()
 
     def buildProtocol(self, addr):
@@ -64,14 +65,13 @@ class RpcServiceFactory(ClientFactory):
         self.done.callback(None)
 
     def register(self, instance):
-        self.services.update(
-            {i: getattr(instance, i) for i in dir(instance) if i[0] != "_"}
-        )
-        self.annotations.update({key1: {
+        services={i: getattr(instance, i) for i in dir(instance) if i[0] != "_"}
+        annotations={key1: {
             key2: str(value2) if str(value2)[0] != "<" else value2.__name__ 
             for key2, value2 in value1.__annotations__.items() if key2 != "return"
-        } for key1, value1 in self.services.items()})
-
+        } for key1, value1 in services.items()}
+        self.services.update(annotations)
+        self.funcs.update(services)
     def get_host(self):
         if "RPCHOST" in os.environ:
             host=os.environ["RPCHOST"].split(":")

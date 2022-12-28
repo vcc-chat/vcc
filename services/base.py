@@ -72,14 +72,16 @@ class RpcServiceFactory(ClientFactory):
         } for key1, value1 in services.items()}
         self.services.update(annotations)
         self.funcs.update(services)
-    def get_host(self):
+    
+    def get_host(self) -> tuple[str, int]:
         if "RPCHOST" in os.environ:
             host=os.environ["RPCHOST"].split(":")
-            host[1]=int(host[1])
-            return host
+            return host[0], int(host[1])
         else:
             return ("localhost",2474)
-    def connect(self, host="localhost", port=2474):
+    def connect(self, host=None, port=None):
+        if host is None and port is None:
+            host, port = self.get_host()
         def main(reactor):
             reactor.connectTCP(host, port, self)
             return self.done

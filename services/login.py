@@ -23,7 +23,7 @@ class Main:
         except:
             return False
 
-    def user_get_name(self, id: int) -> str | None:
+    def get_name(self, id: int) -> str | None:
         user = User.get_or_none(id=id)
         if user is None:
             return None
@@ -33,5 +33,4 @@ if __name__ == "__main__":
     db.create_tables([User])
     server = base.RpcServiceFactory("login")
     server.register(Main())
-    host=server.get_host()
-    server.connect(host=host[0],port=host[1])
+    server.connect()

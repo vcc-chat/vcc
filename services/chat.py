@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-
-import datetime
-import os
+import json
 
 from peewee import *
 
 import base
 import warnings
+import redis
 from models import *
 
 db = get_database()
@@ -14,17 +13,23 @@ db = get_database()
 bind_model(User,db)
 bind_model(Chat,db)
 bind_model(ChatUser,db)
+
+SYSTEM_USER_NAME = "system"
+
 class Main:
-    def chat_create(self, name: str) -> int:
+    def __init__(self):
+        self._redis = redis.Redis()
+
+    def create(self, name: str) -> int:
         return Chat.create(name=name).id
 
-    def chat_get_name(self, id: int) -> str | None:
+    def get_name(self, id: int) -> str | None:
         chat = Chat.get_or_none(id=id)
         if chat is None:
             return None
         return chat.name
 
-    def chat_get_users(self, id: int) -> list[int]:
+    def get_users(self, id: int) -> list[int]:
         chat = Chat.get_or_none(Chat.id == id)
         if chat is None:
             return []
@@ -32,31 +37,38 @@ class Main:
         user_names = [chat_user.user.id for chat_user in chat_users]
         return user_names
 
-    def chat_join(self, chat_id: int, user_id: int) -> bool:
+    def join(self, chat_id: int, user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
-
             ChatUser.get_or_create(chat=chat, user=user)
+            self._redis.publish(f"messages:{chat_id}", json.dumps({
+                "username": SYSTEM_USER_NAME,
+                "msg": f"{user.name} has joined the chat."
+            }))
             return True
         except:
             return False
 
-    def chat_quit(self, chat_id: int, user_id: int) -> bool:
+    def quit(self, chat_id: int, user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
             chat_user.delete_instance()
+            self._redis.publish(f"messages:{chat_id}", json.dumps({
+                "username": SYSTEM_USER_NAME,
+                "msg": f"{user.name} has quit the chat."
+            }))
             return True
         except:
             return False
 
-    def chat_list(self) -> list[int]:
+    def list(self) -> list[int]:
         warnings.warn(DeprecationWarning("chat_list is slow so that it shouldn't be used"))
         return [i.id for i in Chat.select()]
 
-    def chat_list_somebody_joined(self, id: int) -> list[tuple[int, str]]:
+    def list_somebody_joined(self, id: int) -> list[tuple[int, str]]:
         # after json.dumps, tuple returned will become json Array
         try:
             user = User.get_by_id(id)
@@ -70,5 +82,4 @@ if __name__ == "__main__":
     db.create_tables([User, Chat,ChatUser])
     server = base.RpcServiceFactory("chat")
     server.register(Main())
-    host=server.get_host()
-    server.connect(host=host[0],port=host[1])
+    server.connect()

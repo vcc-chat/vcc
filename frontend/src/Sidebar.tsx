@@ -11,6 +11,7 @@ import Button from "@mui/material/Button"
 import GroupAddOutlinedIcon from "@mui/icons-material/GroupAddOutlined"
 import AddCircleOutlineOutlinedIcon from "@mui/icons-material/AddCircleOutlineOutlined"
 import AccountCircle from "@mui/icons-material/AccountCircle"
+import MenuIcon from "@mui/icons-material/Menu"
 import Divider from "@mui/material/Divider"
 import List from "@mui/material/List"
 import ListItem from "@mui/material/ListItem"
@@ -21,6 +22,8 @@ import ListSubheader from "@mui/material/ListSubheader"
 import Tooltip from "@mui/material/Tooltip"
 import Menu from "@mui/material/Menu"
 import MenuItem from "@mui/material/MenuItem"
+import useMediaQuery from "@mui/material/useMediaQuery"
+import { useTheme } from "@mui/material/styles"
 
 import { useSelector, useDispatch } from "./store"
 import { Request, RequestType } from "./config"
@@ -38,8 +41,13 @@ const PaddingTypography = styled(Typography)`
   padding-right: 0.5em;
 ` as any
 
-export function NavBar({ onChange }: {
-  onChange: (arg0: string) => void
+const RightSpaceIconButton = styled(IconButton)`
+  margin-right: 0.1em;
+`
+
+export function NavBar({ onChange, toggle }: {
+  onChange: (arg0: string) => void,
+  toggle: () => void
 }) {
   const chatName = useSelector(state => state.chat.name)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -49,6 +57,15 @@ export function NavBar({ onChange }: {
   return (
     <AppBar position="static">
       <Toolbar>
+        <RightSpaceIconButton
+          size="large"
+          edge="start"
+          color="inherit"
+          aria-label="menu"
+          onClick={toggle}
+        >
+          <MenuIcon />
+        </RightSpaceIconButton>
         <PaddingTypography variant="h6" component="div">
           {chatName}
         </PaddingTypography>
@@ -98,22 +115,33 @@ export function NavBar({ onChange }: {
   )
 }
 
+type PropType = {
+  open: boolean
+  desktop: boolean
+}
+
 const SidebarRoot = styled.div`
-  max-width: 14em;
-  visibility: visible;
-  overflow: hidden;
+  max-width: ${({ open, desktop }: PropType) => open ? (desktop ? "14em" : "100vw") : "0"};
+  min-width: ${({ open, desktop }: PropType) => !desktop && open ? "100vw" : "0"};
+  overflow-y: ${({ open }: PropType) => open ? "auto" : "hidden"};
+  overflow-x: hidden;
   width: 100%;
-  transition: max-width 0.3s ease;
+  transition: max-width 0.3s ease, min-width 0.3s ease;
+  scrollbar-width: thin;
 `
 
-
-export function Sidebar(props: {}) {
+export function Sidebar({ open, setOpen }: {
+  open: boolean,
+  setOpen: (value: boolean) => void
+}) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const chatValue = useSelector(state => state.chat.value)
   const chatValues = useSelector(state => state.chat.values)
   const chatNames = useSelector(state => state.chat.names)
   const { sendJsonMessage } = useNetwork()
+  const theme = useTheme()
+  const desktop = useMediaQuery(theme.breakpoints.up('sm'))
 
   const [joinChatDialogOpen, setJoinChatDialogOpen] = useState(false)
   const [createChatDialogOpen, setCreateChatDialogOpen] = useState(false)
@@ -123,6 +151,7 @@ export function Sidebar(props: {}) {
       dispatch(changeValue(value))
       dispatch(changeName(name))
       navigate(`/chats/${value}`)
+      setOpen(false)
     }
   }
   return (
@@ -143,7 +172,7 @@ export function Sidebar(props: {}) {
         setOpen={setJoinChatDialogOpen}
       />
       <CreateChatDialog open={createChatDialogOpen} setOpen={setCreateChatDialogOpen} />
-      <SidebarRoot>
+      <SidebarRoot open={open} aria-hidden={!open} desktop={desktop}>
         <List subheader={
           <ListSubheader component="div">
             Action
@@ -152,6 +181,7 @@ export function Sidebar(props: {}) {
           <ListItem disablePadding>
             <ListItemButton onClick={() => {
               setCreateChatDialogOpen(true)
+              setOpen(false)
             }}>
               <ListItemIcon>
                 <AddCircleOutlineOutlinedIcon />
@@ -162,6 +192,7 @@ export function Sidebar(props: {}) {
           <ListItem disablePadding>
             <ListItemButton onClick={() => {
               setJoinChatDialogOpen(true)
+              setOpen(false)
             }}>
               <ListItemIcon>
                 <GroupAddOutlinedIcon />
@@ -195,6 +226,7 @@ export function Sidebar(props: {}) {
 const Root = styled.div`
   display: flex;
   flex: 1;
+  overflow: hidden;
 `
 const Container = styled.div`
   display: flex;
@@ -207,13 +239,17 @@ export function MainLayout({ children }: {
 }) {
   const chatNumber = useSelector(state => state.chat.value)
   const navigate = useNavigate()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   return (
     <Root>
-      <Sidebar />
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       <Container>
-        <NavBar onChange={(newIndex) => {
-          navigate(`/chats/${chatNumber}/${newIndex}`)
-        }} />
+        <NavBar 
+          onChange={(newIndex) => {
+            navigate(`/chats/${chatNumber}/${newIndex}`)
+          }} 
+          toggle={() => setSidebarOpen(!sidebarOpen)}
+        />
         {children}
       </Container>
     </Root>

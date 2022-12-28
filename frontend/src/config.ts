@@ -9,7 +9,10 @@ export const enum RequestType {
   CTL_SNAME = "chat_get_name",
   CTL_LJOIN = "chat_list_somebody_joined",
   CTL_REGIS = "register",
-  CTL_TOKEN = "token_login"
+  CTL_TOKEN = "token_login",
+  CTL_USERS = "chat_get_users",
+  CTL_RNAME = "chat_rename",
+  CTL_KICK = "chat_kick"
 }
 
 export type Request = {

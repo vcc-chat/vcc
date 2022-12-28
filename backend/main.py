@@ -1,14 +1,11 @@
-from typing import NamedTuple
+from typing import Any, NamedTuple, cast
 
 import asyncio
 import json
 import logging
 
-import redis.asyncio as redis
 import uvloop
 import jwt
-
-from functools import partial
 
 from websockets.server import WebSocketServerProtocol, serve as websocket_serve
 from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
@@ -71,18 +68,18 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                         token = ""
                     await send(
                         "login",
-                        uid=None if login_result is None else int(login_result),
+                        uid=cast(Any, None if login_result is None else int(login_result)),
                         msg=token
                     )
                     if login_result is not None:
                         value = await client.chat_list_somebody_joined()
                         logging.debug(f"{value=}")
-                        await send("chat_list_somebody_joined", msg=value)
+                        await send("chat_list_somebody_joined", msg=cast(Any, value))
                 case "token_login":
                     try:
                         result = jwt.decode(msg, key, ["HS512"])
                         new_username: str = result["username"]
-                        new_uid: str = result["uid"]
+                        new_uid: int = result["uid"]
                         await send(
                             "token_login",
                             uid=new_uid,
@@ -93,11 +90,11 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                         client._username = new_username
                         value = await client.chat_list_somebody_joined()
                         logging.debug(f"{value=}")
-                        await send("chat_list_somebody_joined", msg=value)
+                        await send("chat_list_somebody_joined", msg=cast(Any, value))
                     except (jwt.DecodeError, KeyError):
                         await send(
                             "token_login",
-                            uid=None,
+                            uid=cast(Any, None),
                             username=""
                         )
                 case "register":
@@ -105,7 +102,7 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                 case "message":
                     await client.send(msg, uid)
                 case "chat_create":
-                    await send("chat_create", uid=await client.chat_create(username))
+                    await send("chat_create", uid=await client.chat_create2(username))
                 case "chat_join":
                     # also return session name
                     join_successfully = await client.chat_join(uid)
@@ -118,7 +115,13 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                     await send("chat_get_name", username=await client.chat_get_name(uid))
                 case "chat_list_somebody_joined":
                     value = await client.chat_list_somebody_joined()
-                    await send("chat_list_somebody_joined", msg=value)
+                    await send("chat_list_somebody_joined", msg=cast(Any, value))
+                case "chat_get_users":
+                    await send("chat_get_users", msg=cast(Any, await client.chat_get_users(uid)))
+                case "chat_rename":
+                    await send("chat_rename", uid=int(await client.chat_rename(uid, msg)))
+                case "chat_kick":
+                    await send("chat_kick", uid=int(await client.chat_kick(uid, int(msg))))
                 case _:
                     await websocket.close(1008)
                     return

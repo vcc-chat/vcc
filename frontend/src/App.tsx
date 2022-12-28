@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, lazy, Suspense, ReactNode } from "react"
 import CssBaseline from '@mui/material/CssBaseline'
 import styled, { createGlobalStyle } from "styled-components"
 import useWebSocket, { ReadyState } from "react-use-websocket"
@@ -7,7 +7,8 @@ import {
   Route,
   createBrowserRouter,
   createRoutesFromElements,
-  RouterProvider
+  RouterProvider,
+  redirect
 } from "react-router-dom"
 
 import Snackbar from "@mui/material/Snackbar"
@@ -16,18 +17,19 @@ import AlertTitle from "@mui/material/AlertTitle"
 
 import { WEBSOCKET_PORT, RequestType, Request, WEBSOCKET_USE_PATH } from "./config"
 import { Notification, notify } from "./Notification"
-import { useSelector, useDispatch } from './store'
+import { useSelector, useDispatch, saveMessage, restoreMessage } from './store'
 import { NetworkContext } from "./hooks"
 import { success, failed, LoginType, reset } from "./state/login"
 import { change as changeUsername } from "./state/username"
 import { changeName, changeAll } from "./state/chat"
-import { addMessage } from "./state/message"
+import { addMessage, setMessages } from "./state/message"
 
-import Home from "./pages/Home"
-import Invite from "./pages/Invite"
-import Login from "./pages/Login"
-import Register from "./pages/Register"
-import Chat, { ChatChat, ChatSettings } from "./pages/Chat"
+const Invite = lazy(() => import("./pages/Invite"))
+const Login = lazy(() => import("./pages/Login"))
+const Register = lazy(() => import("./pages/Register"))
+const Chat = lazy(() => import("./pages/Chat"))
+const ChatChat = lazy(async () => ({default: (await import("./pages/Chat")).ChatChat}))
+const ChatSettings = lazy(async () => ({default: (await import("./pages/Chat")).ChatSettings}))
 
 const GlobalStyle = createGlobalStyle`
   html {
@@ -76,12 +78,16 @@ const Root = styled.div`
   display: flex;
   flex: 1;
   flex-direction: column;
+  overflow: hidden;
 `
 
 const MyAlert = styled(Alert)`
   width: 100%;
 `
 
+function addSuspense(children: ReactNode) {
+  return <Suspense fallback={<></>}>{children}</Suspense>
+}
 
 function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
   const protocol = location.protocol == "http:" ? "ws" : "wss"
@@ -155,6 +161,10 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
           }
         }))
         notify(message.usrname, message.msg)
+        saveMessage({
+          time: +new Date,
+          req: message
+        })
         break
       case RequestType.CTL_JOINS:
         if (message.uid) {
@@ -174,12 +184,13 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
           "Unexpected error: You haven't created the chat successfully. "
         )
         if (message.uid) {
-          sendJsonMessage({
-            uid: message.uid,
-            type: RequestType.CTL_JOINS,
-            usrname: "",
-            msg: ""
-          })
+          // joined by backend now
+          // sendJsonMessage({
+          //   uid: message.uid,
+          //   type: RequestType.CTL_JOINS,
+          //   usrname: "",
+          //   msg: ""
+          // })
           sendJsonMessage({
             uid: 0,
             type: RequestType.CTL_LJOIN,
@@ -197,6 +208,30 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
       case RequestType.CTL_LJOIN:
         dispatch(changeAll(message.msg as any))
         break
+      case RequestType.CTL_KICK:
+        // TODO: refresh information later
+        configureAlert(
+          "User has been kicked. ", 
+          "Permission denied. "
+        )
+        sendJsonMessage({
+          uid: 0,
+          type: RequestType.CTL_LJOIN,
+          usrname: "",
+          msg: ""
+        })
+        break
+      case RequestType.CTL_RNAME:
+        configureAlert(
+          "Chat has renamed. ", 
+          "Permission denied. "
+        )
+        sendJsonMessage({
+          uid: 0,
+          type: RequestType.CTL_LJOIN,
+          usrname: "",
+          msg: ""
+        })
     }
   }, [lastMessage])
 
@@ -208,6 +243,10 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
     setAlertContent("An unexpected error occurred. ")
     
   }, [readyState])
+
+  useEffect(() => {(async () => {
+    dispatch(setMessages(await restoreMessage()))
+  })()}, [])
   
   return {
     sendJsonMessage(req: Request) {
@@ -224,21 +263,21 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
 const router = createBrowserRouter(
   createRoutesFromElements(
     <>
-      <Route path="/" element={<Home />} />
-      <Route path="/chats/invite/:id" element={<Invite />} />
-      <Route path="/chats/:id/" element={<Chat />}>
-        <Route index element={<ChatChat />} />
-        <Route path="settings" element={<ChatSettings />} />
+      <Route path="/" loader={() => redirect("/chats/empty")} />
+      <Route path="/chats/invite/:id" element={addSuspense(<Invite />)} />
+      <Route path="/chats/:id/" element={addSuspense(<Chat />)}>
+        <Route index element={addSuspense(<ChatChat />)} />
+        <Route path="settings" element={addSuspense(<ChatSettings />)} />
       </Route>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={addSuspense(<Login />)} />
+      <Route path="/register" element={addSuspense(<Register />)} />
     </>
   )
 )
 
 function App() {
   const [alertOpen, setAlertOpen] = useState(false)
-  const { sendJsonMessage, makeRequest: makeRequest, ready, severity, alertTitle, alertContent } = useMessageWebSocket(setAlertOpen)
+  const { sendJsonMessage, makeRequest, ready, severity, alertTitle, alertContent } = useMessageWebSocket(setAlertOpen)
   const handleClose = () => {
     setAlertOpen(false)
   }

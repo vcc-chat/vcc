@@ -10,19 +10,19 @@ import Button from "@mui/material/Button"
 
 import { RequestType, Request } from "../config"
 import { useSelector, useDispatch } from "../store"
+import { useNetwork } from "../hooks"
 import { changeValue } from "../state/chat"
+import { useAuth } from "../hooks"
 
 
-
-export default function Invite({ sendJsonMessage, ready }: {
-  sendJsonMessage: (arg: Request) => void,
-  ready: boolean
-}) {
+export default function Invite(props: {}) {
+  const { sendJsonMessage, ready } = useNetwork()
   const { id } = useParams()
   const chat = parseInt(String(id), 10)
   const chats = useSelector(state => state.chat.values)
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  useAuth()
   return (
     <>
       {ready && (
@@ -34,7 +34,6 @@ export default function Invite({ sendJsonMessage, ready }: {
             </DialogContent>
             <DialogActions>
               <Button size="medium" onClick={() => {
-
                 sendJsonMessage({
                   uid: chat,
                   type: RequestType.CTL_JOINS,

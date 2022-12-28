@@ -19,6 +19,7 @@ import { Request, RequestType } from "./config"
 import { useDispatch, useSelector } from "./store"
 import { changeValue as changeChat, add as addChat, remove as removeChat } from "./state/chat"
 import { LoginType } from "./state/login"
+import { useNetwork } from "./hooks"
 
 const ToolbarRoot = styled(SpeedDial)`
   position: fixed;
@@ -26,9 +27,8 @@ const ToolbarRoot = styled(SpeedDial)`
   right: 16px;
 `
 
-export function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeString, open, setOpen }: {
+export function ToolbarDialog({ afterJoin, typeNumber, typeString, open, setOpen }: {
   afterJoin: (arg0: number) => void,
-  sendJsonMessage: (arg0: Request) => void,
   typeNumber: RequestType,
   typeString: string,
   open: boolean,
@@ -37,6 +37,7 @@ export function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeStri
   const [dialogValue, setDialogValue] = useState("")
   const title = typeString[0].toUpperCase() + typeString.slice(1)
   const username = useSelector(state => state.username.value)
+  const { sendJsonMessage } = useNetwork()
   return (
     <Dialog open={open}>
       <DialogTitle>{title} chat</DialogTitle>
@@ -77,12 +78,12 @@ export function ToolbarDialog({ afterJoin, sendJsonMessage, typeNumber, typeStri
   )
 }
 
-export function CreateChatDialog({ sendJsonMessage, open, setOpen }: {
-  sendJsonMessage: (arg0: Request) => void,
+export function CreateChatDialog({ open, setOpen }: {
   open: boolean,
   setOpen: (arg0: boolean) => void
 }) {
   const [chatName, setChatName] = useState("")
+  const { sendJsonMessage } = useNetwork()
   return (
     <Dialog open={open}>
       <DialogTitle>Create chat</DialogTitle>
@@ -116,10 +117,9 @@ export function CreateChatDialog({ sendJsonMessage, open, setOpen }: {
 }
 
 
-export function Toolbar({ sendJsonMessage }: {
-  sendJsonMessage: (arg0: Request) => void
-}) {
+export function Toolbar(props: {}) {
   const dispatch = useDispatch()
+  const { sendJsonMessage } = useNetwork()
   const chat = useSelector(state => state.chat.value)
   const chats = useSelector(state => state.chat.values)
   const loginStatus = useSelector(state => state.login.type)

@@ -46,15 +46,15 @@ async def websocket_send(websocket: WebSocketServerProtocol, *, type: str, uid: 
     }))
 
 async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClient) -> None:
-    async def send(type: str, *, uid: int=0, username: str="", msg: str="") -> None:
-        await websocket.send(json.dumps({
-            "type": type,
-            "uid": uid,
-            "usrname": username,
-            "msg": msg
-        }))
     try:
         async for json_msg in websocket:
+            async def send(type: str, *, uid: int=0, username: str="", msg: str="") -> None:
+                await websocket.send(json.dumps({
+                    "type": type,
+                    "uid": uid,
+                    "usrname": username,
+                    "msg": msg
+                }))
             json_result = json.loads(json_msg)
             username: str = json_result["usrname"]
             uid: int = json_result["uid"]

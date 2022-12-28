@@ -7,8 +7,7 @@ export const enum LoginType {
   LOGIN_LOADING = 1,
   LOGIN_FAILED = 2,
   LOGIN_SUCCESS = 3,
-  REGISTER = 4,
-  TOKEN_LOGIN = 5
+  TOKEN_LOGIN = 4
 }
 
 interface LoginObjectType {
@@ -35,15 +34,12 @@ const loginSlice = createSlice({
     reset(state: LoginObjectType) {
       state.type = LoginType.NOT_LOGIN
     },
-    register(state: LoginObjectType) {
-      state.type = LoginType.REGISTER
-    },
     tokenLogin(state: LoginObjectType) {
       state.type = LoginType.TOKEN_LOGIN
     }
   }
 })
 
-export const { success, failed, startGet, reset, register, tokenLogin } = loginSlice.actions
+export const { success, failed, startGet, reset, tokenLogin } = loginSlice.actions
 
 export default loginSlice.reducer

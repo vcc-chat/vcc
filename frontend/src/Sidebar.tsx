@@ -24,6 +24,7 @@ import MenuItem from "@mui/material/MenuItem"
 import { useSelector, useDispatch } from "./store"
 import { Request, RequestType } from "./config"
 import { ToolbarDialog, CreateChatDialog } from "./Toolbar"
+import { useNetwork } from "./hooks"
 import { changeName, changeValue } from "./state/chat"
 import { reset } from "./state/login"
 
@@ -101,13 +102,12 @@ const SidebarRoot = styled.div`
 `
 
 
-export function Sidebar({ sendJsonMessage }: {
-  sendJsonMessage: (arg: Request) => void
-}) {
+export function Sidebar(props: {}) {
   const dispatch = useDispatch()
   const chatValue = useSelector(state => state.chat.value)
   const chatValues = useSelector(state => state.chat.values)
   const chatNames = useSelector(state => state.chat.names)
+  const { sendJsonMessage } = useNetwork()
 
   const [joinChatDialogOpen, setJoinChatDialogOpen] = useState(false)
   const [createChatDialogOpen, setCreateChatDialogOpen] = useState(false)
@@ -130,13 +130,12 @@ export function Sidebar({ sendJsonMessage }: {
             msg: ""
           })
         }} 
-        sendJsonMessage={sendJsonMessage} 
         typeNumber={RequestType.CTL_JOINS}
         typeString="join"
         open={joinChatDialogOpen}
         setOpen={setJoinChatDialogOpen}
       />
-      <CreateChatDialog sendJsonMessage={sendJsonMessage} open={createChatDialogOpen} setOpen={setCreateChatDialogOpen} />
+      <CreateChatDialog open={createChatDialogOpen} setOpen={setCreateChatDialogOpen} />
       <SidebarRoot>
         <List subheader={
           <ListSubheader component="div">
@@ -196,21 +195,21 @@ const Container = styled.div`
   flex: 1;
 `
 
-export function MainLayout({ chat, settings, sendJsonMessage }: {
+export function MainLayout({ chat, settings }: {
   chat: ReactNode,
-  settings: ReactNode,
-  sendJsonMessage: (arg: Request) => void
+  settings: ReactNode
 }) {
   const [index, setIndex] = useState(0)
   return (
     <Root>
-      <Sidebar sendJsonMessage={sendJsonMessage} />
+      <Sidebar />
       <Container>
         <NavBar onChange={(newIndex) => {
           setIndex(newIndex)
         }} />
         {{
-          0: chat
+          0: chat,
+          1: settings
         }[index]}
       </Container>
     </Root>

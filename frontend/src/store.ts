@@ -3,12 +3,14 @@ import { TypedUseSelectorHook, useDispatch as useRawDispatch, useSelector as use
 import loginReducer from "./state/login"
 import chatReducer from "./state/chat"
 import usernameReducer from './state/username'
+import messageReducer from "./state/message"
 
 const store = configureStore({
   reducer: {
     login: loginReducer,
     chat: chatReducer,
-    username: usernameReducer
+    username: usernameReducer,
+    message: messageReducer
   }
 })
 

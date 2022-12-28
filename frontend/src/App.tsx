@@ -5,24 +5,28 @@ import useWebSocket, { ReadyState } from "react-use-websocket"
 import localforage from "localforage"
 import {
   Route,
-  BrowserRouter,
-  Routes
+  createBrowserRouter,
+  createRoutesFromElements,
+  RouterProvider
 } from "react-router-dom"
 
 import Snackbar from "@mui/material/Snackbar"
 import Alert from "@mui/material/Alert"
 import AlertTitle from "@mui/material/AlertTitle"
 
-import { WEBSOCKET_PORT, RequestType, Request, RequestWithTime, WEBSOCKET_USE_PATH } from "./config"
-import { LoginDialog } from "./Form"
+import { WEBSOCKET_PORT, RequestType, Request, WEBSOCKET_USE_PATH } from "./config"
 import { Notification, notify } from "./Notification"
 import { useSelector, useDispatch } from './store'
+import { NetworkContext } from "./hooks"
 import { success, failed, LoginType, reset } from "./state/login"
 import { change as changeUsername } from "./state/username"
 import { changeName, changeAll } from "./state/chat"
+import { addMessage } from "./state/message"
 
 import Home from "./pages/Home"
 import Invite from "./pages/Invite"
+import Login from "./pages/Login"
+import Register from "./pages/Register"
 
 const GlobalStyle = createGlobalStyle`
   html {
@@ -85,7 +89,6 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
     ? `${protocol}://${location.hostname}:${WEBSOCKET_PORT}/` 
     : `${protocol}://${location.hostname}/ws/`
   ))
-  const [messageHistory, setMessageHistory] = useState<RequestWithTime[]>([])
   const dispatch = useDispatch()
   const loginStatus = useSelector(state => state.login.type)
 
@@ -105,12 +108,33 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
       setAlertContent(errorContent)
     }
   }
+  // number is RequestType
+  const [handleFunctionList, setHandleFunctionList] = useState<Record<string, Array<(value: Request) => void>>>({})
+
+  async function makeRequest(request: Request) {
+    sendJsonMessage(request)
+    return await new Promise<Request>(res => {
+      setHandleFunctionList(list => {
+        if (list[request.type] == undefined) {
+          list[request.type] = [res]
+        } else {
+          list[request.type].unshift(res)
+        }
+        return list
+      })
+    })
+  }
 
   useEffect(() => {
     const message = lastJsonMessage
     console.log({ message })
     if (message == null) return
-
+    const list = handleFunctionList[message.type]
+    if (list instanceof Array && list.length) {
+      list.pop()!(message)
+      setHandleFunctionList(handleFunctionList)
+      return
+    }
     switch (message.type) {
       case RequestType.CTL_LOGIN:
         if (message.uid) {
@@ -120,20 +144,14 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
           dispatch(failed())
         }
         break
-      case RequestType.CTL_TOKEN:
-        if (message.uid != null) {
-          dispatch(changeUsername(message.usrname))
-          dispatch(success())
-        } else {
-          localforage.removeItem("token")
-          dispatch(reset())
-        }
-        break
       case RequestType.MSG_SEND:
         if (loginStatus != LoginType.LOGIN_SUCCESS) break
-        setMessageHistory(messageHistory.concat({
-          time: new Date,
-          req: message
+        dispatch(addMessage({
+          chat: message.uid,
+          message: {
+            time: +new Date,
+            req: message
+          }
         }))
         notify(message.usrname, message.msg)
         break
@@ -175,15 +193,11 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
           "Unexpected error: You haven't quit the chat successfully. "
         )
         break
-      case RequestType.CTL_SNAME:
-        // This should be deprecated: use RequestType.CTL_LJOIN instead
-        dispatch(changeName(message.usrname))
-        break
       case RequestType.CTL_LJOIN:
         dispatch(changeAll(message.msg as any))
         break
     }
-  }, [lastMessage, setMessageHistory])
+  }, [lastMessage])
 
   useEffect(() => {
     if (readyState !== ReadyState.CLOSED) return
@@ -195,10 +209,10 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
   }, [readyState])
   
   return {
-    messageHistory,
     sendJsonMessage(req: Request) {
       sendJsonMessage(req as any)
     },
+    makeRequest: makeRequest,
     ready: readyState === ReadyState.OPEN,
     severity,
     alertTitle,
@@ -206,9 +220,20 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
   }
 }
 
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <>
+      <Route path="/" element={<Home />} />
+      <Route path="/chats/invite/:id" element={<Invite />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+    </>
+  )
+)
+
 function App() {
   const [alertOpen, setAlertOpen] = useState(false)
-  const { messageHistory, sendJsonMessage, ready, severity, alertTitle, alertContent } = useMessageWebSocket(setAlertOpen)
+  const { sendJsonMessage, makeRequest: makeRequest, ready, severity, alertTitle, alertContent } = useMessageWebSocket(setAlertOpen)
   const handleClose = () => {
     setAlertOpen(false)
   }
@@ -216,20 +241,20 @@ function App() {
     <Root>
       <GlobalStyle />
       <CssBaseline />
-      <Notification />
-      <LoginDialog sendJsonMessage={sendJsonMessage} />
-      <Snackbar open={alertOpen} autoHideDuration={6000} onClose={handleClose}>
-        <MyAlert onClose={handleClose} severity={severity}>
-          <AlertTitle>{alertTitle}</AlertTitle>
-          {alertContent}
-        </MyAlert>
-      </Snackbar>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home sendJsonMessage={sendJsonMessage} messageHistory={messageHistory} ready={ready} />} />
-          <Route path="/chat/invite/:id" element={<Invite sendJsonMessage={sendJsonMessage} ready={ready} />} />
-        </Routes>
-      </BrowserRouter>
+      <NetworkContext.Provider value={{
+        sendJsonMessage, 
+        ready,
+        makeRequest
+      }}>
+        <Notification />
+        <Snackbar open={alertOpen} autoHideDuration={6000} onClose={handleClose}>
+          <MyAlert onClose={handleClose} severity={severity}>
+            <AlertTitle>{alertTitle}</AlertTitle>
+            {alertContent}
+          </MyAlert>
+        </Snackbar>
+        <RouterProvider router={router} />
+      </NetworkContext.Provider>
     </Root>
   )
 }

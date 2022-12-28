@@ -20,7 +20,7 @@ export type Request = {
 }
 
 export interface RequestWithTime {
-  time: Date
+  time: number
   req: Request
 }
 

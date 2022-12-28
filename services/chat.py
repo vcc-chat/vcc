@@ -29,12 +29,12 @@ class Main:
             return None
         return chat.name
 
-    def get_users(self, id: int) -> list[int]:
+    def get_users(self, id: int) -> list[tuple[int, str]]:
         chat = Chat.get_or_none(Chat.id == id)
         if chat is None:
             return []
         chat_users = chat.chat_users
-        user_names = [chat_user.user.id for chat_user in chat_users]
+        user_names = [(chat_user.user.id, chat_user.user.name) for chat_user in chat_users]
         return user_names
 
     def join(self, chat_id: int, user_id: int) -> bool:
@@ -64,7 +64,7 @@ class Main:
         except:
             return False
 
-    def list(self) -> list[int]:
+    def chat_list(self) -> list[int]:
         warnings.warn(DeprecationWarning("chat_list is slow so that it shouldn't be used"))
         return [i.id for i in Chat.select()]
 

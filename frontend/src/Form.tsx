@@ -54,6 +54,4 @@ export const MyBackdrop = styled(Backdrop)`
   color: #fff;
 `
 
-export const MyDialog = styled(Dialog)`
-  backdrop-filter: blur(4px);
-`
+export const MyDialog = styled(Dialog)``

@@ -27,6 +27,7 @@ import Home from "./pages/Home"
 import Invite from "./pages/Invite"
 import Login from "./pages/Login"
 import Register from "./pages/Register"
+import Chat, { ChatChat, ChatSettings } from "./pages/Chat"
 
 const GlobalStyle = createGlobalStyle`
   html {
@@ -225,6 +226,10 @@ const router = createBrowserRouter(
     <>
       <Route path="/" element={<Home />} />
       <Route path="/chats/invite/:id" element={<Invite />} />
+      <Route path="/chats/:id/" element={<Chat />}>
+        <Route index element={<ChatChat />} />
+        <Route path="settings" element={<ChatSettings />} />
+      </Route>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
     </>

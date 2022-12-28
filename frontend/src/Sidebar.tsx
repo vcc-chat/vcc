@@ -1,6 +1,7 @@
 import styled from "styled-components"
 import { ReactNode, useState, useEffect } from "react"
 import localforage from "localforage"
+import { useNavigate } from "react-router-dom"
 
 import AppBar from "@mui/material/AppBar"
 import Typography from "@mui/material/Typography"
@@ -38,7 +39,7 @@ const PaddingTypography = styled(Typography)`
 ` as any
 
 export function NavBar({ onChange }: {
-  onChange: (arg0: number) => void
+  onChange: (arg0: string) => void
 }) {
   const chatName = useSelector(state => state.chat.name)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -52,12 +53,12 @@ export function NavBar({ onChange }: {
           {chatName}
         </PaddingTypography>
         <Button color="inherit" onClick={() => {
-          onChange(0)
+          onChange("")
         }}>
           Chat
         </Button>
         <Button color="inherit" onClick={() => {
-          onChange(1)
+          onChange("settings")
         }}>
           Settings
         </Button>
@@ -83,8 +84,12 @@ export function NavBar({ onChange }: {
           <MenuItem onClick={() => {
             (async () => {
               await localforage.removeItem("token")
-              dispatch(reset())
+              // dispatch(reset())
               setAnchorEl(null)
+              // TODO: backend doesn't provide an api for changing account, 
+              // So refreshing and make new websocket connection is required
+              // Change the behavior later
+              location.href = "/login"
             })()
           }}>Logout</MenuItem>
         </Menu>
@@ -104,6 +109,7 @@ const SidebarRoot = styled.div`
 
 export function Sidebar(props: {}) {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const chatValue = useSelector(state => state.chat.value)
   const chatValues = useSelector(state => state.chat.values)
   const chatNames = useSelector(state => state.chat.names)
@@ -116,6 +122,7 @@ export function Sidebar(props: {}) {
     return function () {
       dispatch(changeValue(value))
       dispatch(changeName(name))
+      navigate(`/chats/${value}`)
     }
   }
   return (
@@ -195,22 +202,19 @@ const Container = styled.div`
   flex: 1;
 `
 
-export function MainLayout({ chat, settings }: {
-  chat: ReactNode,
-  settings: ReactNode
+export function MainLayout({ children }: {
+  children: ReactNode
 }) {
-  const [index, setIndex] = useState(0)
+  const chatNumber = useSelector(state => state.chat.value)
+  const navigate = useNavigate()
   return (
     <Root>
       <Sidebar />
       <Container>
         <NavBar onChange={(newIndex) => {
-          setIndex(newIndex)
+          navigate(`/chats/${chatNumber}/${newIndex}`)
         }} />
-        {{
-          0: chat,
-          1: settings
-        }[index]}
+        {children}
       </Container>
     </Root>
   )

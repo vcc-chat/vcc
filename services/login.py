@@ -18,7 +18,7 @@ class Main:
     
     def register(self, username: str, password: str) -> bool:
         try:
-            User.create(name=username, password=password)
+            User(name=username, password=password).save()
             return True
         except:
             return False

@@ -18,6 +18,11 @@ class ChatUser(Model):
     id = BigAutoField(primary_key=True)
     user = ForeignKeyField(User, backref="chat_users")
     chat = ForeignKeyField(Chat, backref="chat_users")
+    # Permissions
+    # Kick other users in the chat
+    kick = BooleanField(default=False)
+    # Rename the chat
+    rename = BooleanField(default=False)
 
 def get_database():
     if "DATABASE" in os.environ:

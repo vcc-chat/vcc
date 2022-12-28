@@ -21,7 +21,17 @@ class Main:
         self._redis = redis.Redis()
 
     def create(self, name: str) -> int:
+        warnings.warn(DeprecationWarning("create is deprecated, use create_with_user instead"))
         return Chat.create(name=name).id
+
+    def create_with_user(self, name: str, user_id: int) -> int | None:
+        try:
+            new_chat = Chat.create(name=name)
+            user = User.get_by_id(user_id)
+            ChatUser.create(user=user, chat=new_chat, kick=True, rename=True)
+            return new_chat.id
+        except:
+            return None
 
     def get_name(self, id: int) -> str | None:
         chat = Chat.get_or_none(id=id)
@@ -59,6 +69,42 @@ class Main:
             self._redis.publish(f"messages:{chat_id}", json.dumps({
                 "username": SYSTEM_USER_NAME,
                 "msg": f"{user.name} has quit the chat."
+            }))
+            return True
+        except:
+            return False
+
+    def kick(self, chat_id: int, user_id: int, kicked_user_id: int) -> bool:
+        try:
+            chat = Chat.get_by_id(chat_id)
+            user = User.get_by_id(user_id)
+            kicked_user = User.get_by_id(kicked_user_id)
+            chat_user = ChatUser.get(chat=chat, user=user)
+            if not chat_user.kick:
+                return False
+            kicked_chat_user = ChatUser.get(chat=chat, user=kicked_user)
+            kicked_chat_user.delete_instance()
+            self._redis.publish(f"messages:{chat_id}", json.dumps({
+                "username": SYSTEM_USER_NAME,
+                "msg": f"{kicked_user.name} has been kicked."
+            }))
+            return True
+        except:
+            return False
+
+    
+    def rename(self, chat_id: int, user_id: int, new_name: str) -> bool:
+        try:
+            chat = Chat.get_by_id(chat_id)
+            user = User.get_by_id(user_id)
+            chat_user = ChatUser.get(chat=chat, user=user)
+            if not chat_user.rename:
+                return False
+            chat.name = new_name
+            chat.save()
+            self._redis.publish(f"messages:{chat_id}", json.dumps({
+                "username": SYSTEM_USER_NAME,
+                "msg": f"The chat has been renamed to {new_name}."
             }))
             return True
         except:

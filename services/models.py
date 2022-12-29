@@ -9,10 +9,14 @@ class User(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=16, unique=True)
     password = CharField(max_length=16)
+    # Permissions
+    login = BooleanField(default=True)
 
 class Chat(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=20)
+    # Permissions
+    public = BooleanField(default=True)
 
 class ChatUser(Model):
     id = BigAutoField(primary_key=True)
@@ -23,6 +27,12 @@ class ChatUser(Model):
     kick = BooleanField(default=False)
     # Rename the chat
     rename = BooleanField(default=False)
+    # Invite others to join the chat
+    invite = BooleanField(default=False)
+    # Modify self and other people's permission
+    modify_permission = BooleanField(default=False)
+    # Send messages
+    send = BooleanField(default=True)
 
 def get_database():
     if "DATABASE" in os.environ:

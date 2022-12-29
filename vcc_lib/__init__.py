@@ -216,6 +216,7 @@ class RpcExchangerClient:
             except Exception as e:
                 log.debug(e, exc_info=True)
                 raw_message = None
+            await asyncio.sleep(0.01)
         return username, msg, chat
 
     async def chat_create(self, name: str) -> int:

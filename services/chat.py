@@ -3,6 +3,7 @@
 import json
 
 from peewee import *
+from typing import Any, Literal
 
 import base
 import warnings
@@ -17,9 +18,23 @@ bind_model(ChatUser,db)
 
 SYSTEM_USER_NAME = "system"
 
+EventType = Literal["join", "quit", "kick", "rename", "invite"]
+
 class Main:
     def __init__(self):
-        self._redis = redis.Redis()
+        self._redis: redis.Redis[bytes] = redis.Redis()
+
+    def _send_message(self, chat: int, msg: str) -> None:
+        self._redis.publish(f"messages:{chat}", json.dumps({
+            "username": SYSTEM_USER_NAME,
+            "msg": msg
+        }))
+
+    def _send_event(self, chat: int, type: EventType, data: Any) -> None:
+        self._redis.publish(f"events:{chat}", json.dumps({
+            "type": type,
+            "data": data
+        }))
 
     @db.atomic()
     def create(self, name: str) -> int:
@@ -60,10 +75,11 @@ class Main:
                 return False
             user = User.get_by_id(user_id)
             ChatUser.get_or_create(chat=chat, user=user)
-            self._redis.publish(f"messages:{chat_id}", json.dumps({
-                "username": SYSTEM_USER_NAME,
-                "msg": f"{user.name} has joined the chat."
-            }))
+            self._send_message(chat_id, f"{user.name} has joined the chat.")
+            self._send_event(chat_id, "join", {
+                "user_name": user.name,
+                "user_id": user_id
+            })
             return True
         except:
             return False
@@ -75,10 +91,11 @@ class Main:
             user = User.get_by_id(user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
             chat_user.delete_instance()
-            self._redis.publish(f"messages:{chat_id}", json.dumps({
-                "username": SYSTEM_USER_NAME,
-                "msg": f"{user.name} has quit the chat."
-            }))
+            self._send_message(chat_id, f"{user.name} has quit the chat.")
+            self._send_event(chat_id, "quit", {
+                "user_name": user.name,
+                "user_id": user_id
+            })
             return True
         except:
             return False
@@ -94,10 +111,13 @@ class Main:
                 return False
             kicked_chat_user = ChatUser.get(chat=chat, user=kicked_user)
             kicked_chat_user.delete_instance()
-            self._redis.publish(f"messages:{chat_id}", json.dumps({
-                "username": SYSTEM_USER_NAME,
-                "msg": f"{kicked_user.name} has been kicked."
-            }))
+            self._send_message(chat_id, f"{kicked_user.name} has been kicked by {user.name}.")
+            self._send_event(chat_id, "kick", {
+                "user_name": user.name,
+                "user_id": user_id,
+                "kicked_user_name": kicked_user.name,
+                "kicked_user_id": kicked_user_id
+            })
             return True
         except:
             return False
@@ -110,12 +130,14 @@ class Main:
             chat_user = ChatUser.get(chat=chat, user=user)
             if not chat_user.rename:
                 return False
+            old_name = chat.name
             chat.name = new_name
             chat.save()
-            self._redis.publish(f"messages:{chat_id}", json.dumps({
-                "username": SYSTEM_USER_NAME,
-                "msg": f"The chat has been renamed to {new_name}."
-            }))
+            self._send_message(chat_id, f"The chat has been renamed {new_name}.")
+            self._send_event(chat_id, "rename", {
+                "old_name": old_name,
+                "new_name": new_name
+            })
             return True
         except:
             return False
@@ -135,10 +157,13 @@ class Main:
             except:
                 pass
             ChatUser.create(chat=chat, user=invited_user)
-            self._redis.publish(f"messages:{chat_id}", json.dumps({
-                "username": SYSTEM_USER_NAME,
-                "msg": f"{invited_user.name} has been invited by {user.name}."
-            }))
+            self._send_message(chat_id, f"{invited_user.name} has been invited by {user.name}.")
+            self._send_event(chat_id, "invite", {
+                "user_name": user.name,
+                "user_id": user_id,
+                "invited_user_name": invited_user.name,
+                "invited_user_id": invited_user_id
+            })
             return True
         except:
             return False

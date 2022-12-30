@@ -31,7 +31,7 @@ class Main:
         try:
             new_chat = Chat.create(name=name)
             user = User.get_by_id(user_id)
-            ChatUser.create(user=user, chat=new_chat, kick=True, rename=True)
+            ChatUser.create(user=user, chat=new_chat, kick=True, rename=True, invite=True, modify_permission=True)
             return new_chat.id
         except:
             return None
@@ -216,17 +216,11 @@ class Main:
             chat_users = chat.chat_users
             # TODO: change after adding permissions
             return {
-                chat_user.id: { name: getattr(chat_user, name) for name in ["kick", "rename", "invite", "modify_permission", "send"] }
+                chat_user.user.id: { name: getattr(chat_user, name) for name in ["kick", "rename", "invite", "modify_permission", "send"] }
                 for chat_user in chat_users
             }
         except:
             return {}
-
-
-    @db.atomic()
-    def chat_list(self) -> list[int]:
-        warnings.warn(DeprecationWarning("chat_list is slow so that it shouldn't be used"))
-        return [i.id for i in Chat.select()]
 
     @db.atomic()
     def list_somebody_joined(self, id: int) -> list[tuple[int, str]]:

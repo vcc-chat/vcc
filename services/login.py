@@ -14,13 +14,14 @@ User=models.bind_model(models.User,db)
 
 with open("config.json") as f:
     key: bytes = json.load(f)["key"].encode()
+    print(f"{key=}")
 
 class Main:
     @db.atomic()
     def login(self, username: str, password: str) -> int | None:
         if username == "system":
             return None
-        hashed_password = hmac.new(key, password, "sha512").hexdigest()
+        hashed_password = hmac.new(key, password.encode(), "sha512").hexdigest()
         user = User.get_or_none(User.name == username, User.password == hashed_password)
         if user is None:
             return None
@@ -32,7 +33,7 @@ class Main:
     def register(self, username: str, password: str) -> bool:
         if username == "system":
             return False
-        hashed_password = hmac.new(key, password, "sha512").hexdigest()
+        hashed_password = hmac.new(key, password.encode(), "sha512").hexdigest()
         try:
             User(name=username, password=hashed_password).save()
             return True

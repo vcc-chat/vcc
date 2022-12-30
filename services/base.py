@@ -41,9 +41,9 @@ class Service(Protocol):
             func = self.factory.funcs[data["service"]]
             try:
                 resp = func(**data["data"])
+                self.send({"type": "respond", "data": resp, "jobid": data["jobid"]})
             except TypeError:
                 self.send({"res": "error", "error": "wrong format"})
-            self.send({"type": "respond", "data": resp, "jobid": data["jobid"]})
 
 
 class RpcServiceFactory(ClientFactory):

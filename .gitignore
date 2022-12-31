@@ -1,0 +1,6 @@
+ssh-keys
+__pycache__
+*.pyc
+nohup.out
+.vscode
+*.save

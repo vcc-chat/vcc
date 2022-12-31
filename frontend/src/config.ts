@@ -12,7 +12,12 @@ export const enum RequestType {
   CTL_TOKEN = "token_login",
   CTL_USERS = "chat_get_users",
   CTL_RNAME = "chat_rename",
-  CTL_KICK = "chat_kick"
+  CTL_KICK = "chat_kick",
+  CTL_GPERM = "chat_get_all_permission",
+  CTL_MPERM = "chat_modify_user_permission",
+  CTL_GINVI = "chat_generate_invite",
+  CTL_CINVI = "chat_check_invite",
+  CTL_INVIT = "chat_invite"
 }
 
 export type Request = {

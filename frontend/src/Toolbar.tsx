@@ -66,9 +66,7 @@ export function ToolbarDialog({ afterJoin, typeNumber, typeString, open, setOpen
           if (chat === null) return
           sendJsonMessage({
             uid: chat,
-            type: typeNumber,
-            usrname: "",
-            msg: ""
+            type: typeNumber
           })
           setOpen(false)
           afterJoin(chat)
@@ -83,7 +81,7 @@ export function CreateChatDialog({ open, setOpen }: {
   setOpen: (arg0: boolean) => void
 }) {
   const [chatName, setChatName] = useState("")
-  const { sendJsonMessage } = useNetwork()
+  const { sendJsonMessage, makeRequest, successAlert, errorAlert } = useNetwork()
   return (
     <Dialog open={open}>
       <DialogTitle>Create chat</DialogTitle>
@@ -101,14 +99,20 @@ export function CreateChatDialog({ open, setOpen }: {
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setOpen(false)}>close</Button>
-        <Button onClick={() => {
+        <Button onClick={async () => {
           if (chatName === "") return
-          sendJsonMessage({
-            uid: 0,
+          const { uid } = await makeRequest({
             type: RequestType.CTL_NEWSE,
-            usrname: chatName,
-            msg: ""
+            usrname: chatName
           })
+          if (uid) {
+            successAlert("You have created the chat successfully. ")
+            sendJsonMessage({
+              type: RequestType.CTL_LJOIN
+            })
+          } else {
+            errorAlert("Unexpected error: You haven't created the chat successfully. ")
+          }
           setOpen(false)
         }}>create</Button>
       </DialogActions>
@@ -119,14 +123,14 @@ export function CreateChatDialog({ open, setOpen }: {
 
 export function Toolbar(props: {}) {
   const dispatch = useDispatch()
-  const { sendJsonMessage } = useNetwork()
+  const { sendJsonMessage, makeRequest, successAlert, errorAlert } = useNetwork()
   const chat = useSelector(state => state.chat.value)
   const chats = useSelector(state => state.chat.values)
   const loginStatus = useSelector(state => state.login.type)
   return (
     <>
       <ToolbarRoot ariaLabel="toolbar" icon={<SpeedDialIcon />} hidden={loginStatus != LoginType.LOGIN_SUCCESS || chat == null}>
-        <SpeedDialAction icon={<GroupRemoveOutlinedIcon />} tooltipTitle="quit chat" onClick={() => {
+        <SpeedDialAction icon={<GroupRemoveOutlinedIcon />} tooltipTitle="quit chat" onClick={async () => {
           if (chat == null) return
           dispatch(removeChat(chat))
           if (chats.length) {
@@ -134,17 +138,17 @@ export function Toolbar(props: {}) {
           } else {
             dispatch(changeChat(null))
           }
-          sendJsonMessage({
+          const { uid } = await makeRequest({
             uid: chat,
-            type: RequestType.CTL_QUITS,
-            usrname: "",
-            msg: ""
+            type: RequestType.CTL_QUITS
           })
+          if (uid) {
+            successAlert("You have quit the chat successfully. ")
+          } else {
+            errorAlert("Unexpected error: You haven't quit the chat successfully. ")
+          }
           sendJsonMessage({
-            uid: 0,
-            type: RequestType.CTL_LJOIN,
-            usrname: "",
-            msg: ""
+            type: RequestType.CTL_LJOIN
           })
         }} />
       </ToolbarRoot>

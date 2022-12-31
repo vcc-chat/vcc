@@ -22,6 +22,7 @@ import ListSubheader from "@mui/material/ListSubheader"
 import Tooltip from "@mui/material/Tooltip"
 import Menu from "@mui/material/Menu"
 import MenuItem from "@mui/material/MenuItem"
+import TuneIcon from '@mui/icons-material/Tune'
 import useMediaQuery from "@mui/material/useMediaQuery"
 import { useTheme } from "@mui/material/styles"
 
@@ -45,14 +46,12 @@ const RightSpaceIconButton = styled(IconButton)`
   margin-right: 0.1em;
 `
 
-export function NavBar({ onChange, toggle }: {
-  onChange: (arg0: string) => void,
+export function NavBar({ toggle }: {
   toggle: () => void
 }) {
   const chatName = useSelector(state => state.chat.name)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const menuOpen = !!anchorEl
-  const dispatch = useDispatch()
   // 0 is chat, 1 is settings
   return (
     <AppBar position="static">
@@ -69,16 +68,6 @@ export function NavBar({ onChange, toggle }: {
         <PaddingTypography variant="h6" component="div">
           {chatName}
         </PaddingTypography>
-        <Button color="inherit" onClick={() => {
-          onChange("")
-        }}>
-          Chat
-        </Button>
-        <Button color="inherit" onClick={() => {
-          onChange("settings")
-        }}>
-          Settings
-        </Button>
         <RightIconButton 
           size="large"
           aria-haspopup="true"
@@ -154,16 +143,21 @@ export function Sidebar({ open, setOpen }: {
       setOpen(false)
     }
   }
+  function settingsClickHandler(value: number, name: string) {
+    return function () {
+      dispatch(changeValue(value))
+      dispatch(changeName(name))
+      navigate(`/chats/${value}/settings`)
+      setOpen(false)
+    }
+  }
   return (
     <>
       <ToolbarDialog
         afterJoin={chat => {
           dispatch(changeValue(chat))
           sendJsonMessage({
-            uid: 0,
-            type: RequestType.CTL_LJOIN,
-            usrname: "",
-            msg: ""
+            type: RequestType.CTL_LJOIN
           })
         }} 
         typeNumber={RequestType.CTL_JOINS}
@@ -208,7 +202,11 @@ export function Sidebar({ open, setOpen }: {
           </ListSubheader>
         }>
           {chatValues.map((value, index) => (
-            <ListItem disablePadding key={value}>
+            <ListItem disablePadding key={value} secondaryAction={
+              <IconButton edge="end" onClick={settingsClickHandler(value, chatNames[index])}>
+                <TuneIcon />
+              </IconButton>
+            }>
               <Tooltip title={`id: ${value}`}>
                 <ListItemButton onClick={clickHandler(value, chatNames[index])} selected={value === chatValue}>
                   <ListItemText primary={chatNames[index]} />
@@ -237,17 +235,12 @@ const Container = styled.div`
 export function MainLayout({ children }: {
   children: ReactNode
 }) {
-  const chatNumber = useSelector(state => state.chat.value)
-  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   return (
     <Root>
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       <Container>
         <NavBar 
-          onChange={(newIndex) => {
-            navigate(`/chats/${chatNumber}/${newIndex}`)
-          }} 
           toggle={() => setSidebarOpen(!sidebarOpen)}
         />
         {children}

@@ -24,8 +24,17 @@ export const useSelector: TypedUseSelectorHook<RootState> = useRawSelector
 
 let messagesCached: RequestWithTime[] = []
 
-export async function saveMessage(msg: RequestWithTime) {
-  messagesCached.push(msg)
+function copy<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj))
+}
+
+export async function saveMessage(msgRaw: RequestWithTime) {
+  const msg: RequestWithTime = copy(msgRaw)
+  if (msg.req.usrname == messagesCached.at(-1)?.req.usrname) {
+    messagesCached.at(-1)!.req.msg += `\n${msg.req.msg}`
+  } else {
+    messagesCached.push(msg)
+  }
   await localforage.setItem("messages", messagesCached)
 }
 
@@ -34,9 +43,9 @@ export async function restoreMessage() {
   let messages: Record<number, RequestWithTime[]> = {}
   for (const i of messagesCached) {
     if (messages[i.req.uid]) {
-      messages[i.req.uid].push(i)
+      messages[i.req.uid].push(copy(i))
     } else {
-      messages[i.req.uid] = [i]
+      messages[i.req.uid] = [copy(i)]
     }
   }
   return messages

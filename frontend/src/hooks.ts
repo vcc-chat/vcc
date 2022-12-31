@@ -1,64 +1,54 @@
-import { useEffect, createContext, useContext } from "react"
-import { useNavigate } from "react-router-dom"
-import localforage from "localforage"
-
-import { useDispatch, useSelector } from "./store"
-import { reset, success, LoginType } from "./state/login"
-import { change as changeUsername } from "./state/username"
+import { createContext, useContext } from "react"
 import { RequestType, Request } from "./config"
 
 export const NetworkContext = createContext<{
   sendJsonMessage: ((arg0: Request) => void) | null,
   ready: boolean,
-  makeRequest: ((arg0: Request) => Promise<Request>) | null
+  makeRequest: ((arg0: Request) => Promise<Request>) | null,
+  successAlert: ((msg: string) => void) | null,
+  errorAlert: ((msg: string) => void) | null
 }>({
   sendJsonMessage: null, 
   ready: false, 
-  makeRequest: null 
+  makeRequest: null,
+  successAlert: null,
+  errorAlert: null
 })
 
 export function useNetwork() {
-  const { sendJsonMessage, ready, makeRequest } = useContext(NetworkContext)!
-  return {
-    sendJsonMessage: sendJsonMessage!,
-    ready,
-    makeRequest: makeRequest!
+  const { sendJsonMessage: sendJsonMessageRaw, ready, makeRequest: makeRequestRaw, successAlert, errorAlert } = useContext(NetworkContext)!
+  function makeRequest(request: {
+    type: RequestType,
+    uid?: number,
+    usrname?: string,
+    msg?: string
+  }) {
+    return makeRequestRaw!({
+      type: request.type,
+      uid: request.uid ?? 0,
+      usrname: request.usrname ?? "",
+      msg: request.msg ?? ""
+    })
   }
-}
-
-export function useAuth(jumpToLogin: boolean = true) {
-  const { makeRequest } = useNetwork()
-  const dispatch = useDispatch()
-  const navigate = useNavigate()
-  const loginStatus = useSelector(state => state.login.type)
-
-  useEffect(() => {
-    (async () => {
-      const token = await localforage.getItem("token")
-      if (typeof token == "string") {
-        const req = await makeRequest({
-          type: RequestType.CTL_TOKEN,
-          uid: 0,
-          usrname: "",
-          msg: token
-        })
-        if (req.uid != null) {
-          dispatch(changeUsername(req.usrname))
-          dispatch(success())
-        } else {
-          localforage.removeItem("token")
-          dispatch(reset())
-        }
-      } else {
-        dispatch(reset())
-      }
-    })()
-  }, [])
-
-  useEffect(() => {
-    if (jumpToLogin && loginStatus == LoginType.NOT_LOGIN) {
-      navigate("/login")
-    }
-  }, [loginStatus])
+  function sendJsonMessage(request: {
+    type: RequestType,
+    uid?: number,
+    usrname?: string,
+    msg?: string
+  }) {
+    return sendJsonMessageRaw!({
+      type: request.type,
+      uid: request.uid ?? 0,
+      usrname: request.usrname ?? "",
+      msg: request.msg ?? ""
+    })
+  }
+  return {
+    sendJsonMessage,
+    ready,
+    makeRequest,
+    successAlert: successAlert!,
+    errorAlert: errorAlert!
+  }
 }
 

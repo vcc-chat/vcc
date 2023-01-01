@@ -37,15 +37,20 @@ class Main:
         }))
 
     @db.atomic()
-    def create(self, name: str) -> int:
-        warnings.warn(DeprecationWarning("create is deprecated, use create_with_user instead"))
-        return Chat.create(name=name).id
-
-    @db.atomic()
-    def create_with_user(self, name: str, user_id: int) -> int | None:
+    def create_with_user(self, name: str, user_id: int, parent_chat_id: int) -> int | None:
+        # parent_chat_id is -1 if the chat has no parent
         try:
-            new_chat = Chat.create(name=name)
             user = User.get_by_id(user_id)
+            if parent_chat_id == -1:
+                new_chat = Chat.create(name=name, parent=None)
+            else:
+                parent_chat = Chat.get_by_id(parent_chat_id)
+                if parent_chat.parent is not None:
+                    # Only 2 levels are allowed
+                    return None
+                # Make sure creator has already joined the parent chat
+                ChatUser.get(user=user, chat=parent)
+                new_chat = Chat.create(name=name, parent=parent_chat)
             ChatUser.create(user=user, chat=new_chat, kick=True, rename=True, invite=True, modify_permission=True)
             return new_chat.id
         except:
@@ -60,6 +65,7 @@ class Main:
 
     @db.atomic()
     def get_users(self, id: int) -> list[tuple[int, str]]:
+        # Won't return users of sub-chats
         chat = Chat.get_or_none(Chat.id == id)
         if chat is None:
             return []
@@ -74,6 +80,12 @@ class Main:
             if not chat.public:
                 return False
             user = User.get_by_id(user_id)
+            if chat.parent is not None:
+                parent_chat = chat.parent
+                if not parent_chat.public:
+                    return False
+                # Also join parent chat
+                ChatUser.get_or_create(chat=parent_chat, user=user)
             ChatUser.get_or_create(chat=chat, user=user)
             self._send_message(chat_id, f"{user.name} has joined the chat.")
             self._send_event(chat_id, "join", {
@@ -89,6 +101,10 @@ class Main:
         try:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
+            if chat.sub_chats.exists():
+                for i in chat.sub_chats.join(ChatUser).where(ChatUser.chat == Chat.id).where(ChatUser.user == user).execute():
+                    # Users must quit any sub chat first, and we you help them to quit
+                    i.chat_user.delete_instance()
             chat_user = ChatUser.get(chat=chat, user=user)
             chat_user.delete_instance()
             self._send_message(chat_id, f"{user.name} has quit the chat.")
@@ -108,8 +124,17 @@ class Main:
             kicked_user = User.get_by_id(kicked_user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
             if not chat_user.kick:
-                return False
+                parent_chat = chat.parent
+                if parent_chat is None:
+                    return False
+                parent_chat_user = ChatUser.get(chat=parent_chat, user=user)
+                if not parent_chat_user.kick:
+                    return False
             kicked_chat_user = ChatUser.get(chat=chat, user=kicked_user)
+            if chat.sub_chats.exists():
+                for i in chat.sub_chats.join(ChatUser).where(ChatUser.chat == Chat.id).where(ChatUser.user == kicked_user).execute():
+                    # Kick him from any sub-chat
+                    i.chat_user.delete_instance()
             kicked_chat_user.delete_instance()
             self._send_message(chat_id, f"{kicked_user.name} has been kicked by {user.name}.")
             self._send_event(chat_id, "kick", {
@@ -129,7 +154,12 @@ class Main:
             user = User.get_by_id(user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
             if not chat_user.rename:
-                return False
+                parent_chat = chat.parent
+                if parent_chat is None:
+                    return False
+                parent_chat_user = ChatUser.get(chat=parent_chat, user=user)
+                if not parent_chat_user.rename:
+                    return False
             old_name = chat.name
             chat.name = new_name
             chat.save()
@@ -156,6 +186,13 @@ class Main:
                 return False
             except:
                 pass
+            if chat.parent is not None:
+                parent_chat = chat.parent
+                parent_chat_user = ChatUser.get(chat=chat.parent, user=user)
+                if not parent_chat_user.invite or parent_chat.public:
+                    return False
+                # Also join parent chat
+                ChatUser.get_or_create(chat=parent_chat, user=user)
             ChatUser.create(chat=chat, user=invited_user)
             self._send_message(chat_id, f"{invited_user.name} has been invited by {user.name}.")
             self._send_event(chat_id, "invite", {
@@ -174,6 +211,7 @@ class Main:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
+            # Needn't check parent chat user
             return chat_user.send
         except:
             return False
@@ -187,7 +225,12 @@ class Main:
             modified_user = User.get_by_id(modified_user_id)
             modified_chat_user = ChatUser.get(chat=chat, user=modified_user)
             if not chat_user.modify_permission:
-                return False
+                parent_chat = chat.parent
+                if parent_chat is None:
+                    return False
+                parent_chat_user = ChatUser.get(chat=parent_chat, user=user)
+                if not parent_chat_user.modify_permission:
+                    return False
             if not hasattr(modified_chat_user, name) or not isinstance(getattr(modified_chat_user, name), bool):
                 return False
             # Maybe dangerous
@@ -204,7 +247,12 @@ class Main:
             user = User.get_by_id(user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
             if not chat_user.modify_permission:
-                return False
+                parent_chat = chat.parent
+                if parent_chat is None:
+                    return False
+                parent_chat_user = ChatUser.get(chat=parent_chat, user=user)
+                if not parent_chat_user.modify_permission:
+                    return False
             if not hasattr(chat, name) or not isinstance(getattr(chat, name), bool):
                 return False
             # Maybe dangerous
@@ -254,6 +302,15 @@ class Main:
             user = User.get_by_id(id)
             chat_users = user.chat_users
             return [(chat_user.chat.id, chat_user.chat.name) for chat_user in chat_users]
+        except:
+            return []
+
+    @db.atomic()
+    def list_sub_chats(self, id: int) -> list[tuple[int, str]]:
+        try:
+            chat = Chat.get_by_id(id)
+            sub_chats = chat.sub_chats
+            return [(i.id, i.name) for i in sub_chats]
         except:
             return []
 

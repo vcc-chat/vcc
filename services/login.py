@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import hmac
+import random
+import string
 import json
 
 from peewee import *
@@ -12,20 +14,25 @@ db = models.get_database()
 
 User=models.bind_model(models.User,db)
 
-with open("config.json") as f:
-    key: bytes = json.load(f)["key"].encode()
-    print(f"{key=}")
 
+
+def random_string(length:int)->str:
+    return "".join(
+        random.SystemRandom().choice(string.ascii_letters + string.digits)
+        for _ in range(length)
+    )
 class Main:
     @db.atomic()
     def login(self, username: str, password: str) -> int | None:
         if username == "system":
             return None
-        hashed_password = hmac.new(key, password.encode(), "sha512").hexdigest()
-        user = User.get_or_none(User.name == username, User.password == hashed_password)
+        user = User.get_or_none(User.name == username)
         if user is None:
             return None
         if not user.login:
+            return None
+        hashed_password = hmac.new(user.salt.encode(), password.encode(), "sha512").hexdigest()
+        if hashed_password!=user.password:
             return None
         return user.id
     
@@ -33,9 +40,9 @@ class Main:
     def register(self, username: str, password: str) -> bool:
         if username == "system":
             return False
-        hashed_password = hmac.new(key, password.encode(), "sha512").hexdigest()
+        hashed_password = hmac.new((salt:=random_string(10)).encode(), password.encode(), "sha512").hexdigest()
         try:
-            User(name=username, password=hashed_password).save()
+            User(name=username, password=hashed_password,salt=salt).save()
             return True
         except:
             return False

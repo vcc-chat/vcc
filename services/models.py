@@ -9,12 +9,15 @@ class User(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=16, unique=True)
     password = CharField(max_length=16)
+    salt= CharField()
     # Permissions
     login = BooleanField(default=True)
 
 class Chat(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=20)
+    # Parent chat
+    parent = ForeignKeyField("self", backref="sub_chats")
     # Permissions
     public = BooleanField(default=True)
 

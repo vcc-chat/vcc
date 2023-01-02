@@ -128,9 +128,19 @@ class RpcExchanger:
                 "data": data,
                 "jobid": self._jobid
             }).encode())
-            decode_str = (await loop.sock_recv(self._sock, 67)).decode()
-            self._jobid = json.loads(decode_str)["next_jobid"]
+            json_res = json.loads((data:=await loop.sock_recv(self._sock, 65535)).decode())
+            print(data)
+            self._jobid = json_res["next_jobid"]
+            if json_res["res"]!="ok":
+                match json_res["error"]:
+                    case "no such service":
+                        raise RpcException("no such service {service}")
+                    case "invalid request data type":
+                        raise TypeError("invalid request data type")
+                    case _:
+                        raise UnknownError()
             decode_str = (await loop.sock_recv(self._sock, 65536)).decode()
+            print(decode_str)
             return json.loads(decode_str)["data"]
 
     def get_redis_instance(self) -> redis.Redis:

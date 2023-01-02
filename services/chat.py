@@ -49,7 +49,7 @@ class Main:
                     # Only 2 levels are allowed
                     return None
                 # Make sure creator has already joined the parent chat
-                ChatUser.get(user=user, chat=parent)
+                ChatUser.get(user=user, chat=parent_chat)
                 new_chat = Chat.create(name=name, parent=parent_chat)
             ChatUser.create(user=user, chat=new_chat, kick=True, rename=True, invite=True, modify_permission=True)
             return new_chat.id

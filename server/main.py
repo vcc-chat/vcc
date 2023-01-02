@@ -12,7 +12,7 @@ class RpcProtocol(protocol.Protocol):
         self.factory: RpcServer = factory
         self.name=None
     def send(self, data):
-        self.transport.write(bytes(json.dumps(data), "UTF8"))
+        self.transport.write(bytes(json.dumps(data)+"\n", "UTF8"))
 
     def dataReceived(self, data):
         try:
@@ -34,10 +34,10 @@ class RpcProtocol(protocol.Protocol):
                     )
                     ret = "ok"
                 except (KeyError, TypeError) as e:
-                    print(e)
+                    print(e.args)
+                    error=e.args[0]
                     ret = "err"
-
-                ret = {"res": ret, "next_jobid": str(uuid.uuid4())}
+                ret = {"res": ret,"next_jobid": str(uuid.uuid4())}|({"error":error} if ret=="err" else {})
                 self.send(ret)
             case _:
                 self.send({"res": "error", "error": "invalid request"})
@@ -82,20 +82,22 @@ class RpcServer(protocol.Factory):
         self.builtin_service=BuiltinService(self,{"list_providers":self.list_providers})
     def make_request(self, client:RpcProtocol, service:str, data:dict, jobid:str):
         service=service.split("/")
+        if service[0] not in self.services or service[1] not in self.services[service[0]]:
+            raise KeyError("no such service")
         try:
-            # verify type
+                #verify type
             if len(self.services[service[0]][service[1]])>0:
                 valid: bool = reduce(
                     lambda a, b: a and b[0][0] == b[1][0] and b[0][1] == type(b[1][1]).__name__,
                     zip_longest(*[sorted(c.items()) for c in [self.services[service[0]][service[1]], data]]), True,
                 )
                 if not valid:
-                    raise TypeError("Invalid request data type")
+                    raise TypeError("invalid request data type")
             self.promises[jobid] = client
             self.providers[service[0]].make_request(service[1], data, jobid)
-        except KeyError as e:
-            print(traceback.format_exc())
-            raise KeyError("No such service")
+        except Exception as e:
+            traceback.print_exc()
+            raise e
     def make_respond(self, jobid, data):
         self.promises[jobid].make_respond(jobid, data)
         del self.promises[jobid]

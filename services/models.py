@@ -26,7 +26,7 @@ class ChatUser(Model):
     user = ForeignKeyField(User, backref="chat_users")
     chat = ForeignKeyField(Chat, backref="chat_users")
     # Permissions
-    permissions = BitField(default=16)
+    permissions = BitField(default=80)
     # Kick other users in the chat
     kick = permissions.flag(1)
     # Rename the chat
@@ -37,6 +37,10 @@ class ChatUser(Model):
     modify_permission = permissions.flag(8)
     # Send messages
     send = permissions.flag(16)
+    # Create sub-chats
+    create_sub_chat = permissions.flag(32)
+    # Create sessions
+    create_session = permissions.flag(64)
 
 def get_database():
     if "DATABASE" in os.environ:

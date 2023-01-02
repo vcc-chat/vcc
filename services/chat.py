@@ -20,6 +20,9 @@ SYSTEM_USER_NAME = "system"
 
 EventType = Literal["join", "quit", "kick", "rename", "invite"]
 
+all_user_permissions = ["kick", "rename", "invite", "modify_permission", "send", "create_sub_chat", "create_session"]
+all_chat_permissions = ["public"]
+
 class Main:
     def __init__(self):
         self._redis: redis.Redis[bytes] = redis.Redis()
@@ -49,9 +52,11 @@ class Main:
                     # Only 2 levels are allowed
                     return None
                 # Make sure creator has already joined the parent chat
-                ChatUser.get(user=user, chat=parent_chat)
+                parent_chat_user = ChatUser.get(user=user, chat=parent_chat)
+                if not parent_chat_user.create_sub_chat:
+                    return None
                 new_chat = Chat.create(name=name, parent=parent_chat)
-            ChatUser.create(user=user, chat=new_chat, kick=True, rename=True, invite=True, modify_permission=True)
+            ChatUser.create(user=user, chat=new_chat, permissions=(1 << 16) - 1)
             return new_chat.id
         except:
             return None
@@ -217,6 +222,18 @@ class Main:
             return False
 
     @db.atomic()
+    def check_create_session(self, chat_id: int, user_id: int) -> bool:
+        try:
+            chat = Chat.get_by_id(chat_id)
+            if chat.parent is None:
+                return False
+            user = User.get_by_id(user_id)
+            chat_user = ChatUser.get(chat=chat, user=user)
+            return chat_user.create_session
+        except:
+            return False
+
+    @db.atomic()
     def modify_user_permission(self, chat_id: int, user_id: int, modified_user_id: int, name: str, value: bool) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
@@ -231,7 +248,7 @@ class Main:
                 parent_chat_user = ChatUser.get(chat=parent_chat, user=user)
                 if not parent_chat_user.modify_permission:
                     return False
-            if not hasattr(modified_chat_user, name) or not isinstance(getattr(modified_chat_user, name), bool):
+            if name not in all_user_permissions:
                 return False
             # Maybe dangerous
             setattr(modified_chat_user, name, value)
@@ -253,7 +270,7 @@ class Main:
                 parent_chat_user = ChatUser.get(chat=parent_chat, user=user)
                 if not parent_chat_user.modify_permission:
                     return False
-            if not hasattr(chat, name) or not isinstance(getattr(chat, name), bool):
+            if name not in all_chat_permissions:
                 return False
             # Maybe dangerous
             setattr(chat, name, value)
@@ -268,8 +285,7 @@ class Main:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
-            # TODO: change after adding permissions
-            return {i: getattr(chat_user, i) for i in ["kick", "rename", "invite", "modify_permission", "send"]}
+            return {i: getattr(chat_user, i) for i in all_user_permissions}
         except:
             return {}
         
@@ -277,8 +293,7 @@ class Main:
     def get_permission(self, chat_id: int) -> dict[str, bool]:
         try:
             chat = Chat.get_by_id(chat_id)
-            # TODO: change after adding permissions
-            return {i: getattr(chat, i) for i in ["public"]}
+            return {i: getattr(chat, i) for i in all_chat_permissions}
         except:
             return {}
     
@@ -287,9 +302,8 @@ class Main:
         try:
             chat = Chat.get_by_id(chat_id)
             chat_users = chat.chat_users
-            # TODO: change after adding permissions
             return {
-                chat_user.user.id: { name: getattr(chat_user, name) for name in ["kick", "rename", "invite", "modify_permission", "send"] }
+                chat_user.user.id: { name: getattr(chat_user, name) for name in all_user_permissions }
                 for chat_user in chat_users
             }
         except:

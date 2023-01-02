@@ -119,6 +119,16 @@ class RpcExchanger:
         }))
         log.debug(f"{username=} {msg=} {chat=}")
 
+    async def sock_recvline(self):
+        loop = asyncio.get_event_loop()
+        data=""
+        while 1:
+            recv=await loop.sock_recv(self._sock,1)
+
+            if recv!=b'\n':
+                data+=recv.decode()
+            else:
+                return data
     async def rpc_request(self, service: str, data: Any) -> Any:
         loop = asyncio.get_event_loop()
         async with self._lock:
@@ -128,8 +138,7 @@ class RpcExchanger:
                 "data": data,
                 "jobid": self._jobid
             }).encode())
-            json_res = json.loads((data:=await loop.sock_recv(self._sock, 65535)).decode())
-            print(data)
+            json_res = json.loads(data:=await self.sock_recvline())
             self._jobid = json_res["next_jobid"]
             if json_res["res"]!="ok":
                 match json_res["error"]:
@@ -139,8 +148,7 @@ class RpcExchanger:
                         raise TypeError("invalid request data type")
                     case _:
                         raise UnknownError()
-            decode_str = (await loop.sock_recv(self._sock, 65536)).decode()
-            print(decode_str)
+            decode_str = await self.sock_recvline()
             return json.loads(decode_str)["data"]
 
     def get_redis_instance(self) -> redis.Redis:

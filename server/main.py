@@ -61,28 +61,41 @@ class RpcProtocol(protocol.Protocol):
         data = {"type": "resp", "data": data, "jobid": jobid}
         self.send(data)
 
+class BuiltinService():
+    def __init__(self,factory,functions:dict,name:str="rpc"):
+        self.factory=factory
+        self.factory.providers[name]=self
+        self.functions=functions
+        self.factory.services[name]={key:{} for key in self.functions.keys()}
 
+    def make_request(self, service, data, jobid):
+        self.factory.make_respond(jobid,self.functions[service]())
 class RpcServer(protocol.Factory):
-    services = {}
-    providers = {}
+    services = {} # map providers to services
+    providers = {} # map service name to actual instance
     promises = {}
 
+    def list_providers(self) -> list:
+        return list(self.providers.keys())
+    def __init__(self):
+        super()
+        self.builtin_service=BuiltinService(self,{"list_providers":self.list_providers})
     def make_request(self, client:RpcProtocol, service:str, data:dict, jobid:str):
         service=service.split("/")
         try:
             # verify type
-            valid: bool = reduce(
-                lambda a, b: a and b[0][0] == b[1][0] and b[0][1] == type(b[1][1]).__name__,
-                zip_longest(*[sorted(c.items()) for c in [self.services[service[0]][service[1]], data]]), True,
-            )
-            if not valid:
-                raise TypeError("Invalid request data type")
+            if len(self.services[service[0]][service[1]])>0:
+                valid: bool = reduce(
+                    lambda a, b: a and b[0][0] == b[1][0] and b[0][1] == type(b[1][1]).__name__,
+                    zip_longest(*[sorted(c.items()) for c in [self.services[service[0]][service[1]], data]]), True,
+                )
+                if not valid:
+                    raise TypeError("Invalid request data type")
+            self.promises[jobid] = client
             self.providers[service[0]].make_request(service[1], data, jobid)
         except KeyError as e:
             print(traceback.format_exc())
             raise KeyError("No such service")
-        self.promises[jobid] = client
-
     def make_respond(self, jobid, data):
         self.promises[jobid].make_respond(jobid, data)
         del self.promises[jobid]

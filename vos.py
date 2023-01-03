@@ -38,7 +38,7 @@ def async_wrapper(func):
     evloop = asyncio.get_event_loop()
 
     def wrapper(*args):
-        return evloop.create_task(func(*args))
+        return evloop.run_until_complete(func(*args))
 
     return wrapper
 
@@ -102,7 +102,7 @@ class mainapp:
         async for msg in self.client:
 
             if msg[0] != "event":
-                username, msg, chat = msg[1:]
+                username, msg, chat, session = msg[1:]
                 if chat == self.current_chat[0]:
                     text = HTML(f"<ansiblue>{username}</ansiblue>:\n    {msg}\n")
                     lens = len(text.value.split("\n")) - 1
@@ -186,13 +186,13 @@ class mainapp:
             self.app = app
             app: prompt_toolkit.Application
 
-        await app.run_async()
+            await app.run_async()
 
     @async_wrapper
     async def send_message(self, buffer: Buffer):
         if buffer.text == "":
             return
-        await self.client.send(buffer.text, self.current_chat[0])
+        await self.client.send(buffer.text, self.current_chat[0], None)
 
     @async_wrapper
     async def create_chat(self):

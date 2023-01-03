@@ -229,5 +229,6 @@ class ExampleFactory(factory.SSHFactory):
 
 
 if __name__ == "__main__":
+    vos.init()
     reactor.listenTCP(5022, ExampleFactory())
     reactor.run()

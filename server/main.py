@@ -28,30 +28,19 @@ class RpcProtocol(protocol.Protocol):
             case "respond" if self.role == "service":
                 self.factory.make_respond(data["jobid"], data["data"])
             case "request" if self.role == "client":
-                try:
-                    self.factory.make_request(
-                        self, data["service"], data["data"], data["jobid"]
-                    )
-                    ret = "ok"
-                except (KeyError, TypeError) as e:
-                    print(e.args)
-                    error=e.args[0]
-                    ret = "err"
-                ret = {"res": ret,"next_jobid": str(uuid.uuid4())}|({"error":error} if ret=="err" else {})
-                self.send(ret)
+                self.factory.make_request(
+                    self, data["service"], data["data"], data["jobid"]
+                )
             case _:
                 self.send({"res": "error", "error": "invalid request"})
                 return
     def do_handshake(self, data):
         self.role=data["role"]
-        if data["role"] == "client":
-            initial_jobid = uuid.uuid4()
-            self.send({"res": "ok", "initial_jobid": str(initial_jobid)})
-        elif data["role"] == "service":
+        if data["role"] == "service":
             self.name=data['name']
             self.factory.services[self.name]=data["services"]
             self.factory.providers[self.name]=self
-            self.send({"res": "ok"})
+        self.send({"res": "ok"})
 
     def make_request(self, service, data, jobid):
         data = {"type": "call", "service": service, "data": data, "jobid": jobid}
@@ -83,10 +72,9 @@ class RpcServer(protocol.Factory):
     def make_request(self, client:RpcProtocol, service:str, data:dict, jobid:str):
         service=service.split("/")
         if service[0] not in self.services or service[1] not in self.services[service[0]]:
-            raise KeyError("no such service")
+            self.send({"res": "error", "error": "no such service"})
         try:
-                #verify type
-            if len(self.services[service[0]][service[1]])>0:
+            if self.services[service[0]][service[1]]:
                 valid: bool = reduce(
                     lambda a, b: a and b[0][0] == b[1][0] and b[0][1] == type(b[1][1]).__name__,
                     zip_longest(*[sorted(c.items()) for c in [self.services[service[0]][service[1]], data]]), True,
@@ -94,10 +82,11 @@ class RpcServer(protocol.Factory):
                 if not valid:
                     raise TypeError("invalid request data type")
             self.promises[jobid] = client
-            self.providers[service[0]].make_request(service[1], data, jobid)
-        except Exception as e:
+        except:
             traceback.print_exc()
-            raise e
+            self.send({"res": "error", "error": "unknown error"})
+        else:
+            self.providers[service[0]].make_request(service[1], data, jobid)
     def make_respond(self, jobid, data):
         self.promises[jobid].make_respond(jobid, data)
         del self.promises[jobid]

@@ -6,6 +6,7 @@ import socket
 import logging
 import json
 import warnings
+import uuid
 
 from functools import wraps
 from redis.asyncio.client import PubSub
@@ -75,14 +76,13 @@ class RpcExchanger:
     """Low-level api which is hard to use"""
     _sock: socket.socket
     _redis: redis.Redis
-    _jobid: str
     def __init__(self) -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(("0.0.0.0", 0))
         self._sock = sock
-        self._lock = asyncio.Lock()
 
         self._redis = redis.Redis(host="localhost")
+        self._responses: dict[str, Any] = {}
         self.rpc = RpcExchangerRpcHandler(self)
 
     def __enter__(self) -> RpcExchanger:
@@ -90,7 +90,7 @@ class RpcExchanger:
         sock = self._sock
         sock.connect(("127.0.0.1", 2474))
         sock.send(b'{"type": "handshake","role": "client"}')
-        self._jobid = json.loads(sock.recv(65536).decode())["initial_jobid"]
+        sock.recv(65536)
         sock.setblocking(False)
         return self
 
@@ -105,7 +105,7 @@ class RpcExchanger:
         sock.setblocking(False)
         await loop.sock_connect(sock, ("127.0.0.1", 2474))
         await loop.sock_sendall(sock, b'{"type": "handshake","role": "client"}')
-        self._jobid = json.loads((await loop.sock_recv(sock, 65536)).decode())["initial_jobid"]
+        await loop.sock_recv(sock, 65536)
         return self
 
     async def __aexit__(self, *args) -> None:
@@ -125,7 +125,7 @@ class RpcExchanger:
     async def sock_recvline(self):
         loop = asyncio.get_event_loop()
         data=""
-        while 1:
+        while True:
             recv=await loop.sock_recv(self._sock,1)
 
             if recv!=b'\n':
@@ -134,25 +134,35 @@ class RpcExchanger:
                 return data
     async def rpc_request(self, service: str, data: Any) -> Any:
         loop = asyncio.get_event_loop()
-        async with self._lock:
-            await loop.sock_sendall(self._sock, json.dumps({
-                "type": "request",
-                "service": service,
-                "data": data,
-                "jobid": self._jobid
-            }).encode())
-            json_res = json.loads(data:=await self.sock_recvline())
-            self._jobid = json_res["next_jobid"]
-            if json_res["res"]!="ok":
-                match json_res["error"]:
-                    case "no such service":
-                        raise RpcException("no such service {service}")
-                    case "invalid request data type":
-                        raise TypeError("invalid request data type")
-                    case _:
-                        raise UnknownError()
-            decode_str = await self.sock_recvline()
-            return json.loads(decode_str)["data"]
+        new_uuid = str(uuid.uuid4())
+        await loop.sock_sendall(self._sock, json.dumps({
+            "type": "request",
+            "service": service,
+            "data": data,
+            "jobid": new_uuid
+        }).encode())
+        while True:
+            if new_uuid in self._responses:
+                json_res = self._responses[new_uuid]
+                del self._responses[new_uuid]
+                break
+            json_res = json.loads(await self.sock_recvline())
+            print(json_res)
+            if json_res["jobid"] == new_uuid:
+                break
+            else:
+                self._responses[json_res["jobid"]] = json_res
+        if "error" in json_res:
+            match json_res["error"]:
+                case "no such service":
+                    raise RpcException("no such service {service}")
+                case "invalid request data type":
+                    raise TypeError("invalid request data type")
+                case "wrong format":
+                    raise TypeError("wrong format")
+                case _:
+                    raise UnknownError()
+        return json_res["data"]
 
     def get_redis_instance(self) -> redis.Redis:
         return self._redis

@@ -59,10 +59,12 @@ class RpcExchangerRpcHandler:
 class RedisMessage(TypedDict):
     username: str
     msg: str
+    # TODO: add NotRequired after upgrading to python3.11
+    session: str
 
 Event = Literal["join", "quit", "kick", "rename", "invite"]
 
-MessageCallback = Callable[[str, str, int], None | Awaitable[None]]
+MessageCallback = Callable[[str, str, int, str | None], None | Awaitable[None]]
 EventCallback = Callable[[Event, Any, int], None | Awaitable[None]]
 
 class RedisEvent(TypedDict):
@@ -111,11 +113,12 @@ class RpcExchanger:
         self._sock.shutdown(socket.SHUT_RDWR)
         self._sock.close()
 
-    async def send_msg(self, username: str, msg: str, chat: int) -> None:
+    async def send_msg(self, username: str, msg: str, chat: int, session: str | None=None) -> None:
         log.debug(f"messages:{chat}")
         await self._redis.publish(f"messages:{chat}", json.dumps({
             "username": username,
-            "msg": msg
+            "msg": msg,
+            **({} if session is None else {"session": session})
         }))
         log.debug(f"{username=} {msg=} {chat=}")
 
@@ -160,6 +163,7 @@ class RpcExchanger:
 class RpcExchangerClient:
     _exchanger: RpcExchanger
     _chat_list: set[int]
+    _session_list: set[tuple[int, str]]
     _uid: int | None
     _username: str | None
     _pubsub_raw: PubSub
@@ -180,6 +184,7 @@ class RpcExchangerClient:
     def __init__(self, exchanger: RpcExchanger) -> None:
         self._exchanger = exchanger
         self._chat_list = set()
+        self._session_list = set()
         self._uid = None
         self._username = None
         self._pubsub_raw = self._exchanger.get_redis_instance().pubsub()
@@ -216,20 +221,17 @@ class RpcExchangerClient:
         if chat in self._chat_list:
             raise ChatAlreadyJoinedError()
 
-    async def send(self, msg: str, chat: int) -> None:
+    async def send(self, msg: str, chat: int, session: str | None) -> None:
         self.check_authorized()
         self.check_joined(chat)
-        if self._username is None:
-            raise NotAuthorizedError()
+        if session is not None and (chat, session) not in self._session_list:
+            raise ChatNotJoinedError()
         if not await self._rpc.chat.check_send(chat_id=chat, user_id=self._uid):
             raise PermissionDeniedError()
-        await self._exchanger.send_msg(self._username, msg, chat)    
+        await self._exchanger.send_msg(cast(str, self._username), msg, chat, session)    
     
-    async def recv(self) -> tuple[Literal["message"], str, str, int] | tuple[Literal["event"], Event, Any, int]:
+    async def recv(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
         raw_message: Any = None
-        username = ""
-        msg = ""
-        chat = -1
 
         while True:
             while not self._chat_list:
@@ -243,11 +245,16 @@ class RpcExchangerClient:
                 json_content_untyped: Any = json.loads(raw_message["data"].decode())
                 if raw_message["channel"].startswith(b"messages"):
                     json_message: RedisMessage = json_content_untyped
+                    session: str | None = None
                     username = json_message["username"]
                     msg = json_message["msg"]
                     chat = int(raw_message["channel"][9:])
-                    log.debug(f"{username=} {msg=} {chat=}")
-                    return "message", username, msg, chat
+                    if "session" in json_message:
+                        session = json_message["session"]
+                        if (chat, session) not in self._session_list:
+                            continue
+                    log.debug(f"{username=} {msg=} {chat=} {session=}")
+                    return "message", username, msg, chat, session
                 elif raw_message["channel"].startswith(b"events"):
                     json_content: RedisEvent = json_content_untyped
                     type = json_content["type"]
@@ -267,6 +274,14 @@ class RpcExchangerClient:
                 log.debug(e, exc_info=True)
                 raw_message = None
                 await asyncio.sleep(0.01)
+
+    async def session_join(self, name: str, chat_id: int) -> bool:
+        self.check_authorized()
+        self.check_joined(chat_id)
+        result = await self._rpc.chat.check_create_session(chat_id=chat_id, user_id=self._uid)
+        if result:
+            self._session_list.add((chat_id, name))
+        return result
 
     async def chat_create(self, name: str, parent_chat_id: int=-1) -> int:
         """Create a new chat, user will join the chat created after creating"""
@@ -312,7 +327,7 @@ class RpcExchangerClient:
             await self._pubsub.unsubscribe(f"messages:{id}")
             await self._pubsub.unsubscribe(f"events:{id}")
         async with self._chat_list_lock:
-            self._chat_list.remove(id)
+            self._chat_list.discard(id)
         return True
 
     async def chat_list_somebody_joined(self) -> list[tuple[int, str, int | None]]:
@@ -392,7 +407,7 @@ class RpcExchangerClient:
     def __aiter__(self) -> RpcExchangerClient:
         return self
 
-    async def __anext__(self) -> tuple[Literal["message"], str, str, int] | tuple[Literal["event"], Event, Any, int]:
+    async def __anext__(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
         return await self.recv()
 
     async def __aenter__(self) -> RpcExchangerClient:
@@ -427,9 +442,9 @@ class RpcExchangerClient:
     async def run_forever(self):
         async for result in self:
             if result[0] == "message":
-                _, username, msg, chat = result
+                _, username, msg, chat, session = result
                 if self._msg_callback is not None:
-                    returned = self._msg_callback(username, msg, chat)
+                    returned = self._msg_callback(username, msg, chat, session)
                     if isinstance(returned, Awaitable):
                         await returned
             else:

@@ -103,7 +103,9 @@ class Main:
                 parent_chat_user = ChatUser.get_or_create(chat=parent_chat, user=user)
                 if parent_chat_user.banned:
                     return False
-            ChatUser.get_or_create(chat=chat, user=user)
+            chat_user = ChatUser.get_or_create(chat=chat, user=user)
+            if chat_user.banned:
+                return False
             self._send_message(chat_id, f"{user.name} has joined the chat.")
             self._send_event(chat_id, "join", {
                 "user_name": user.name,

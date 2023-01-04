@@ -20,7 +20,17 @@ SYSTEM_USER_NAME = "system"
 
 EventType = Literal["join", "quit", "kick", "rename", "invite"]
 
-all_user_permissions = ["kick", "rename", "invite", "modify_permission", "send", "create_sub_chat", "create_session"]
+all_user_permissions = [
+    "kick",
+    "rename",
+    "invite",
+    "modify_permission",
+    "send",
+    "create_sub_chat",
+    "create_session",
+    "ban",
+    "banned"
+]
 all_chat_permissions = ["public"]
 
 class Main:
@@ -53,10 +63,10 @@ class Main:
                     return None
                 # Make sure creator has already joined the parent chat
                 parent_chat_user = ChatUser.get(user=user, chat=parent_chat)
-                if not parent_chat_user.create_sub_chat:
+                if not parent_chat_user.create_sub_chat or parent_chat_user.banned:
                     return None
                 new_chat = Chat.create(name=name, parent=parent_chat)
-            ChatUser.create(user=user, chat=new_chat, permissions=(1 << 16) - 1)
+            ChatUser.create(user=user, chat=new_chat, permissions=1 | 2 | 4 | 8 | 16 | 32 | 64 | 128)
             return new_chat.id
         except:
             return None
@@ -90,7 +100,9 @@ class Main:
                 if not parent_chat.public:
                     return False
                 # Also join parent chat
-                ChatUser.get_or_create(chat=parent_chat, user=user)
+                parent_chat_user = ChatUser.get_or_create(chat=parent_chat, user=user)
+                if parent_chat_user.banned:
+                    return False
             ChatUser.get_or_create(chat=chat, user=user)
             self._send_message(chat_id, f"{user.name} has joined the chat.")
             self._send_event(chat_id, "join", {
@@ -108,7 +120,7 @@ class Main:
             user = User.get_by_id(user_id)
             if chat.sub_chats.exists():
                 for i in chat.sub_chats.join(ChatUser).where(ChatUser.chat == Chat.id).where(ChatUser.user == user).execute():
-                    # Users must quit any sub chat first, and we you help them to quit
+                    # Users must quit any sub chat first, and we help them to quit
                     i.chat_user.delete_instance()
             chat_user = ChatUser.get(chat=chat, user=user)
             chat_user.delete_instance()
@@ -128,6 +140,8 @@ class Main:
             user = User.get_by_id(user_id)
             kicked_user = User.get_by_id(kicked_user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
+            if chat_user.banned:
+                return False
             if not chat_user.kick:
                 parent_chat = chat.parent
                 if parent_chat is None:
@@ -158,6 +172,8 @@ class Main:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
+            if chat_user.banned:
+                return False
             if not chat_user.rename:
                 parent_chat = chat.parent
                 if parent_chat is None:
@@ -184,9 +200,12 @@ class Main:
             user = User.get_by_id(user_id)
             invited_user = User.get_by_id(invited_user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
+            if chat_user.banned:
+                return False
             if not chat_user.invite or chat.public:
                 return False
             try:
+                # Include banned
                 ChatUser.get(chat=chat, user=invited_user)
                 return False
             except:
@@ -217,7 +236,7 @@ class Main:
             user = User.get_by_id(user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
             # Needn't check parent chat user
-            return chat_user.send
+            return chat_user.send and not chat_user.banned
         except:
             return False
 
@@ -229,7 +248,7 @@ class Main:
                 return False
             user = User.get_by_id(user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
-            return chat_user.create_session
+            return chat_user.create_session and not chat_user.banned
         except:
             return False
 
@@ -241,6 +260,8 @@ class Main:
             chat_user = ChatUser.get(chat=chat, user=user)
             modified_user = User.get_by_id(modified_user_id)
             modified_chat_user = ChatUser.get(chat=chat, user=modified_user)
+            if chat_user.banned:
+                return False
             if not chat_user.modify_permission:
                 parent_chat = chat.parent
                 if parent_chat is None:
@@ -263,6 +284,8 @@ class Main:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
+            if chat_user.banned:
+                return False
             if not chat_user.modify_permission:
                 parent_chat = chat.parent
                 if parent_chat is None:
@@ -285,6 +308,8 @@ class Main:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
             chat_user = ChatUser.get(chat=chat, user=user)
+            if chat_user.banned:
+                return False
             return {i: getattr(chat_user, i) for i in all_user_permissions}
         except:
             return {}
@@ -314,7 +339,7 @@ class Main:
         # after json.dumps, tuple returned will become json Array
         try:
             user = User.get_by_id(id)
-            chat_users = user.chat_users
+            chat_users = user.chat_users.where(~ChatUser.banned).join(Chat).select(Chat.id, Chat.name, Chat.parent).execute()
             return [(chat_user.chat.id, chat_user.chat.name, None if chat_user.chat.parent is None else chat_user.chat.parent.id) for chat_user in chat_users]
         except:
             return []

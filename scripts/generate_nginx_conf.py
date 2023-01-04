@@ -5,12 +5,10 @@ import sys
 ENVIRON_PREFIX = "WEBVCC_"
 
 SERVER = """
-root /app/static
+root /app/static;
 index index.html;
 server_name SERVERNAME;
 
-limit_conn conn 20;
-limit_req zone=req burst=10;
 location / {
         limit_except GET HEAD POST {
                 deny all;
@@ -33,19 +31,21 @@ location /ws/ {
 """
 
 TEMPLATE = """
-server {
-        CONTENT
-        LISTEN
-}
+
+    server {
+            CONTENT
+            LISTEN
+   }
+
 """
 
 NOSSL = """
-listen 80
+listen HTTPPORT;
 """
 
 SSL = """
-listen [::]:443 ssl http2 ipv6only=on;
-listen 443 ssl http2;
+listen [::]:HTTPSPORT ssl http2 ipv6only=on;
+listen HTTPSPORT ssl http2;
 ssl_certificate SSL_CERT;
 ssl_certificate_key SSL_KEY;
 ssl_dhparam SSL_DHPARAM;
@@ -73,7 +73,21 @@ else:
 TEMPLATE = TEMPLATE.replace("CONTENT", SERVER)
 if (value := os.environ.get(ENVIRON_PREFIX + "SERVERNAME")) == None:
     raise RuntimeError
+
+if (value := os.environ.get(ENVIRON_PREFIX + "HTTPPORT")) !=None:
+    TEMPLATE = TEMPLATE.replace("HTTPPORT", value)
+else:
+    TEMPLATE = TEMPLATE.replace("HTTPPORT", "80")
+
+
+if (value := os.environ.get(ENVIRON_PREFIX + "HTTPSPORT")) !=None:
+    TEMPLATE = TEMPLATE.replace("HTTPSPORT", value)
+else:
+    TEMPLATE = TEMPLATE.replace("HTTPSPORT", "443")
+
+
 TEMPLATE = TEMPLATE.replace("SERVERNAME", os.environ.get(ENVIRON_PREFIX + "SERVERNAME"))
+
 
 if len(sys.argv)==2:
     open(sys.argv[1],"w").write(TEMPLATE)

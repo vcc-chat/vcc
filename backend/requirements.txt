@@ -26,3 +26,4 @@ vcc-lib
 watchdog==2.1.9
 wcwidth==0.2.5
 websockets==10.3
+PyJWT

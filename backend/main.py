@@ -1,11 +1,14 @@
 from typing import Any, NamedTuple, cast
 
+import os
 import asyncio
 import json
 import logging
+import uuid
 
 try:
     import uvloop # I dont want to install this thing in the fucking docker because it needs gcc
+    uvloop.install()
 except:
     pass
 import jwt
@@ -15,7 +18,13 @@ from websockets.server import WebSocketServerProtocol, serve as websocket_serve
 from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
 from vcc import RpcExchanger, RpcExchangerClient, PermissionDeniedError
 
-with open("config.json") as config_file:
+confpath="config.json"
+if (path:=os.environ.get("WEBVCC_CONFPATH"))!=None:
+    confpath=path
+
+if not os.path.exists(confpath):
+    json.dump({"key":str(uuid.uuid4())},open(confpath,"w"))
+with open(confpath) as config_file:
     config = json.load(config_file)
     key = config["key"]
 
@@ -195,6 +204,4 @@ async def main() -> None:
         async with websocket_serve(lambda ws: loop(ws, exchanger), "", 7000):
             logging.info("started: ws://localhost:7000")
             await asyncio.Future()
-
-uvloop.install()
 asyncio.run(main())

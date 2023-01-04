@@ -90,7 +90,7 @@ class RpcExchanger:
         # you should not use this, use async version instead
         sock = self._sock
         sock.connect(("127.0.0.1", 2474))
-        sock.send(b'{"type": "handshake","role": "client"}')
+        sock.send(b'{"type": "handshake","role": "client"}\r\n')
         sock.recv(65536)
         sock.setblocking(False)
         return self
@@ -105,7 +105,7 @@ class RpcExchanger:
         sock = self._sock
         sock.setblocking(False)
         await loop.sock_connect(sock, ("127.0.0.1", 2474))
-        await loop.sock_sendall(sock, b'{"type": "handshake","role": "client"}')
+        await loop.sock_sendall(sock, b'{"type": "handshake","role": "client"}\r\n')
         await loop.sock_recv(sock, 65536)
         return self
 
@@ -130,9 +130,10 @@ class RpcExchanger:
             while True:
                 recv=await loop.sock_recv(self._sock,1)
 
-                if recv!=b'\n':
+                if recv!=b'\r':
                     data+=recv
                 else:
+                    await loop.sock_recv(self._sock,1) # \n
                     return data.decode()
     async def rpc_request(self, service: str, data: Any) -> Any:
         loop = asyncio.get_event_loop()
@@ -142,7 +143,7 @@ class RpcExchanger:
             "service": service,
             "data": data,
             "jobid": new_uuid
-        }).encode())
+        }).encode() + b"\r\n")
         logging.debug(f"{service=}{data=}")
         while True:
             if new_uuid in self._responses:
@@ -150,6 +151,9 @@ class RpcExchanger:
                 del self._responses[new_uuid]
                 break
             json_res = json.loads(await self.sock_recvline())
+            if "jobid" not in json_res:
+                logging.debug(f"{json_res=}")
+                raise RpcException("packets so fast")
             if json_res["jobid"] == new_uuid:
                 break
             else:

@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react"
 import { useNavigate, Form } from "react-router-dom"
-import TextField from "@mui/material/TextField"
-import DialogActions from "@mui/material/DialogActions"
-import DialogContent from "@mui/material/DialogContent"
-import DialogContentText from "@mui/material/DialogContentText"
-import DialogTitle from "@mui/material/DialogTitle"
+import {
+  TextField,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle
+} from "@mui/material"
 
 import { LoginButton, MyDialog } from "../Form"
 import { RequestType, Request } from "../config"
 import { useSelector, useDispatch } from "../store"
-import { useNetwork } from "../hooks"
+import { useNetwork } from "../tools"
 import { useRegisterActionData } from "../loaders"
 import { LoginType } from "../state/login"
 

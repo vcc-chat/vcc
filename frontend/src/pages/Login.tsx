@@ -2,14 +2,16 @@
 import { useEffect, useState } from "react"
 import { useNavigate, Form } from "react-router-dom"
 import localforage from "localforage"
-import PureButton from "@mui/material/Button"
-import TextField from "@mui/material/TextField"
-import Dialog from "@mui/material/Dialog"
-import DialogActions from "@mui/material/DialogActions"
-import DialogContent from "@mui/material/DialogContent"
-import DialogContentText from "@mui/material/DialogContentText"
-import DialogTitle from "@mui/material/DialogTitle"
-import CircularProgress from "@mui/material/CircularProgress"
+import {
+  Button as PureButton,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  CircularProgress
+} from "@mui/material"
 
 import { LoginButton, MyBackdrop, MyDialog } from "../Form"
 import { useSelector, useDispatch } from "../store"

@@ -6,10 +6,12 @@ import logging
 
 try:
     import uvloop # I dont want to install this thing in the fucking docker because it needs gcc
+    uvloop.install()
 except:
     pass
 import jwt
 
+from uuid import uuid4
 from datetime import datetime, timedelta, timezone
 from websockets.server import WebSocketServerProtocol, serve as websocket_serve
 from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
@@ -21,15 +23,17 @@ with open("config.json") as config_file:
 
 async def recv_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClient) -> None:
     try:
-        async for type, username, msg, chat in client:
-            if type == "event":
+        async for result in client:
+            if result[0] == "event":
                 continue
+            _, username, msg, chat, session = result
             logging.debug(f"{username=} {msg=} {chat=}")
             json_msg = json.dumps({
                 "type": "message",
                 "uid": chat,
                 "usrname": username,
-                "msg": msg
+                "msg": msg,
+                "session": session
             })
             if username == "system" and ("kick" in msg or "rename" in msg):
                 await websocket.send(json.dumps({
@@ -50,17 +54,18 @@ async def recv_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
 async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClient) -> None:
     try:
         async for json_msg in websocket:
+            json_result = json.loads(json_msg)
+            username: str = json_result["usrname"]
+            uid: int = json_result["uid"]
+            msg: str = json_result["msg"]
             async def send(type: str, *, uid: int=0, username: str="", msg: str="") -> None:
                 await websocket.send(json.dumps({
                     "type": type,
                     "uid": uid,
                     "usrname": username,
-                    "msg": msg
+                    "msg": msg,
+                    "uuid": str(uuid4()) if json_result.get("uuid") is None else json_result["uuid"]
                 }))
-            json_result = json.loads(json_msg)
-            username: str = json_result["usrname"]
-            uid: int = json_result["uid"]
-            msg: str = json_result["msg"]
             match json_result["type"]:
                 case "login":
                     login_result = await client.login(username, msg)
@@ -77,10 +82,6 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                         uid=cast(Any, None if login_result is None else int(login_result)),
                         msg=token
                     )
-                    if login_result is not None:
-                        value = await client.chat_list()
-                        logging.debug(f"{value=}")
-                        await send("chat_list_somebody_joined", msg=cast(Any, value))
                 case "token_login":
                     try:
                         result = jwt.decode(msg, key, ["HS512"])
@@ -94,24 +95,27 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                         # Dangerous! Don't do it in your own project.
                         client._uid = new_uid
                         client._username = new_username
-                        value = await client.chat_list()
-                        logging.debug(f"{value=}")
-                        await send("chat_list_somebody_joined", msg=cast(Any, value))
-                    except (jwt.DecodeError, KeyError):
+                        await client.add_online()
+                    except (jwt.DecodeError, KeyError) as e:
+                        print(e)
                         await send(
                             "token_login",
                             uid=cast(Any, None),
                             username=""
                         )
+                case "is_online":
+                    await send("is_online", msg=cast(Any, await client.is_online(cast(Any, msg))))
                 case "register":
                     await send("register", uid=int(await client.register(username, msg)))
                 case "message":
                     try:
-                        await client.send(msg, uid)
+                        await client.send(msg, uid, cast(Any, json_result)["session"] if "session" in json_result else None)
                     except PermissionDeniedError:
                         pass
+                case "session_join":
+                    await send("session_join", uid=await client.session_join(msg, uid))
                 case "chat_create":
-                    await send("chat_create", uid=await client.chat_create(username))
+                    await send("chat_create", uid=await client.chat_create(username, -1 if uid == 0 else uid))
                 case "chat_join":
                     # also return session name
                     join_successfully = await client.chat_join(uid)
@@ -136,7 +140,13 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                     await send("chat_modify_user_permission", uid=int(await client.chat_modify_user_permission(data["chat_id"], data["modified_user_id"], data["name"], data["value"])))
                 case "chat_get_all_permission":
                     await send("chat_get_all_permission", msg=cast(Any, await client.chat_get_all_permission(uid)))
+                case "chat_get_permission":
+                    await send("chat_get_permission", msg=cast(Any, await client.chat_get_permission(uid)))
+                case "chat_modify_permission":
+                    await send("chat_modify_permission", uid=int(await client.chat_modify_permission(uid, username, bool(msg))))
                 case "chat_generate_invite":
+                    if uid not in client._chat_list:
+                        raise PermissionDeniedError()
                     token = jwt.encode({
                         "": [uid, client.uid],
                         "exp": datetime.now(tz=timezone.utc) + timedelta(days=14)
@@ -179,7 +189,8 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
 async def loop(websocket: WebSocketServerProtocol, exchanger: RpcExchanger) -> None:
     send_loop_task: asyncio.Task[None]
     recv_loop_task: asyncio.Task[None]
-    remote_ip: str = websocket.remote_address[0]
+    websocket.request_headers
+    remote_ip: str = websocket.request_headers["X-Real-IP"] if websocket.remote_address[0] == "127.0.0.1" else websocket.remote_address[0]
     logging.info(f"{websocket.id}:{remote_ip} connected")
     async with exchanger.create_client() as client:
         send_loop_task = asyncio.create_task(send_loop(websocket, client))
@@ -196,5 +207,4 @@ async def main() -> None:
             logging.info("started: ws://localhost:7000")
             await asyncio.Future()
 
-uvloop.install()
 asyncio.run(main())

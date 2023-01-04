@@ -1,4 +1,4 @@
-import styled from "styled-components"
+import styled from "@emotion/styled"
 import { Link as RawLink, useRouteError, isRouteErrorResponse } from "react-router-dom"
 
 const Root = styled.div`

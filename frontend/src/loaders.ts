@@ -12,6 +12,7 @@ import { RequestType } from "./config"
 import store from "./store"
 import { change as changeUsername } from "./state/username"
 import { success, reset, LoginType } from "./state/login"
+import { queryClient } from "./tools"
 
 export function wait() {
   return new Promise<void>(res=>setTimeout(res, 0))
@@ -79,13 +80,13 @@ export async function inviteLoader({ request }: LoaderFunctionArgs) {
 }
 
 export async function chatLoader() {
-  return await authLoader()
+  return authLoader()
 }
 
 export async function chatAction({ params, request }: ActionFunctionArgs) {
   const { id: chatString } = params
-  const { msg } = Object.fromEntries(await request.formData())
-  console.log({ chatString, msg })
+  const { msg, session } = Object.fromEntries(await request.formData())
+  console.log({ chatString, msg, session })
   if (chatString == null || msg == null || typeof msg != "string") {
     throw badRequest()
   }
@@ -97,12 +98,22 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
     uid: chat,
     type: RequestType.MSG_SEND,
     usrname: "",
-    msg: msg
+    msg: msg,
+    session: (session == "" ? null : session) as unknown as string
   })
   return null
 }
 
-export async function settingsLoader({ params }: LoaderFunctionArgs) {
+export async function settingsIndexLoader({ params }: LoaderFunctionArgs) {
+  const { id } = params
+  return redirect(`/chats/${id}/settings/null`)
+}
+
+export async function settingsLoader() {
+  return await authLoader()
+}
+
+export async function settingsInfoLoader({ params }: LoaderFunctionArgs) {
   const authResult = await authLoader()
   if (authResult.status != 200) return authResult
 
@@ -112,26 +123,9 @@ export async function settingsLoader({ params }: LoaderFunctionArgs) {
   const chat = parseInt(chatString, 10)
   if (Number.isNaN(chat)) throw badRequest()
 
-  const [users, permission, inviteLink] = await Promise.all([
-    (async () => {
-      const { msg } = await window.makeRequest({
-        type: RequestType.CTL_USERS,
-        uid: chat,
-        usrname: "",
-        msg: ""
-      })
-      return msg as unknown as [number, string][]
-    })(),
-    (async () => {
-      const { msg } = await window.makeRequest({
-        type: RequestType.CTL_GPERM,
-        uid: chat,
-        usrname: "",
-        msg: ""
-      })
-      return msg as unknown as Record<number, Record<string, boolean>>
-    })(),
-    (async () => {
+  const inviteLink = await queryClient.fetchQuery({
+    queryKey: ["get-invite-link", chat],
+    queryFn: async () => {
       const { msg } = await window.makeRequest({
         type: RequestType.CTL_GINVI,
         uid: chat,
@@ -139,15 +133,91 @@ export async function settingsLoader({ params }: LoaderFunctionArgs) {
         msg: ""
       })
       return `/chats/invite/?token=${msg}`
-    })()
-  ])
-  return json({ users, permission, inviteLink })
+    }
+  })
+  return json({ inviteLink })
 }
 
-export function useSettingsLoaderData() {
+export async function settingsUsersLoader({ params }: LoaderFunctionArgs) {
+  const authResult = await authLoader()
+  if (authResult.status != 200) return authResult
+
+  const { id: chatString } = params
+  if (chatString === undefined) throw badRequest()
+
+  const chat = parseInt(chatString, 10)
+  if (Number.isNaN(chat)) throw badRequest()
+
+  const [users, permission] = await Promise.all([
+    queryClient.fetchQuery({
+      queryKey: ["user-list", chat],
+      queryFn: async () => {
+        const { msg } = await window.makeRequest({
+          type: RequestType.CTL_USERS,
+          uid: chat,
+          usrname: "",
+          msg: ""
+        })
+        return msg as unknown as [number, string][]
+      }
+    }),
+    queryClient.fetchQuery({
+      queryKey: ["user-permission", chat],
+      queryFn: async () => {
+        const { msg } = await window.makeRequest({
+          type: RequestType.CTL_GPERM,
+          uid: chat,
+          usrname: "",
+          msg: ""
+        })
+        return msg as unknown as Record<number, Record<string, boolean>>
+      }
+    })
+  ])
+  console.log({ users, permission })
+  return json({ users, permission })
+}
+
+export async function settingsActionsLoader({ params }: LoaderFunctionArgs) {
+  const authResult = await authLoader()
+  if (authResult.status != 200) return authResult
+
+  const { id: chatString } = params
+  if (chatString === undefined) throw badRequest()
+
+  const chat = parseInt(chatString, 10)
+  if (Number.isNaN(chat)) throw badRequest()
+
+  const a = await queryClient.fetchQuery({
+    queryKey: ["chat-public", chat],
+    queryFn: async () => {
+      const { msg } = await window.makeRequest({
+        type: RequestType.CTL_GCPER,
+        uid: chat,
+        usrname: "",
+        msg: ""
+      })
+      return msg as unknown as Record<string, boolean>
+    }
+  })
+  return json({ public_: a.public })
+}
+
+export function useSettingsActionsLoaderData() {
+  return useLoaderData() as {
+    public_: boolean
+  }
+}
+
+export function useSettingsUsersLoaderData() {
   return useLoaderData() as {
     users: [number, string][]
     permission: Record<number, Record<string, boolean>>
+  }
+}
+
+export function useSettingsInfoLoaderData() {
+  return useLoaderData() as {
     inviteLink: string
   }
 }

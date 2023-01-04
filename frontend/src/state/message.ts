@@ -21,12 +21,7 @@ const messageSlice = createSlice({
       if (Object.hasOwn(state.value, chat)) {
         const messages = state.value[chat]
         const lastMessage = messages.at(-1)!
-        if (lastMessage.req.usrname == message.req.usrname) {
-          lastMessage.req.msg += `\n${message.req.msg}`
-          lastMessage.time = message.time
-        } else {
-          messages.push(message)
-        }
+        messages.push(message)
       } else {
         state.value[chat] = [message]
       }

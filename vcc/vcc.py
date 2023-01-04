@@ -83,6 +83,7 @@ class RpcExchanger:
 
         self._redis = redis.Redis(host="localhost")
         self._responses: dict[str, Any] = {}
+        self._recv_lock = asyncio.Lock()
         self.rpc = RpcExchangerRpcHandler(self)
 
     def __enter__(self) -> RpcExchanger:
@@ -124,14 +125,15 @@ class RpcExchanger:
 
     async def sock_recvline(self):
         loop = asyncio.get_event_loop()
-        data=""
-        while True:
-            recv=await loop.sock_recv(self._sock,1)
+        data=b""
+        async with self._recv_lock:
+            while True:
+                recv=await loop.sock_recv(self._sock,1)
 
-            if recv!=b'\n':
-                data+=recv.decode()
-            else:
-                return data
+                if recv!=b'\n':
+                    data+=recv
+                else:
+                    return data.decode()
     async def rpc_request(self, service: str, data: Any) -> Any:
         loop = asyncio.get_event_loop()
         new_uuid = str(uuid.uuid4())
@@ -141,13 +143,13 @@ class RpcExchanger:
             "data": data,
             "jobid": new_uuid
         }).encode())
+        logging.debug(f"{service=}{data=}")
         while True:
             if new_uuid in self._responses:
                 json_res = self._responses[new_uuid]
                 del self._responses[new_uuid]
                 break
             json_res = json.loads(await self.sock_recvline())
-            print(json_res)
             if json_res["jobid"] == new_uuid:
                 break
             else:
@@ -210,7 +212,16 @@ class RpcExchangerClient:
         if uid is not None:
             self._uid = uid
             self._username = username
+            await self._rpc.login.add_online(id=uid)
         return uid
+
+    async def add_online(self) -> None:
+        self.check_authorized()
+        await self._rpc.login.add_online(id=self._uid)
+
+    async def is_online(self, user_ids: list[int]) -> list[bool]:
+        self.check_authorized()
+        return await self._rpc.login.is_online(ids=user_ids)
 
     async def register(self, username: str, password: str, *, auto_login: bool=False) -> bool:
         # Note: this only register, won't login
@@ -425,6 +436,8 @@ class RpcExchangerClient:
         return self
 
     async def __aexit__(self, *args) -> None:
+        if self._uid is not None:
+            await self._rpc.login.add_offline(id=self._uid)
         await self._pubsub_raw.__aexit__(None, None, None)
         return None
 

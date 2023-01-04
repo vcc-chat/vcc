@@ -4,7 +4,10 @@ import asyncio
 import json
 import logging
 
-import uvloop
+try:
+    import uvloop # I dont want to install this thing in the fucking docker because it needs gcc
+except:
+    pass
 import jwt
 
 from datetime import datetime, timedelta, timezone

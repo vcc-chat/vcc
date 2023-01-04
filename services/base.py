@@ -4,18 +4,19 @@ import logging
 
 from twisted.internet import task
 from twisted.internet.defer import Deferred
-from twisted.internet.protocol import ClientFactory, Protocol
+from twisted.internet.protocol import ClientFactory
+from twisted.protocols.basic import LineReceiver
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
-class Service(Protocol):
+class Service(LineReceiver):
     def __init__(self, factory):
         self.factory: RpcServiceFactory = factory
 
     def send(self, obj):
-        self.transport.write(bytes(json.dumps(obj), "UTF8"))
+        self.sendLine(bytes(json.dumps(obj), "UTF8"))
 
     def connectionMade(self):
         self.send(
@@ -27,7 +28,7 @@ class Service(Protocol):
             }
         )
 
-    def dataReceived(self, data):
+    def lineReceived(self, data):
         try:
             data = json.loads(data)
             log.debug(data)

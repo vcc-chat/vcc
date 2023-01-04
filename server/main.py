@@ -5,16 +5,16 @@ import traceback
 from functools import reduce
 from itertools import zip_longest
 from twisted.internet import protocol, reactor, endpoints
+from twisted.protocols.basic import LineReceiver
 
-
-class RpcProtocol(protocol.Protocol):
+class RpcProtocol(LineReceiver):
     def __init__(self, factory):
         self.factory: RpcServer = factory
         self.name=None
     def send(self, data):
-        self.transport.write(bytes(json.dumps(data)+"\n", "UTF8"))
+        self.sendLine(bytes(json.dumps(data), "UTF8"))
 
-    def dataReceived(self, data):
+    def lineReceived(self, data):
         try:
             data = json.loads(data)
         except json.JSONDecodeError:
@@ -76,7 +76,7 @@ class RpcServer(protocol.Factory):
         try:
             if self.services[service[0]][service[1]]:
                 valid: bool = reduce(
-                    lambda a, b: a and b[0][0] == b[1][0] and (b[0][1] == type(b[1][1]).__name__ or b[0][1] == "Any"),
+                    lambda a, b: a and b[0][0] == b[1][0] and (b[0][1] == type(b[1][1]).__name__ or b[0][1] == "Any" or b[0][1] == "typing.Any"),
                     zip_longest(*[sorted(c.items()) for c in [self.services[service[0]][service[1]], data]]), True,
                 )
                 if not valid:

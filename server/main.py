@@ -32,7 +32,7 @@ class RpcProtocol(protocol.Protocol):
                     self, data["service"], data["data"], data["jobid"]
                 )
             case _:
-                self.send({"res": "error", "error": "invalid request"})
+                self.send({"res": "error", "error": "invalid request", "jobid": data["jobid"]})
                 return
     def do_handshake(self, data):
         self.role=data["role"]
@@ -72,11 +72,11 @@ class RpcServer(protocol.Factory):
     def make_request(self, client:RpcProtocol, service:str, data:dict, jobid:str):
         service=service.split("/")
         if service[0] not in self.services or service[1] not in self.services[service[0]]:
-            self.send({"res": "error", "error": "no such service"})
+            self.send({"res": "error", "error": "no such service", "jobid": jobid})
         try:
             if self.services[service[0]][service[1]]:
                 valid: bool = reduce(
-                    lambda a, b: a and b[0][0] == b[1][0] and b[0][1] == type(b[1][1]).__name__,
+                    lambda a, b: a and b[0][0] == b[1][0] and (b[0][1] == type(b[1][1]).__name__ or b[0][1] == "Any"),
                     zip_longest(*[sorted(c.items()) for c in [self.services[service[0]][service[1]], data]]), True,
                 )
                 if not valid:
@@ -84,7 +84,7 @@ class RpcServer(protocol.Factory):
             self.promises[jobid] = client
         except:
             traceback.print_exc()
-            self.send({"res": "error", "error": "unknown error"})
+            client.send({"res": "error", "error": "unknown error", "jobid": jobid})
         else:
             self.providers[service[0]].make_request(service[1], data, jobid)
     def make_respond(self, jobid, data):

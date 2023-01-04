@@ -5,6 +5,7 @@ import random
 import string
 import json
 
+from typing import Any
 from peewee import *
 
 import base
@@ -53,6 +54,33 @@ class Main:
         if user is None:
             return None
         return user.name
+
+    @db.atomic()
+    def add_online(self, id: int) -> bool:
+        user = User.get_or_none(id=id)
+        if user is None:
+            return False
+        user.online_count += 1
+        user.save()
+        return True
+
+    @db.atomic()
+    def add_offline(self, id: int) -> bool:
+        user = User.get_or_none(id=id)
+        if user is None:
+            return False
+        if user.online_count <= 0:
+            return False
+        user.online_count -= 1
+        user.save()
+        return True
+
+    @db.atomic()
+    def is_online(self, ids: Any) -> list[bool]:
+        try:
+            return [bool(User.get_by_id(id).online_count) for id in ids]
+        except:
+            return []
 
 if __name__ == "__main__":
     db.create_tables([User])

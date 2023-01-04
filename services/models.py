@@ -10,6 +10,7 @@ class User(Model):
     name = CharField(max_length=16, unique=True)
     password = CharField(max_length=16)
     salt= CharField()
+    online_count = IntegerField(default=0)
     # Permissions
     login = BooleanField(default=True)
 

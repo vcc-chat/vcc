@@ -1,25 +1,39 @@
 
-import { useState } from "react"
-import styled from "styled-components"
-import SpeedDial from "@mui/material/SpeedDial"
-import SpeedDialIcon from "@mui/material/SpeedDialIcon"
-import SpeedDialAction from "@mui/material/SpeedDialAction"
-import GroupAddOutlinedIcon from "@mui/icons-material/GroupAddOutlined"
-import GroupRemoveOutlinedIcon from "@mui/icons-material/GroupRemoveOutlined"
-import AddCircleOutlineOutlinedIcon from "@mui/icons-material/AddCircleOutlineOutlined"
-import Dialog from "@mui/material/Dialog"
-import DialogActions from "@mui/material/DialogActions"
-import DialogContent from "@mui/material/DialogContent"
-import DialogContentText from "@mui/material/DialogContentText"
-import DialogTitle from "@mui/material/DialogTitle"
-import TextField from "@mui/material/TextField"
-import Button from "@mui/material/Button"
+import { useState, useEffect } from "react"
+import styled from "@emotion/styled"
+import {
+  SpeedDial,
+  SpeedDialIcon,
+  SpeedDialAction,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  TextField,
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Autocomplete
+} from "@mui/material"
+import { GroupRemoveOutlined as GroupRemoveOutlinedIcon } from "@mui/icons-material"
+import { useQueryClient, useQuery } from "@tanstack/react-query"
+
 
 import { Request, RequestType } from "./config"
 import { useDispatch, useSelector } from "./store"
-import { changeValue as changeChat, add as addChat, remove as removeChat } from "./state/chat"
+import { changeValue as changeChat, addSession } from "./state/chat"
 import { LoginType } from "./state/login"
-import { useNetwork } from "./hooks"
+import { useChatList, useNetwork } from "./tools"
+import {
+  SettingsGroup,
+  SettingsEditItem,
+  allPermissions,
+  PermissionKey,
+  permissionKeyToName,
+} from "./Settings"
 
 const ToolbarRoot = styled(SpeedDial)`
   position: fixed;
@@ -27,8 +41,13 @@ const ToolbarRoot = styled(SpeedDial)`
   right: 16px;
 `
 
+const DialogForm = styled.div`
+  display: flex;
+  flex-direction: column;
+`
+
 export function ToolbarDialog({ afterJoin, typeNumber, typeString, open, setOpen }: {
-  afterJoin: (arg0: number) => void,
+  afterJoin: (arg0: number, req: Request) => void,
   typeNumber: RequestType,
   typeString: string,
   open: boolean,
@@ -36,8 +55,7 @@ export function ToolbarDialog({ afterJoin, typeNumber, typeString, open, setOpen
 }) {
   const [dialogValue, setDialogValue] = useState("")
   const title = typeString[0].toUpperCase() + typeString.slice(1)
-  const username = useSelector(state => state.username.value)
-  const { sendJsonMessage } = useNetwork()
+  const { makeRequest } = useNetwork()
   return (
     <Dialog open={open}>
       <DialogTitle>{title} chat</DialogTitle>
@@ -56,7 +74,7 @@ export function ToolbarDialog({ afterJoin, typeNumber, typeString, open, setOpen
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setOpen(false)}>close</Button>
-        <Button onClick={() => {
+        <Button onClick={async () => {
           let chat: number
           try {
             chat = parseInt(dialogValue)
@@ -64,12 +82,12 @@ export function ToolbarDialog({ afterJoin, typeNumber, typeString, open, setOpen
             return
           }
           if (chat === null) return
-          sendJsonMessage({
+          const request = await makeRequest({
             uid: chat,
             type: typeNumber
           })
           setOpen(false)
-          afterJoin(chat)
+          afterJoin(chat, request)
         }}>{typeString}</Button>
       </DialogActions>
     </Dialog>
@@ -77,41 +95,94 @@ export function ToolbarDialog({ afterJoin, typeNumber, typeString, open, setOpen
 }
 
 export function CreateChatDialog({ open, setOpen }: {
-  open: boolean,
+  open: boolean
   setOpen: (arg0: boolean) => void
 }) {
   const [chatName, setChatName] = useState("")
-  const { sendJsonMessage, makeRequest, successAlert, errorAlert } = useNetwork()
+  const { refresh: refreshChats, names: chatNames, values: chatValues, parentChats } = useChatList()
+  const dispatch = useDispatch()
+  const { makeRequest, successAlert, errorAlert } = useNetwork()
+  const [parentChat, setParentChat] = useState(-1)
+  const [isCreateChat, setIsCreateChat] = useState(true)
   return (
     <Dialog open={open}>
-      <DialogTitle>Create chat</DialogTitle>
+      <DialogTitle>Create {isCreateChat ? "chat" : "session"}</DialogTitle>
       <DialogContent>
         <DialogContentText>
-          Enter the name of the chat you want to create.
+          Enter the name of the {isCreateChat ? "chat" : "session"} you want to create and choose its parent chat.
         </DialogContentText>
-        <TextField 
-          autoFocus 
-          label="Chat name" 
-          margin="dense" 
-          value={chatName} 
-          onChange={ev => setChatName(ev.target.value)}
-        />
+        <DialogForm>
+          <TextField 
+            autoFocus 
+            label={isCreateChat ? "Chat name" : "Session name"} 
+            margin="dense" 
+            value={chatName} 
+            onChange={ev => setChatName(ev.target.value)}
+          />
+          <Autocomplete
+            value={parentChat == -1 ? null : {
+              id: parentChat,
+              label: chatNames[chatValues.indexOf(Number(parentChat))],
+              isCreateChat: Object.keys(parentChats).includes(parentChat.toString())
+            }}
+            onChange={(ev, newValue) => {
+              setParentChat(newValue?.id ?? -1)
+              setIsCreateChat(newValue?.isCreateChat ?? true)
+            }}
+            disablePortal
+            blurOnSelect
+            options={
+              Object
+                .keys(parentChats)
+                .map<[number, boolean]>(a => [Number(a), true])
+                .concat(
+                  Object
+                    .values(parentChats)
+                    .reduce((a, b) => a.concat(b), [])
+                    .map(a => [a, false])
+                )
+                .map(([chat, isParent]) => ({
+                  label: chatNames[chatValues.indexOf(chat)],
+                  id: chat,
+                  isCreateChat: isParent
+                }))
+            }
+            groupBy={(option) => option.isCreateChat ? "Parent chat" : "Sub-chat"}
+            renderInput={(params) => <TextField {...params} label="Parent chat" />}
+            isOptionEqualToValue={(option, value) => (
+              option.id == value.id && option.label == value.label
+            )}
+          />
+        </DialogForm>
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setOpen(false)}>close</Button>
         <Button onClick={async () => {
           if (chatName === "") return
-          const { uid } = await makeRequest({
-            type: RequestType.CTL_NEWSE,
-            usrname: chatName
-          })
-          if (uid) {
-            successAlert("You have created the chat successfully. ")
-            sendJsonMessage({
-              type: RequestType.CTL_LJOIN
+          if (isCreateChat) {
+            const { uid } = await makeRequest({
+              type: RequestType.CTL_NEWSE,
+              usrname: chatName,
+              uid: parentChat
             })
+            if (uid) {
+              successAlert(`You have created the ${isCreateChat ? "chat" : "session"} successfully. `)
+              refreshChats()
+            } else {
+              errorAlert(`Unexpected error: You haven't created the ${isCreateChat ? "chat" : "session"} successfully. `)
+            }
           } else {
-            errorAlert("Unexpected error: You haven't created the chat successfully. ")
+            const { uid } = await makeRequest({
+              type: RequestType.CTL_JSESS,
+              uid: parentChat,
+              msg: chatName
+            })
+            if (uid) {
+              successAlert("You have joined the session successfully. ")
+              dispatch(addSession([parentChat, chatName]))
+            } else {
+              errorAlert("Permission denied. ")
+            }
           }
           setOpen(false)
         }}>create</Button>
@@ -121,18 +192,219 @@ export function CreateChatDialog({ open, setOpen }: {
 }
 
 
+function SettingsEdit({ id: uid, permission: permissionRawData }: {
+  id: number,
+  permission: Record<PermissionKey, boolean>
+}) {
+  const chat = useSelector(state => state.chat.value)
+  const queryClient = useQueryClient()
+  const [permissions, setPermissions] = useState({
+    kick: false,
+    rename: false,
+    invite: false,
+    modify_permission: false,
+    send: true,
+    create_sub_chat: false,
+    create_session: true
+  })
+  function setPermission(key: PermissionKey) {
+    return function (value: boolean) {
+      setPermissions({
+        ...permissions,
+        [key]: value
+      })
+    }
+  }
+  const { makeRequest, successAlert, errorAlert } = useNetwork()
+  function makeModifyPermissionRequest(name: PermissionKey) {
+    const value = permissions[name]
+    if (permissionRawData[name] == value) {
+      return Promise.resolve({
+        uid: 1,
+        type: RequestType.CTL_MPERM,
+        usrname: "",
+        msg: ""
+      })
+    }
+    const request = makeRequest({
+      type: RequestType.CTL_MPERM,
+      msg: {
+        "chat_id": chat,
+        "modified_user_id": uid,
+        "name": name,
+        "value": value
+      } as any
+    })
+    queryClient.invalidateQueries({
+      queryKey: ["user-permission", chat]
+    })
+    return request
+  }
+  useEffect(() => {
+    if (!permissionRawData) return
+    setPermissions(permissionRawData)
+  }, [permissionRawData])
+  return (
+    <SettingsGroup>
+      {allPermissions.map(key => (
+        <SettingsEditItem
+          checked={permissions[key]}
+          setChecked={setPermission(key)}
+          label={permissionKeyToName(key)}
+          key={key}
+        />
+      ))}
+      <Button onClick={async () => {
+        const result = await Promise.all(
+          allPermissions.map(makeModifyPermissionRequest)
+        )
+        const success = result
+          .map(req => !!req.uid)
+          .reduce((a, b) => a && b)
+        if (success) {
+          successAlert("Permission has successfully been modified.")
+        } else {
+          errorAlert("Permission denied.")
+        }
+      }} disabled={
+        allPermissions
+          .map((a) => permissionRawData[a] == permissions[a])
+          .reduce((a,b) => a && b)
+      }>
+        Change permission
+      </Button>
+    </SettingsGroup>
+  )
+}
+
+
+export function EditPermissionDialog({ open, setOpen, uid, username }: {
+  open: boolean,
+  setOpen: (value: boolean) => void,
+  uid: number,
+  username: string
+}) {
+  const { makeRequest, successAlert, errorAlert } = useNetwork()
+  const chat = useSelector(state => state.chat.value)
+  const { data: permissionRawData } = useQuery({
+    queryKey: ["user-permission", chat],
+    queryFn: async () => {
+      const { msg } = await makeRequest({
+        type: RequestType.CTL_GPERM,
+        uid: chat!,
+        usrname: "",
+        msg: ""
+      })
+      return msg as unknown as Record<number, Record<string, boolean>>
+    },
+    enabled: chat != null
+  })
+  const permissionOriginal = permissionRawData?.[uid]
+  const queryClient = useQueryClient()
+  const [permissions, setPermissions] = useState({
+    kick: false,
+    rename: false,
+    invite: false,
+    modify_permission: false,
+    send: true,
+    create_sub_chat: false,
+    create_session: true
+  })
+  function setPermission(key: PermissionKey) {
+    return function (value: boolean) {
+      setPermissions({
+        ...permissions,
+        [key]: value
+      })
+    }
+  }
+  function makeModifyPermissionRequest(name: PermissionKey) {
+    const value = permissions[name]
+    if (permissionOriginal != undefined && permissionOriginal[name] == value) {
+      return Promise.resolve({
+        uid: 1,
+        type: RequestType.CTL_MPERM,
+        usrname: "",
+        msg: ""
+      })
+    }
+    const request = makeRequest({
+      type: RequestType.CTL_MPERM,
+      msg: {
+        "chat_id": chat,
+        "modified_user_id": uid,
+        "name": name,
+        "value": value
+      } as any
+    })
+    queryClient.invalidateQueries({
+      queryKey: ["user-permission", chat]
+    })
+    return request
+  }
+  useEffect(() => {
+    if (!permissionOriginal) return
+    setPermissions(permissionOriginal as any)
+  }, [permissionOriginal])
+  return (
+    <Dialog open={open}>
+      <DialogTitle>Modify permission</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          Modify permission of {username}.
+        </DialogContentText>
+        <DialogForm>
+          {allPermissions.map(key => (
+            <SettingsEditItem
+              checked={permissions[key]}
+              setChecked={setPermission(key)}
+              label={permissionKeyToName(key)}
+              key={key}
+            />
+          ))}
+        </DialogForm>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setOpen(false)}>close</Button>
+        <Button onClick={async () => {
+          const result = await Promise.all(
+            allPermissions.map(makeModifyPermissionRequest)
+          )
+          const success = result
+            .map(req => !!req.uid)
+            .reduce((a, b) => a && b)
+          if (success) {
+            successAlert("Permission has successfully been modified.")
+          } else {
+            errorAlert("Permission denied.")
+          }
+        }} disabled={
+          permissionOriginal == undefined || (
+            allPermissions
+              .map((a) => permissionOriginal[a] == permissions[a])
+              .reduce((a,b) => a && b)
+          )
+        }>
+          Change permission
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+
+}
+
+
 export function Toolbar(props: {}) {
   const dispatch = useDispatch()
-  const { sendJsonMessage, makeRequest, successAlert, errorAlert } = useNetwork()
+  const { makeRequest, successAlert, errorAlert } = useNetwork()
   const chat = useSelector(state => state.chat.value)
-  const chats = useSelector(state => state.chat.values)
   const loginStatus = useSelector(state => state.login.type)
+  const { refresh: refreshChats, values: chats } = useChatList()
   return (
     <>
       <ToolbarRoot ariaLabel="toolbar" icon={<SpeedDialIcon />} hidden={loginStatus != LoginType.LOGIN_SUCCESS || chat == null}>
         <SpeedDialAction icon={<GroupRemoveOutlinedIcon />} tooltipTitle="quit chat" onClick={async () => {
           if (chat == null) return
-          dispatch(removeChat(chat))
           if (chats.length) {
             dispatch(changeChat(chats[0]))
           } else {
@@ -144,12 +416,10 @@ export function Toolbar(props: {}) {
           })
           if (uid) {
             successAlert("You have quit the chat successfully. ")
+            refreshChats()
           } else {
             errorAlert("Unexpected error: You haven't quit the chat successfully. ")
           }
-          sendJsonMessage({
-            type: RequestType.CTL_LJOIN
-          })
         }} />
       </ToolbarRoot>
     </>

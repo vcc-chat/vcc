@@ -1,23 +1,25 @@
 import { useState, useEffect } from "react"
 import { useNavigate, useSearchParams, useLoaderData } from "react-router-dom"
 
-import Dialog from "@mui/material/Dialog"
-import DialogActions from "@mui/material/DialogActions"
-import DialogContent from "@mui/material/DialogContent"
-import DialogContentText from "@mui/material/DialogContentText"
-import DialogTitle from "@mui/material/DialogTitle"
-import Button from "@mui/material/Button"
+import {
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Button
+} from "@mui/material"
 
 import { RequestType, Request } from "../config"
 import { useSelector, useDispatch } from "../store"
-import { useNetwork } from "../hooks"
+import { useChatList, useNetwork } from "../tools"
 import { changeValue } from "../state/chat"
 
 
 export default function Invite(props: {}) {
-  const { sendJsonMessage, makeRequest, ready, successAlert, errorAlert } = useNetwork()
+  const { makeRequest, ready, successAlert, errorAlert } = useNetwork()
   const { chat, token } = useLoaderData() as { chat: number, token: string }
-  const chats = useSelector(state => state.chat.values)
+  const { refresh: refreshChats, values: chats } = useChatList()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   return (
@@ -39,9 +41,7 @@ export default function Invite(props: {}) {
                 if (uid) {
                   successAlert("You have joined the chat successfully. ")
                   dispatch(changeValue(chat))
-                  sendJsonMessage({
-                    type: RequestType.CTL_LJOIN
-                  })
+                  refreshChats()
                 } else {
                   errorAlert("Unexpected error occurred. ")
                 }

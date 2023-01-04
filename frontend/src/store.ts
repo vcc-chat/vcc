@@ -30,16 +30,14 @@ function copy<T>(obj: T): T {
 
 export async function saveMessage(msgRaw: RequestWithTime) {
   const msg: RequestWithTime = copy(msgRaw)
-  if (msg.req.usrname == messagesCached.at(-1)?.req.usrname) {
-    messagesCached.at(-1)!.req.msg += `\n${msg.req.msg}`
-  } else {
-    messagesCached.push(msg)
-  }
+  const req1 = msg.req
+  const req2 = messagesCached.at(-1)?.req
+  messagesCached.push(msg)
   await localforage.setItem("messages", messagesCached)
 }
 
 export async function restoreMessage() {
-  messagesCached = await localforage.getItem<RequestWithTime[]>("messages") ?? []
+  messagesCached = (await localforage.getItem<RequestWithTime[]>("messages")) ?? []
   let messages: Record<number, RequestWithTime[]> = {}
   for (const i of messagesCached) {
     if (messages[i.req.uid]) {

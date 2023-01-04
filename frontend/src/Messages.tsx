@@ -1,4 +1,7 @@
-import styled from "styled-components"
+import styled from "@emotion/styled"
+import { Avatar } from "@mui/material"
+
+import { stringToColor } from "./tools"
 
 export const Messages = styled.ul`
   display: flex;
@@ -23,6 +26,32 @@ export const Messages = styled.ul`
   }
 `
 
+const AvatarColored = styled(Avatar)`
+  background-color: ${({ color }: { color: string }) => color};
+  width: 36px;
+  height: 36px;
+  font-size: 1.125rem;
+`
+
+export function MessageAvatar({ name }: {
+  name: string
+}) {
+  const characters = name.split(" ")
+  const letter1 = (characters[0]?.[0] ?? "").toUpperCase()
+  const letter2 = (characters[1]?.[0] ?? "").toUpperCase()
+  return (
+    <AvatarColored color={stringToColor(name)}>
+      {letter1}{letter2}
+    </AvatarColored>
+  )
+}
+
+export const MessageUsername = styled.div`
+  margin-top: auto;
+  margin-bottom: auto;
+  margin-left: 0.35em;
+`
+
 export const MessageTime = styled.div`
   display: none;
   color: var(--gray-500);
@@ -34,17 +63,19 @@ export const MessageTime = styled.div`
   font-weight: var(--normal-weight);
 `
 
-export const Message = styled.li`
+export const Message = styled.li<{
+  showTitle: boolean
+}>`
   list-style-type: none;
-  margin: 0.1em;
   &:hover {
     background-color: var(--gray-100);
   }
   &:hover ${MessageTime} {
     display: block;
   }
-  padding: 0.3em;
-  border-radius: 0.2em;
+  margin: ${({ showTitle }) => showTitle ? "0.1em" : "0"} 0.1em;
+  padding: ${({ showTitle }) => showTitle ? "0.3em" : "0"} 0.3em 0;
+  border-radius: ${({ showTitle }) => showTitle ? "0.2em" : "0"};
 `
 export const MessageTitle = styled.div`
   display: flex;
@@ -55,5 +86,19 @@ export const MessageTitle = styled.div`
 export const MessageBody = styled.div`
   line-break: anywhere;
   white-space: pre-wrap;
+  margin-left: 0.2em;
+  display: flex;
+`
+export const MessageBodyMarkdown = styled.div`
+  display: flex;
+  flex-direction: column;
+  p {
+    margin-top: 0.25em;
+    margin-bottom: 0.25em;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    display: inline;
+  }
 `
 

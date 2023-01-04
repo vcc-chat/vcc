@@ -1,7 +1,7 @@
 export const WEBSOCKET_PORT = 7000
 
 export const enum RequestType {
-  MSG_SEND = "message", 
+  MSG_SEND = "message",
   CTL_LOGIN = "login",
   CTL_NEWSE = "chat_create",
   CTL_JOINS = "chat_join",
@@ -17,7 +17,11 @@ export const enum RequestType {
   CTL_MPERM = "chat_modify_user_permission",
   CTL_GINVI = "chat_generate_invite",
   CTL_CINVI = "chat_check_invite",
-  CTL_INVIT = "chat_invite"
+  CTL_INVIT = "chat_invite",
+  CTL_GCPER = "chat_get_permission",
+  CTL_MCPER = "chat_modify_permission",
+  CTL_JSESS = "session_join",
+  CTL_ISONL = "is_online"
 }
 
 export type Request = {
@@ -25,6 +29,8 @@ export type Request = {
   uid: number
   usrname: string
   msg: string
+  uuid?: string
+  session?: string
 }
 
 export interface RequestWithTime {
@@ -33,3 +39,4 @@ export interface RequestWithTime {
 }
 
 export const WEBSOCKET_USE_PATH = import.meta.env.PROD
+export const MESSAGE_MIME_TYPE = "application/x-web-vcc.message+json"

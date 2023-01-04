@@ -14,11 +14,9 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "jsxImportSource": "@emotion/react"
   },
   "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }],
-  "paths": {
-    "@mui/styled-engine": ["./node_modules/@mui/styled-engine-sc"]
-  }
+  "references": [{ "path": "./tsconfig.node.json" }]
 }

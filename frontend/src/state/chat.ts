@@ -4,15 +4,15 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit"
 interface ChatType {
   value: number | null,
   name: string | null,
-  values: number[],
-  names: string[]
+  sessions: [number, string][],
+  session: string | null
 }
 
 const chatState: ChatType = {
   value: null,
   name: null,
-  values: [],
-  names: []
+  sessions: [],
+  session: null
 }
 
 const chatSlice = createSlice({
@@ -25,34 +25,34 @@ const chatSlice = createSlice({
     changeValue(state: ChatType, action: PayloadAction<number | null>) {
       state.value = action.payload
     },
-    add(state: ChatType, action: PayloadAction<number>) {
-      if (!state.values.includes(action.payload))
-        state.values.push(action.payload)
-    },
-    remove(state: ChatType, action: PayloadAction<number>) {
-      const index = state.values.indexOf(action.payload)
-      if (!~index) return
-      state.values.splice(index, 1)
-    },
-    changeAll(state: ChatType, action: PayloadAction<[number, string][]>) {
+    changeAll(state: ChatType, action: PayloadAction<[number[], string[]]>) {
       const { payload } = action
-      state.values = payload.map(value => value[0])
-      state.names = payload.map(value => value[1])
+      const [values, names] = payload
       if (state.name == null || state.value == null) {
         if (payload) {
-          state.value = state.values[0]
-          state.name = state.names[0]
+          state.value = values[0]
+          state.name = names[0]
         }
         return
       }
-      if (!payload.includes([state.value, state.name])) {
-        state.value = state.values[0]
-        state.name = state.names[0]
+      if (!~payload.findIndex(a => a[0] == state.value && a[1] == state.name)) {
+        state.value = values[0]
+        state.name = names[0]
       }
+    },
+    addSession(state: ChatType, action: PayloadAction<[number, string]>) {
+      const { payload } = action
+      if (!~state.sessions.findIndex(([a, b]) => a == payload[0] && b == payload[1])) {
+        state.sessions.push(payload)
+      }
+    },
+    changeSession(state: ChatType, action: PayloadAction<string | null>) {
+      const { payload } = action
+      state.session = payload
     }
   }
 })
 
-export const { changeName, changeValue, add, remove, changeAll } = chatSlice.actions
+export const { changeName, changeValue, changeAll, addSession, changeSession } = chatSlice.actions
 
 export default chatSlice.reducer

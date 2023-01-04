@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react"
-import Snackbar from "@mui/material/Snackbar"
-import Button from '@mui/material/Button'
-import IconButton from '@mui/material/IconButton'
-import CloseIcon from '@mui/icons-material/Close'
+import { Snackbar, Button, IconButton } from "@mui/material"
+import { Close as CloseIcon } from "@mui/icons-material"
 
 export function notify(title: string, body: string) {
   if (window.Notification.permission !== "granted")

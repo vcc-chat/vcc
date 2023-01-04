@@ -11,6 +11,7 @@ import uuid
 from functools import wraps
 from redis.asyncio.client import PubSub
 from typing import Any, Awaitable, Callable, cast, TypedDict, Literal, overload, no_type_check_decorator
+from os import getenv
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -76,12 +77,17 @@ class RpcExchanger:
     """Low-level api which is hard to use"""
     _sock: socket.socket
     _redis: redis.Redis
-    def __init__(self) -> None:
+    def __init__(self, *, rpc_host: str | None=None, rpc_port: int | None=None, redis_url: str="redis://localhost:6379") -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(("0.0.0.0", 0))
         self._sock = sock
 
-        self._redis = redis.Redis(host="localhost")
+        rpc_host = getenv("VCC_LIB_RPC_HOST", "127.0.0.1") if rpc_host is None else rpc_host
+        rpc_port = int(getenv("VCC_LIB_RPC_PORT", 2474)) if rpc_port is None else rpc_port
+        redis_url = getenv("VCC_LIB_REDIS_URL", "redis://localhost:6379") if redis_url is None else redis_url
+
+        self._socket_address = (rpc_host, rpc_port)
+        self._redis = redis.Redis.from_url(redis_url)
         self._responses: dict[str, Any] = {}
         self._recv_lock = asyncio.Lock()
         self.rpc = RpcExchangerRpcHandler(self)
@@ -89,7 +95,7 @@ class RpcExchanger:
     def __enter__(self) -> RpcExchanger:
         # you should not use this, use async version instead
         sock = self._sock
-        sock.connect(("127.0.0.1", 2474))
+        sock.connect(self._socket_address)
         sock.send(b'{"type": "handshake","role": "client"}\r\n')
         sock.recv(65536)
         sock.setblocking(False)
@@ -104,7 +110,7 @@ class RpcExchanger:
         loop = asyncio.get_event_loop()
         sock = self._sock
         sock.setblocking(False)
-        await loop.sock_connect(sock, ("127.0.0.1", 2474))
+        await loop.sock_connect(sock, self._socket_address)
         await loop.sock_sendall(sock, b'{"type": "handshake","role": "client"}\r\n')
         await loop.sock_recv(sock, 65536)
         return self

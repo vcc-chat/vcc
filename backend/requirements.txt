@@ -2,11 +2,4 @@ redis==4.4.0
 types-redis==4.3.21.6
 #uvloop==0.16.0
 vcc-lib
-<<<<<<< HEAD
-watchdog==2.1.9
-wcwidth==0.2.5
 websockets==10.3
-PyJWT
-=======
-websockets==10.3
->>>>>>> refs/remotes/origin/master

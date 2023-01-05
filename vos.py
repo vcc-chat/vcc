@@ -32,7 +32,6 @@ def init():
     vcc_client = vcc.RpcExchanger()
     asyncio.get_event_loop().run_until_complete(vcc_client.__aenter__())
 
-
 def async_wrapper(func):
     """used to convert async function to normal function"""
     evloop = asyncio.get_event_loop()
@@ -192,7 +191,7 @@ class mainapp:
     async def send_message(self, buffer: Buffer):
         if buffer.text == "":
             return
-        await self.client.send(buffer.text, self.current_chat[0], None)
+        await self.client.send(buffer.text, self.current_chat[0])
 
     @async_wrapper
     async def create_chat(self):

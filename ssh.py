@@ -33,9 +33,9 @@ asyncio.new_event_loop()
 
 if not (DATAROOT:=os.environ.get("VOS_DATAROOT")):
     DATAROOT="./"
-SERVER_KEY_PRIVATE = DATAROOT+"ssh_host_key"
-SERVER_KEY_PUBLIC = DATAROOT+"ssh_host_key.pub"
-SERVER_PRIME = DATAROOT+"prime"
+SERVER_KEY_PRIVATE = DATAROOT+"/ssh_host_key"
+SERVER_KEY_PUBLIC = DATAROOT+"/ssh_host_key.pub"
+SERVER_PRIME = DATAROOT+"/prime"
 if not os.path.exists(SERVER_KEY_PRIVATE) or  not os.path.exists(SERVER_KEY_PUBLIC):
     os.system(f'ckeygen -t ED25519 -f {SERVER_KEY_PRIVATE} --no-passphrase   -q')
 if not os.path.exists(SERVER_PRIME):

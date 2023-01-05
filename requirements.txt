@@ -1,4 +1,6 @@
 Twisted==22.1.0
 prompt_toolkit
 vcc-lib
-
+nest_asyncio
+cryptography
+bcrypt

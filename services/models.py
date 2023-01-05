@@ -42,8 +42,6 @@ class ChatUser(Model):
     create_sub_chat = permissions.flag(32)
     # Create sessions
     create_session = permissions.flag(64)
-    # Ban other people
-    ban = permissions.flag(128)
     # Being banned, any other permission will be ignored
     banned = permissions.flag(256)
 

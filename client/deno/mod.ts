@@ -1,11 +1,9 @@
-import { readLines } from "https://deno.land/std@0.171.0/io/read_lines.ts"
-
-type Response = {
+type Response<T = unknown> = {
   type: string
   id: string
 } & ({
   ok: true
-  response: unknown
+  response: T
 } | {
   ok: false
   error: string
@@ -19,41 +17,69 @@ type Request = {
 
 export class VCCError extends Error {}
 
-function createRPC(conn: Deno.TcpConn, IDFuncMap: Record<string, (response: Response) => void>, prefix = "") {
-  const encoder = new TextEncoder()
+type Any = ReturnType<JSON["parse"]>
+
+class WebSocketWrapper {
+  websocket: WebSocket
+  IDFuncMap: Record<string, (response: Response<Any>) => void>
+  constructor(url: string | URL) {
+    this.websocket = new WebSocket(url)
+    this.IDFuncMap = {}
+  }
+  async waitOpen() {
+    await new Promise<void>(res => {
+      this.websocket.addEventListener("open", () => {
+        res()
+      })
+    })
+  }
+  createRecvLoop() {
+    this.websocket.addEventListener("message", (msg) => {
+      const data = msg.data
+      const response: Response = JSON.parse(data)
+      this.IDFuncMap[response.id]?.(response)
+      delete this.IDFuncMap[response.id]
+    })
+  }
+  sendNoResponse(type: string, requestData: unknown) {
+    const id = crypto.randomUUID()
+    const request: Request = {
+      type,
+      id,
+      request: requestData
+    }
+    this.websocket.send(JSON.stringify(request))
+    return id
+  }
+  async send<T = unknown>(type: string, requestData: unknown) {
+    const id = this.sendNoResponse(type, requestData)
+    const response = await new Promise<Response<T>>(res => {
+      this.IDFuncMap[id] = res
+    })
+    if (response.ok) {
+      return response.response
+    } else {
+      throw new VCCError(response.error)
+    }
+  }
+}
+
+function createRPC(wrapper: WebSocketWrapper, prefix = "") {
   return new Proxy({} as Record<string, <T = unknown>(req: unknown) => Promise<T>>, {
     get(_, type) {
-      if (typeof type == "symbol") throw TypeError()
-      return async (requestData: unknown) => {
-        const id = crypto.randomUUID()
-        const request: Request = {
-          type: prefix + type,
-          id,
-          request: requestData
-        }
-        await conn.write(encoder.encode(JSON.stringify(request) + "\r\n"))
-        const response = await new Promise<Response>(res => {
-          IDFuncMap[id] = res
-        })
-        if (response.ok) {
-          return response.response
-        } else {
-          throw new VCCError(response.error)
-        }
+      if (typeof type == "symbol") throw new VCCError("Using symbol type is not allowed")
+      return async (data: unknown) => {
+        return await wrapper.send(prefix + type, data)
       }
-
     },
-    has(_, key) {
-      if (typeof key == "symbol") return false
-      return true
-    }
+    has: (_, name) => typeof name == "string"
   })
 }
 
 export class ConnectionChatOperations {
   private rpc: Record<string, <T>(req: unknown) => Promise<T>>
-  constructor(conn: Deno.TcpConn, IDFuncMap: Record<string, (response: Response) => void>) {
-    this.rpc = createRPC(conn, IDFuncMap, "chat_")
+  constructor(websocket: WebSocketWrapper) {
+    this.rpc = createRPC(websocket, "chat_")
   }
 
   async create(name: string, parent_chat_id = -1) {
@@ -117,49 +143,33 @@ export class ConnectionChatOperations {
 }
 
 export class Connection {
-  private conn: Deno.TcpConn
-  private IDFuncMap: Record<string, (response: Response) => void>
-  private encoder: TextEncoder
   private rpc: Record<string, <T>(req: unknown) => Promise<T>>
+  private websocket: WebSocketWrapper
   chat: ConnectionChatOperations
 
-  private constructor() {
-    this.conn = undefined as unknown as Deno.TcpConn
-    this.IDFuncMap = {}
-    this.encoder = new TextEncoder()
+  private constructor(url: string | URL) {
     this.rpc = {}
     this.chat = undefined as unknown as ConnectionChatOperations
+    this.websocket = new WebSocketWrapper(url)
   }
 
-  private static async create() {
-    const conn = await Deno.connect({
-      port: 2470
-    })
-    const connection = new Connection()
-    connection.conn = conn
-    ;(async () => {
-      for await (const line of readLines(conn)) {
-        console.log(line)
-        const response: Response = JSON.parse(line)
-        connection.IDFuncMap[response.id]?.(response)
-        delete connection.IDFuncMap[response.id]
-      }
-    })()
-    connection.rpc = createRPC(conn, connection.IDFuncMap)
-    connection.chat = new ConnectionChatOperations(conn, connection.IDFuncMap)
-    return connection
+  private static async create(url: string | URL) {
+    try {
+      const connection = new Connection(url)
+      const websocket = connection.websocket
+      await websocket.waitOpen()
+      websocket.createRecvLoop()
+      connection.rpc = createRPC(websocket)
+      connection.chat = new ConnectionChatOperations(websocket)
+      return connection
+    } catch (e) {
+      console.error(e)
+      throw e
+    }
   }
 
-  private async sendNonblock(request: Request) {
-    await this.conn.write(this.encoder.encode(JSON.stringify(request) + "\r\n"))
-  }
-
-  async sendMessage(msg: string, chat: number, session: string | null = null) {
-    await this.sendNonblock({
-      type: "message",
-      id: crypto.randomUUID(),
-      request: { msg, chat, session }
-    })
+  sendMessage(msg: string, chat: number, session: string | null = null) {
+    this.websocket.sendNoResponse("message", { msg, chat, session })
   }
 
   async login(username: string, password: string) {
@@ -175,6 +185,6 @@ export class Connection {
   }
 }
 
-export function createConnection() {
-  return (Connection as unknown as { create: () => Promise<Connection> }).create()
+export function createConnection(url: string | URL = "ws://127.0.0.1:2470") {
+  return (Connection as unknown as { create: (url: string | URL) => Promise<Connection> }).create(url)
 }

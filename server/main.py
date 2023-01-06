@@ -9,6 +9,8 @@ import uvloop
 import sys
 import jwt
 import logging
+import websockets.server
+from websockets.exceptions import ConnectionClosed
 
 class ServerError(Exception):
     pass
@@ -89,40 +91,41 @@ class ClientHandler:
     async def chat_get_all_permission(self, chat_id: int) -> dict[int, dict[ChatUserPermissionName, bool]]:
         return await self._client.chat_get_all_permission(chat_id)
 
-async def recv_message_loop(client: RpcExchangerClient, writer: asyncio.StreamWriter) -> None:
-    async for i in client:
-        if i[0] != "message":
-            continue
-        _, username, msg, chat, session = i
-        writer.write(json.dumps({
-            "type": "message",
-            "ok": True,
-            "id": str(uuid4()),
-            "response": {
-                "username": username,
-                "msg": msg,
-                "chat": chat,
-                "session": session
-            }
-        }).encode() + b"\r\n")
-        await writer.drain()
+async def recv_message_loop(client: RpcExchangerClient, websocket: websockets.server.WebSocketServerProtocol) -> None:
+    try:
+        async for i in client:
+            if i[0] != "message":
+                continue
+            _, username, msg, chat, session = i
+            await websocket.send(json.dumps({
+                "type": "message",
+                "ok": True,
+                "id": str(uuid4()),
+                "response": {
+                    "username": username,
+                    "msg": msg,
+                    "chat": chat,
+                    "session": session
+                }
+            }))
+    except asyncio.CancelledError:
+        pass
 
-async def handle_client(exchanger: RpcExchanger, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-    logging.info(f"new connection: {writer.get_extra_info('peername')[0]}")
+async def handle_client(exchanger: RpcExchanger, websocket: websockets.server.WebSocketServerProtocol) -> None:
+    logging.info(f"new connection: {websocket.remote_address}")
     async with exchanger.create_client() as client:
         # Request: {"type": "message", "id": "3a9b50b1-0355-496d-96fd-52e908ab931e", "request": {"msg": "quack", "chat": 1, "session": null}}
         handler = ClientHandler(client)
-        recv_message_task = asyncio.create_task(recv_message_loop(client, writer))
+        recv_message_task = asyncio.create_task(recv_message_loop(client, websocket))
         tasks: set[asyncio.Task[None]] = set()
 
         async def make_error(request_type: str, request_id: str | int, data: str) -> None:
-            writer.write(json.dumps({
+            await websocket.send(json.dumps({
                 "type": request_type,
                 "ok": False,
                 "id": request_id,
                 "error": data
-            }).encode() + b"\r\n")
-            await writer.drain()
+            }))
 
         async def task(request: Any) -> None:
             request_type = request["type"]
@@ -135,13 +138,12 @@ async def handle_client(exchanger: RpcExchanger, reader: asyncio.StreamReader, w
                     raise ServerError("Types cannot start with _")
                 response = await getattr(handler, request_type)(**request_body)
                 # Response: {"type": "message", "ok": true, "id": "3a9b50b1-0355-496d-96fd-52e908ab931e", "response": null}
-                writer.write(json.dumps({
+                await websocket.send(json.dumps({
                     "type": request_type,
                     "ok": True,
                     "id": request_id,
                     "response": response
-                }).encode() + b"\r\n")
-                await writer.drain()
+                }))
             except ServerError as e:
                 await make_error(request_type, request_id, e.args[0])
             except TypeError:
@@ -152,20 +154,20 @@ async def handle_client(exchanger: RpcExchanger, reader: asyncio.StreamReader, w
                 pass
             except Exception as e:
                 logging.warning(f"uncaught error: {type(e).__name__}:{str(e)}")
-                writer.close()
+                await websocket.close(1008)
                 raise
             finally:
                 current_task = asyncio.current_task()
                 if current_task is not None:
                     tasks.discard(current_task)
         try:
-            while True:
-                # Ignore trailing newline
-                line = (await reader.readline())[:-2]
+            async for line in websocket:
                 request = json.loads(line)
                 tasks.add(asyncio.create_task(task(request)))
+        except ConnectionClosed:
+            pass
         finally:
-            writer.close()
+            await websocket.close(1008)
             recv_message_task.cancel()
             for i in tasks:
                 i.cancel()
@@ -173,9 +175,8 @@ async def handle_client(exchanger: RpcExchanger, reader: asyncio.StreamReader, w
 
 async def main() -> None:
     async with RpcExchanger() as exchanger:
-        server = await asyncio.start_server(lambda *args: handle_client(exchanger, *args), "0.0.0.0", 2470)
-        async with server:
-            await server.serve_forever()
+        async with websockets.server.serve(lambda *args: handle_client(exchanger, *args), "", 2470):
+            await asyncio.Future()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

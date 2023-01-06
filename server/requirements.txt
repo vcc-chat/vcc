@@ -1,0 +1,15 @@
+async-timeout==4.0.2
+cffi==1.15.1
+cryptography==39.0.0
+mypy==0.991
+mypy-extensions==0.4.3
+pycparser==2.21
+PyJWT==2.6.0
+redis==4.4.0
+tomli==2.0.1
+typeguard==2.13.3
+types-redis==4.3.21.7
+typing_extensions==4.4.0
+uvloop==0.17.0
+vcc_lib
+websockets==10.4

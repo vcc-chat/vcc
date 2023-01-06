@@ -32,7 +32,7 @@ all_user_permissions = [
 ]
 all_chat_permissions = ["public"]
 
-class Main:
+class ChatService:
     def __init__(self):
         self._redis: redis.Redis[bytes] = redis.Redis()
 
@@ -358,5 +358,5 @@ class Main:
 if __name__ == "__main__":
     db.create_tables([User, Chat,ChatUser])
     server = base.RpcServiceFactory("chat")
-    server.register(Main())
+    server.register(ChatService())
     server.connect()

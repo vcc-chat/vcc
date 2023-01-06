@@ -22,7 +22,7 @@ def random_string(length:int)->str:
         random.SystemRandom().choice(string.ascii_letters + string.digits)
         for _ in range(length)
     )
-class Main:
+class Login:
     @db.atomic()
     def login(self, username: str, password: str) -> int | None:
         if username == "system":
@@ -85,5 +85,5 @@ class Main:
 if __name__ == "__main__":
     db.create_tables([User])
     server = base.RpcServiceFactory("login")
-    server.register(Main())
+    server.register(Login())
     server.connect()

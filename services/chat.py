@@ -99,10 +99,10 @@ class Main:
                 if not parent_chat.public:
                     return False
                 # Also join parent chat
-                parent_chat_user = ChatUser.get_or_create(chat=parent_chat, user=user)
+                parent_chat_user, parent_chat_user_created = ChatUser.get_or_create(chat=parent_chat, user=user)
                 if parent_chat_user.banned:
                     return False
-            chat_user = ChatUser.get_or_create(chat=chat, user=user)
+            chat_user, chat_user_created = ChatUser.get_or_create(chat=chat, user=user)
             if chat_user.banned:
                 return False
             self._send_message(chat_id, f"{user.name} has joined the chat.")
@@ -275,6 +275,8 @@ class Main:
             # Maybe dangerous
             setattr(modified_chat_user, name, value)
             modified_chat_user.save()
+            if name == "banned" and value:
+                ChatUser.update(permissions=ChatUser.banned.set()).where(ChatUser.chat.parent == chat & ChatUser.user == modified_user).execute()
             return True
         except:
             return False

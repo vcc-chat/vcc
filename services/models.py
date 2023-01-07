@@ -45,10 +45,20 @@ class ChatUser(Model):
     # Being banned, any other permission will be ignored
     banned = permissions.flag(256)
 
+class Bot(Model):
+    id = BigAutoField(primary_key=True)
+    name = CharField(max_length=16, unique=True)
+    token = CharField(max_length=32)
+
+class ChatBot(Model):
+    id = BigAutoField(primary_key=True)
+    bot = ForeignKeyField(Bot, backref="chat_bots")
+    chat = ForeignKeyField(Chat, backref="chat_bots")
+
 def get_database():
     if "DATABASE" in os.environ:
         return eval(os.environ["DATABASE"])
     else:
         return SqliteDatabase("db.db")
 
-__all__ = ["bind_model", "User", "Chat", "ChatUser", "get_database"]
+__all__ = ["bind_model", "User", "Chat", "ChatUser", "Bot", "ChatBot", "get_database"]

@@ -156,10 +156,8 @@ class Main:
                     # Kick him from any sub-chat
                     i.chat_user.delete_instance()
             kicked_chat_user.delete_instance()
-            self._send_message(chat_id, f"{kicked_user.name} has been kicked by {user.name}.")
+            self._send_message(chat_id, f"{kicked_user.name} has been kicked.")
             self._send_event(chat_id, "kick", {
-                "user_name": user.name,
-                "user_id": user_id,
                 "kicked_user_name": kicked_user.name,
                 "kicked_user_id": kicked_user_id
             })

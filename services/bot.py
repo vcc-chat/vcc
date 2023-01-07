@@ -2,6 +2,7 @@
 from models import *
 from base import RpcServiceFactory
 from chat import all_user_permissions, all_chat_permissions
+import traceback
 db = get_database()
 
 bind_model(User, db)
@@ -63,7 +64,7 @@ class Main:
     @db.atomic()
     def kick(self, bot_id: int, kicked_user_id: int, chat_id: int) -> bool:
         try:
-            chat,  = self._get_chat_bot_or_parent(chat_id, bot_id)
+            chat  = self._get_chat_bot_or_parent(chat_id, bot_id)[0]
             kicked_user = User.get(id=kicked_user_id)
             kicked_chat_user = ChatUser.get(chat=chat, user=kicked_user)
             kicked_chat_user.delete_instance()
@@ -74,7 +75,7 @@ class Main:
     @db.atomic()
     def rename(self, bot_id: int, new_name: str, chat_id: int) -> bool:
         try:
-            chat,  = self._get_chat_bot_or_parent(chat_id, bot_id)
+            chat  = self._get_chat_bot_or_parent(chat_id, bot_id)[0]
             chat.name = new_name
             chat.save()
             return True
@@ -90,12 +91,12 @@ class Main:
             return False
 
     def check_create_session(self, bot_id: int, chat_id: int) -> bool:
-        return self.check_send()
+        return self.check_send(bot_id, chat_id)
 
     @db.atomic()
     def modify_user_permission(self, chat_id: int, bot_id: int, modified_user_id: int, name: str, value: bool) -> bool:
         try:
-            chat, = self._get_chat_bot_or_parent(chat_id, bot_id)
+            chat = self._get_chat_bot_or_parent(chat_id, bot_id)[0]
             modified_user = User.get_by_id(modified_user_id)
             modified_chat_user = ChatUser.get(chat=chat, user=modified_user)
             if name not in all_user_permissions:
@@ -112,7 +113,7 @@ class Main:
     @db.atomic()
     def modify_permission(self, chat_id: int, bot_id: int, name: str, value: bool) -> bool:
         try:
-            chat, = self._get_chat_bot_or_parent(chat_id, bot_id)
+            chat = self._get_chat_bot_or_parent(chat_id, bot_id)[0]
             if name not in all_chat_permissions:
                 return False
             # Maybe dangerous
@@ -127,7 +128,7 @@ class Main:
         # after json.dumps, tuple returned will become json Array
         try:
             bot = Bot.get_by_id(id)
-            chat_bots = bot.chat_bots.select(Chat.id, Chat.name, Chat.parent).execute()
+            chat_bots = bot.chat_bots.join(Chat).select(Chat.id, Chat.name, Chat.parent).execute()
             return [(chat_bot.chat.id, chat_bot.chat.name, None if chat_bot.chat.parent is None else chat_bot.chat.parent.id) for chat_bot in chat_bots]
         except:
             return []

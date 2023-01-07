@@ -27,4 +27,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: cd npm && npm publish
+        run: cd client/deno/npm && npm publish

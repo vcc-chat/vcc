@@ -59,7 +59,7 @@ class ClientHandler:
         if not await self._client.chat_join(id):
             raise ServerError("Operation failed, maybe the chat does not exist, you have already joined, you have been banned, the chat is not public")
 
-    async def chat_get_users(self, id: int) -> list[int]:
+    async def chat_get_users(self, id: int) -> list[tuple[int, str]]:
         return await self._client.chat_get_users(id)
 
     async def chat_quit(self, id: int) -> None:
@@ -90,6 +90,9 @@ class ClientHandler:
 
     async def chat_get_all_permission(self, chat_id: int) -> dict[int, dict[ChatUserPermissionName, bool]]:
         return await self._client.chat_get_all_permission(chat_id)
+
+    async def chat_get_user_permission(self, chat_id: int, user_id: int) -> dict[ChatUserPermissionName , bool]:
+        return await self._client.chat_get_user_permission(chat_id, user_id)
 
 async def recv_message_loop(client: RpcExchangerClient, websocket: websockets.server.WebSocketServerProtocol) -> None:
     try:

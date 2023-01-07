@@ -58,7 +58,7 @@ class BuiltinService():
         self.factory.services[name]={key:{} for key in self.functions.keys()}
 
     def make_request(self, service, data, jobid):
-        self.factory.make_respond(jobid,self.functions[service]())
+        self.factory.make_respond(jobid,self.functions[service](**data))
 class RpcServer(protocol.Factory):
     services = {} # map providers to services
     providers = {} # map service name to actual instance
@@ -66,9 +66,11 @@ class RpcServer(protocol.Factory):
 
     def list_providers(self) -> list:
         return list(self.providers.keys())
+    def list_services(self,name) -> list:
+        return list(self.services[name].keys())
     def __init__(self):
         super()
-        self.builtin_service=BuiltinService(self,{"list_providers":self.list_providers})
+        self.builtin_service=BuiltinService(self,{"list_providers":self.list_providers,"list_services":self.list_services})
     def make_request(self, client:RpcProtocol, service:str, data:dict, jobid:str):
         service=service.split("/")
         if service[0] not in self.services or service[1] not in self.services[service[0]]:

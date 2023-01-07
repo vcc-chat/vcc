@@ -49,8 +49,8 @@ class ClientHandler:
         if not result:
             raise ServerError("Duplicated username")
 
-    async def message(self, msg: str, chat: int, session: str | None = None) -> None:
-        await self._client.send(msg, chat, session)
+    async def message(self, username: str, msg: str, chat: int, session: str | None = None) -> None:
+        await self._client._exchanger.send_msg(username, msg, chat, session)
 
     async def chat_create(self, name: str, parent_chat_id: int = -1) -> int:
         return await self._client.chat_create(name, parent_chat_id)

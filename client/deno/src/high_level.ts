@@ -1,4 +1,4 @@
-import { createRawConnection, RawConnection, UserPermissions, ChatPermissions } from "./low-level.ts"
+import { createRawConnection, RawConnection, UserPermissions, ChatPermissions } from "./low_level.ts"
 
 export class User {
   readonly id: number
@@ -118,18 +118,19 @@ function sleep(milliseconds: number) {
   })
 }
 
-export async function createBuilder({ url, username, password, chatRefreshTime = 10000 }: {
+export async function createBuilder(config: {
   url?: string | URL,
   username: string,
   password: string,
   chatRefreshTime?: number
 }) {
+  const { url = undefined, username, password, chatRefreshTime = 10000 } = config
   const builder = new (Builder as unknown as {
     new(): Builder
   })
   const conn = await createRawConnection(url)
   await conn.login(username, password)
-  ;(builder as unknown as { conn: RawConnection }).conn = conn
+  ;(builder as unknown as { _conn: RawConnection })._conn = conn
   await builder.updateChats()
   ;(async () => {
     await sleep(chatRefreshTime)

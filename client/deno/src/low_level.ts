@@ -1,3 +1,5 @@
+import { uuid } from "./uuid.deno.ts"
+
 type Response<T = unknown> = {
   type: string
   id: string
@@ -39,13 +41,14 @@ class WebSocketWrapper {
   createRecvLoop() {
     this.websocket.addEventListener("message", (msg) => {
       const data = msg.data
+      if (typeof data != "string") return
       const response: Response = JSON.parse(data)
       this.IDFuncMap[response.id]?.(response)
       delete this.IDFuncMap[response.id]
     })
   }
   sendNoResponse(type: string, requestData: unknown) {
-    const id = crypto.randomUUID()
+    const id = uuid()
     const request: Request = {
       type,
       id,
@@ -70,7 +73,7 @@ class WebSocketWrapper {
 function createRPC(wrapper: WebSocketWrapper, prefix = "") {
   return new Proxy({} as Record<string, <T = unknown>(req: unknown) => Promise<T>>, {
     get(_, type) {
-      if (typeof type == "symbol") throw new VCCError("Using symbol type is not allowed")
+      if (typeof type == "symbol") return async () => {}
       return async (data: unknown) => {
         return await wrapper.send(prefix + type, data)
       }

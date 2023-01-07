@@ -42,8 +42,8 @@ class RpcExchangerRpcHandler2:
         self._exchanger = exchanger
         self._provider = provider
 
-    def __getattr__(self, service: str) -> Callable[..., Awaitable]:
-        async def func(**data):
+    def __getattr__(self, service: str) -> Callable[..., Awaitable[Any]]:
+        async def func(**data: dict[str, Any]) -> Any:
             log.debug(f"{self._provider=} {service=} {data=}")
             result = await self._exchanger.rpc_request(self._provider+"/"+service, data)
             log.debug(f"{result=}")
@@ -55,7 +55,7 @@ class RpcExchangerRpcHandler:
     def __init__(self, exchanger: RpcExchanger) -> None:
         self._exchanger = exchanger
 
-    def __getattr__(self, provider: str):
+    def __getattr__(self, provider: str) -> RpcExchangerRpcHandler2:
         return RpcExchangerRpcHandler2(self._exchanger, provider)
 
 class RedisMessage(TypedDict):
@@ -76,7 +76,7 @@ class RedisEvent(TypedDict):
 class RpcExchanger:
     """Low-level api which is hard to use"""
     _sock: socket.socket
-    _redis: redis.Redis
+    _redis: redis.Redis[bytes]
     def __init__(self, *, rpc_host: str | None=None, rpc_port: int | None=None, redis_url: str="redis://localhost:6379") -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(("0.0.0.0", 0))
@@ -101,7 +101,7 @@ class RpcExchanger:
         sock.setblocking(False)
         return self
 
-    def __exit__(self, *args) -> None:
+    def __exit__(self, *args: Any) -> None:
         # redis close
         self._sock.shutdown(socket.SHUT_RDWR)
         self._sock.close()
@@ -115,7 +115,7 @@ class RpcExchanger:
         await loop.sock_recv(sock, 65536)
         return self
 
-    async def __aexit__(self, *args) -> None:
+    async def __aexit__(self, *args: Any) -> None:
         await self._redis.close()
         self._sock.shutdown(socket.SHUT_RDWR)
         self._sock.close()
@@ -129,7 +129,7 @@ class RpcExchanger:
         }))
         log.debug(f"{username=} {msg=} {chat=}")
 
-    async def sock_recvline(self):
+    async def sock_recvline(self) -> str:
         loop = asyncio.get_event_loop()
         data=b""
         async with self._recv_lock:
@@ -176,7 +176,7 @@ class RpcExchanger:
                     raise UnknownError()
         return json_res["data"]
 
-    def get_redis_instance(self) -> redis.Redis:
+    def get_redis_instance(self) -> redis.Redis[bytes]:
         return self._redis
 
     def create_client(self) -> RpcExchangerClient:
@@ -231,14 +231,14 @@ class RpcExchangerClient:
 
     async def is_online(self, user_ids: list[int]) -> list[bool]:
         self.check_authorized()
-        return await self._rpc.login.is_online(ids=user_ids)
+        return cast(list[bool], await self._rpc.login.is_online(ids=user_ids))
 
     async def register(self, username: str, password: str, *, auto_login: bool=False) -> bool:
         # Note: this only register, won't login
         success = await self._rpc.login.register(username=username, password=password)
         if success and auto_login:
             await self.login(username, password)
-        return success
+        return cast(bool, success)
 
     def check_authorized(self) -> None:
         if self._uid is None or self._username is None:
@@ -259,7 +259,16 @@ class RpcExchangerClient:
             raise ChatNotJoinedError()
         if not await self._rpc.chat.check_send(chat_id=chat, user_id=self._uid):
             raise PermissionDeniedError()
-        await self._exchanger.send_msg(cast(str, self._username), msg, chat, session)    
+        await self._exchanger.send_msg(cast(str, self._username), msg, chat, session)   
+
+    async def send_with_another_username(self, username: str, msg: str, chat: int, session: str | None) -> None:
+        self.check_authorized()
+        self.check_joined(chat)
+        if session is not None and (chat, session) not in self._session_list:
+            raise ChatNotJoinedError()
+        if not await self._rpc.chat.check_send_with_another_username(chat_id=chat, user_id=self._uid):
+            raise PermissionDeniedError()
+        await self._exchanger.send_msg(username, msg, chat, session)  
     
     async def recv(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
         raw_message: Any = None
@@ -312,14 +321,14 @@ class RpcExchangerClient:
         result = await self._rpc.chat.check_create_session(chat_id=chat_id, user_id=self._uid)
         if result:
             self._session_list.add((chat_id, name))
-        return result
+        return cast(bool, result)
 
     async def chat_create(self, name: str, parent_chat_id: int=-1) -> int:
         """Create a new chat, user will join the chat created after creating"""
         self.check_authorized()
         if parent_chat_id != -1:
             self.check_joined(parent_chat_id)
-        return await self._rpc.chat.create_with_user(name=name, user_id=self._uid, parent_chat_id=parent_chat_id)
+        return cast(int, await self._rpc.chat.create_with_user(name=name, user_id=self._uid, parent_chat_id=parent_chat_id))
     
     async def chat_create2(self, name: str) -> int:
         """The alias of chat_create"""
@@ -328,12 +337,12 @@ class RpcExchangerClient:
     async def chat_get_name(self, id: int) -> str:
         """Get name of chat by id"""
         self.check_authorized()
-        return await self._rpc.chat.get_name(id=id)
+        return cast(str, await self._rpc.chat.get_name(id=id))
 
-    async def chat_get_users(self, id: int) -> list[int]:
+    async def chat_get_users(self, id: int) -> list[tuple[int, str]]:
         """Get id of all users in the chat"""
         self.check_authorized()
-        return await self._rpc.chat.get_users(id=id)
+        return cast(list[tuple[int, str]], [tuple(i) for i in await self._rpc.chat.get_users(id=id)])
 
     async def chat_join(self, id: int, *, auto_subscribe: bool=True) -> bool:
         """Join a chat by its id"""
@@ -390,7 +399,7 @@ class RpcExchangerClient:
         """List all sub-chats of a chat"""
         self.check_authorized()
         self.check_joined(id)
-        return await self._rpc.chat.list_sub_chats(id=id)
+        return cast(list[tuple[int, str]], await self._rpc.chat.list_sub_chats(id=id))
 
     async def chat_kick(self, chat_id: int, kicked_user_id: int) -> bool:
         """List all chat you joined"""
@@ -398,42 +407,42 @@ class RpcExchangerClient:
         self.check_joined(chat_id)
         if self._uid == kicked_user_id:
             return False
-        return await self._rpc.chat.kick(chat_id=chat_id, user_id=self._uid, kicked_user_id=kicked_user_id)
+        return cast(bool, await self._rpc.chat.kick(chat_id=chat_id, user_id=self._uid, kicked_user_id=kicked_user_id))
 
     async def chat_rename(self, chat_id: int, new_name: str) -> bool:
         self.check_authorized()
         self.check_joined(chat_id)
-        return await self._rpc.chat.rename(chat_id=chat_id, user_id=self._uid, new_name=new_name)
+        return cast(bool, await self._rpc.chat.rename(chat_id=chat_id, user_id=self._uid, new_name=new_name))
 
     async def chat_invite(self, chat_id: int, user_id: int) -> bool:
         self.check_authorized()
         self.check_not_joined(chat_id)
-        return await self._rpc.chat.invite(chat_id=chat_id, user_id=user_id, invited_user_id=self._uid)
+        return cast(bool, await self._rpc.chat.invite(chat_id=chat_id, user_id=user_id, invited_user_id=self._uid))
 
     async def chat_modify_user_permission(self, chat_id: int, modified_user_id: int, name: ChatUserPermissionName, value: bool) -> bool:
         self.check_authorized()
         self.check_joined(chat_id)
-        return await self._rpc.chat.modify_user_permission(chat_id=chat_id, user_id=self._uid, modified_user_id=modified_user_id, name=name, value=value)
+        return cast(bool, await self._rpc.chat.modify_user_permission(chat_id=chat_id, user_id=self._uid, modified_user_id=modified_user_id, name=name, value=value))
 
     async def chat_get_user_permission(self, chat_id: int, user_id: int) -> dict[ChatUserPermissionName, bool]:
         self.check_authorized()
         self.check_joined(chat_id)
-        return await self._rpc.chat.get_user_permission(chat_id=chat_id, user_id=user_id)
+        return cast(dict[ChatUserPermissionName, bool], await self._rpc.chat.get_user_permission(chat_id=chat_id, user_id=user_id))
 
-    async def chat_modify_permission(self, chat_id: int, name: str, value: bool) -> bool:
+    async def chat_modify_permission(self, chat_id: int, name: ChatPermissionName, value: bool) -> bool:
         self.check_authorized()
         self.check_joined(chat_id)
-        return await self._rpc.chat.modify_permission(chat_id=chat_id, user_id=self._uid, name=name, value=value)
+        return cast(bool, await self._rpc.chat.modify_permission(chat_id=chat_id, user_id=self._uid, name=name, value=value))
 
     async def chat_get_permission(self, chat_id: int) -> dict[ChatPermissionName, bool]:
         self.check_authorized()
         self.check_joined(chat_id)
-        return await self._rpc.chat.get_permission(chat_id=chat_id)
+        return cast(dict[ChatPermissionName, bool], await self._rpc.chat.get_permission(chat_id=chat_id))
 
     async def chat_get_all_permission(self, chat_id: int) -> dict[int, dict[ChatUserPermissionName, bool]]:
         self.check_authorized()
         self.check_joined(chat_id)
-        return await self._rpc.chat.get_all_user_permission(chat_id=chat_id)
+        return cast(dict[int, dict[ChatUserPermissionName, bool]], await self._rpc.chat.get_all_user_permission(chat_id=chat_id))
 
     def __aiter__(self) -> RpcExchangerClient:
         return self
@@ -442,10 +451,10 @@ class RpcExchangerClient:
         return await self.recv()
 
     async def __aenter__(self) -> RpcExchangerClient:
-        self._pubsub = await self._pubsub_raw.__aenter__()
+        self._pubsub = await cast(Any, self._pubsub_raw).__aenter__()
         return self
 
-    async def __aexit__(self, *args) -> None:
+    async def __aexit__(self, *args: Any) -> None:
         if self._uid is not None:
             await self._rpc.login.add_offline(id=self._uid)
         await self._pubsub_raw.__aexit__(None, None, None)
@@ -458,7 +467,7 @@ class RpcExchangerClient:
     def on(self, type: Literal["event"], event_type: Event) -> Callable[[EventCallback], EventCallback]: ...
 
     @no_type_check_decorator
-    def on(self, type, event_type = None):
+    def on(self, type: Any, event_type: Any = None) -> Any:
         if type == "message" and event_type is None:
             def message_callback_handler(callback: MessageCallback) -> MessageCallback:
                 self._msg_callback = callback
@@ -472,7 +481,7 @@ class RpcExchangerClient:
         else:
             raise TypeError("Wrong usage")
 
-    async def run_forever(self):
+    async def run_forever(self) -> None:
         async for result in self:
             if result[0] == "message":
                 _, username, msg, chat, session = result

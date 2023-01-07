@@ -122,7 +122,15 @@ class Main:
         except:
             return False
 
-    
+    @db.atomic()
+    def list_chat(self, id: int) -> list[tuple[int, str, int | None]]:
+        # after json.dumps, tuple returned will become json Array
+        try:
+            bot = Bot.get_by_id(id)
+            chat_bots = bot.chat_bots.select(Chat.id, Chat.name, Chat.parent).execute()
+            return [(chat_bot.chat.id, chat_bot.chat.name, None if chat_bot.chat.parent is None else chat_bot.chat.parent.id) for chat_bot in chat_bots]
+        except:
+            return []
 
 if __name__ == "__main__":
     db.create_tables([User, Chat, ChatUser, Bot, ChatBot])

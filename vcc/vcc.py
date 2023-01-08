@@ -82,15 +82,23 @@ class RpcExchanger:
         sock.bind(("0.0.0.0", 0))
         self._sock = sock
 
-        rpc_host = getenv("VCC_LIB_RPC_HOST", "127.0.0.1") if rpc_host is None else rpc_host
-        rpc_port = int(getenv("VCC_LIB_RPC_PORT", 2474)) if rpc_port is None else rpc_port
-        redis_url = getenv("VCC_LIB_REDIS_URL", "redis://localhost:6379") if redis_url is None else redis_url
+        host_env=self.get_host()
+        rpc_host = host_env[0] if rpc_host is None else rpc_host
+        rpc_port = host_env[1] if rpc_port is None else rpc_port
+        redis_url = getenv("REDIS_URL", "redis://localhost:6379") if redis_url is None else redis_url
 
         self._socket_address = (rpc_host, rpc_port)
         self._redis = redis.Redis.from_url(redis_url)
         self._responses: dict[str, Any] = {}
         self._recv_lock = asyncio.Lock()
         self.rpc = RpcExchangerRpcHandler(self)
+
+    def get_host(self) -> tuple[str, int]:
+        if "RPCHOST" in os.environ:
+            host = os.environ["RPCHOST"].split(":")
+            return host[0], int(host[1])
+        else:
+            return ("localhost", 2474)
 
     def __enter__(self) -> RpcExchanger:
         # you should not use this, use async version instead

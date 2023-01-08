@@ -29,7 +29,7 @@ class RpcProtocol(LineReceiver):
                 self.do_handshake(data)
             case "respond" if self.role == "service":
                 self.factory.make_respond(data["jobid"], data["data"])
-            case "request" if self.role == "client":
+            case "request":
                 self.factory.make_request(
                     self, data["service"], data["data"], data["jobid"]
                 )

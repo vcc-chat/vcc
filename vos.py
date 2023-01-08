@@ -1,6 +1,8 @@
 import sys
 import threading
 
+import setproctitle
+
 
 import prompt_toolkit
 from prompt_toolkit import Application, HTML
@@ -37,7 +39,7 @@ def async_wrapper(func):
     evloop = asyncio.get_event_loop()
 
     def wrapper(*args):
-        return evloop.run_until_complete(func(*args))
+        return evloop.create_task(func(*args))
 
     return wrapper
 
@@ -48,9 +50,10 @@ async def show_dialog_as_float(app, dialog):
     root_container.floats.insert(0, float_)
     focused_before = app.layout.current_window
     app.layout.focus(dialog)
+    app._redraw()
     result = await dialog.future
     app.layout.focus(focused_before)
-
+    app._redraw()
     if float_ in root_container.floats:
         root_container.floats.remove(float_)
     return result
@@ -72,7 +75,6 @@ class TextInputDialog:
             self.future.set_result(None)
 
         self.text_area = TextArea(
-            completer=completer,
             multiline=False,
             width=D(preferred=40),
             accept_handler=accept_text,
@@ -92,11 +94,11 @@ class TextInputDialog:
     def __pt_container__(self):
         return self.dialog
 
-
 class mainapp:
     def __init__(self, protocol):
-        self.protocol = protocol
 
+        self.protocol = protocol
+        setproctitle.setthreadtitle("VOS client")
     async def message_reciver(self):
         async for msg in self.client:
 

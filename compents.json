@@ -1,0 +1,14 @@
+[
+  {
+    "id": "vcc.vos",
+    "desc": "A vcc gateway for ssh",
+    "command": "null",
+    "ports": [
+      5022
+    ],
+    "options": {
+      "require": [],
+      "optional": []
+    }
+  }
+]

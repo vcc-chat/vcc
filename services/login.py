@@ -13,15 +13,16 @@ import models
 
 db = models.get_database()
 
-User=models.bind_model(models.User,db)
+User = models.bind_model(models.User, db)
 
 
-
-def random_string(length:int)->str:
+def random_string(length: int) -> str:
     return "".join(
         random.SystemRandom().choice(string.ascii_letters + string.digits)
         for _ in range(length)
     )
+
+
 class Login:
     @db.atomic()
     def login(self, username: str, password: str) -> int | None:
@@ -32,18 +33,22 @@ class Login:
             return None
         if not user.login:
             return None
-        hashed_password = hmac.new(user.salt.encode(), password.encode(), "sha512").hexdigest()
-        if hashed_password!=user.password:
+        hashed_password = hmac.new(
+            user.salt.encode(), password.encode(), "sha512"
+        ).hexdigest()
+        if hashed_password != user.password:
             return None
         return user.id
-    
+
     @db.atomic()
     def register(self, username: str, password: str) -> bool:
         if username == "system":
             return False
-        hashed_password = hmac.new((salt:=random_string(10)).encode(), password.encode(), "sha512").hexdigest()
+        hashed_password = hmac.new(
+            (salt := random_string(10)).encode(), password.encode(), "sha512"
+        ).hexdigest()
         try:
-            User(name=username, password=hashed_password,salt=salt).save()
+            User(name=username, password=hashed_password, salt=salt).save()
             return True
         except:
             return False
@@ -81,6 +86,7 @@ class Login:
             return [bool(User.get_by_id(id).online_count) for id in ids]
         except:
             return []
+
 
 if __name__ == "__main__":
     db.create_tables([User])

@@ -1,18 +1,21 @@
 from peewee import *
 import os
 
-def bind_model(model,db):
+
+def bind_model(model, db):
     model.bind(db)
     return model
+
 
 class User(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=16, unique=True)
     password = CharField(max_length=16)
-    salt= CharField()
+    salt = CharField()
     online_count = IntegerField(default=0)
     # Permissions
     login = BooleanField(default=True)
+
 
 class Chat(Model):
     id = BigAutoField(primary_key=True)
@@ -21,6 +24,7 @@ class Chat(Model):
     parent = ForeignKeyField("self", backref="sub_chats", null=True)
     # Permissions
     public = BooleanField(default=True)
+
 
 class ChatUser(Model):
     id = BigAutoField(primary_key=True)
@@ -45,20 +49,24 @@ class ChatUser(Model):
     # Being banned, any other permission will be ignored
     banned = permissions.flag(256)
 
+
 class Bot(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=16, unique=True)
     token = CharField(max_length=32)
+
 
 class ChatBot(Model):
     id = BigAutoField(primary_key=True)
     bot = ForeignKeyField(Bot, backref="chat_bots")
     chat = ForeignKeyField(Chat, backref="chat_bots")
 
+
 def get_database():
     if "DATABASE" in os.environ:
         return eval(os.environ["DATABASE"])
     else:
         return SqliteDatabase("db.db")
+
 
 __all__ = ["bind_model", "User", "Chat", "ChatUser", "Bot", "ChatBot", "get_database"]

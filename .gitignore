@@ -4,3 +4,7 @@ __pycache__
 nohup.out
 .vscode
 *.save
+prime
+ssh_host_key
+ssh_host_key.pub
+prime

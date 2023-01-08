@@ -39,7 +39,7 @@ def async_wrapper(func):
     evloop = asyncio.get_event_loop()
 
     def wrapper(*args):
-        return evloop.create_task(func(*args))
+        return evloop.run_until_complete(func(*args))
 
     return wrapper
 
@@ -193,7 +193,7 @@ class mainapp:
     async def send_message(self, buffer: Buffer):
         if buffer.text == "":
             return
-        await self.client.send(buffer.text, self.current_chat[0])
+        await self.client.send(buffer.text, self.current_chat[0], None)
 
     @async_wrapper
     async def create_chat(self):

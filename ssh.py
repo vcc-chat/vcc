@@ -7,6 +7,7 @@ import sys
 import os
 import asyncio
 import threading
+import logging
 
 from zope.interface import implementer
 
@@ -206,5 +207,6 @@ class ExampleFactory(factory.SSHFactory):
 
 if __name__ == "__main__":
     vos.init()
+    logging.getLogger("vcc.vcc").setLevel(logging.DEBUG)
     reactor.listenTCP(5022, ExampleFactory())
     reactor.run()

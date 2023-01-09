@@ -8,7 +8,7 @@ from typing import Any, Literal
 
 import base
 import warnings
-import redis
+import redis.asyncio as redis
 from models import *
 
 db = get_database()
@@ -38,16 +38,16 @@ class ChatService:
     def __init__(self):
         self._redis: redis.Redis[bytes] = redis.Redis.from_url(os.environ.get("REDIS_URL","redis://localhost"))
 
-    def _send_message(self, chat: int, msg: str) -> None:
-        self._redis.publish(
+    async def _send_message(self, chat: int, msg: str) -> None:
+        await self._redis.publish(
             f"messages:{chat}", json.dumps({"username": SYSTEM_USER_NAME, "msg": msg})
         )
 
-    def _send_event(self, chat: int, type: EventType, data: Any) -> None:
-        self._redis.publish(f"events:{chat}", json.dumps({"type": type, "data": data}))
+    async def _send_event(self, chat: int, type: EventType, data: Any) -> None:
+        await self._redis.publish(f"events:{chat}", json.dumps({"type": type, "data": data}))
 
     @db.atomic()
-    def create_with_user(
+    async def create_with_user(
         self, name: str, user_id: int, parent_chat_id: int
     ) -> int | None:
         # parent_chat_id is -1 if the chat has no parent
@@ -73,14 +73,14 @@ class ChatService:
             return None
 
     @db.atomic()
-    def get_name(self, id: int) -> str | None:
+    async def get_name(self, id: int) -> str | None:
         chat = Chat.get_or_none(id=id)
         if chat is None:
             return None
         return chat.name
 
     @db.atomic()
-    def get_users(self, id: int) -> list[tuple[int, str]]:
+    async def get_users(self, id: int) -> list[tuple[int, str]]:
         # Won't return users of sub-chats
         chat = Chat.get_or_none(Chat.id == id)
         if chat is None:
@@ -92,7 +92,7 @@ class ChatService:
         return user_names
 
     @db.atomic()
-    def join(self, chat_id: int, user_id: int) -> bool:
+    async def join(self, chat_id: int, user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
             if not chat.public:
@@ -111,8 +111,8 @@ class ChatService:
             chat_user, chat_user_created = ChatUser.get_or_create(chat=chat, user=user)
             if chat_user.banned:
                 return False
-            self._send_message(chat_id, f"{user.name} has joined the chat.")
-            self._send_event(
+            await self._send_message(chat_id, f"{user.name} has joined the chat.")
+            await self._send_event(
                 chat_id, "join", {"user_name": user.name, "user_id": user_id}
             )
             return True
@@ -120,7 +120,7 @@ class ChatService:
             return False
 
     @db.atomic()
-    def quit(self, chat_id: int, user_id: int) -> bool:
+    async def quit(self, chat_id: int, user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
@@ -135,8 +135,8 @@ class ChatService:
                     i.chat_user.delete_instance()
             chat_user = ChatUser.get(chat=chat, user=user)
             chat_user.delete_instance()
-            self._send_message(chat_id, f"{user.name} has quit the chat.")
-            self._send_event(
+            await self._send_message(chat_id, f"{user.name} has quit the chat.")
+            await self._send_event(
                 chat_id, "quit", {"user_name": user.name, "user_id": user_id}
             )
             return True
@@ -144,7 +144,7 @@ class ChatService:
             return False
 
     @db.atomic()
-    def kick(self, chat_id: int, user_id: int, kicked_user_id: int) -> bool:
+    async def kick(self, chat_id: int, user_id: int, kicked_user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
@@ -184,7 +184,7 @@ class ChatService:
             return False
 
     @db.atomic()
-    def rename(self, chat_id: int, user_id: int, new_name: str) -> bool:
+    async def rename(self, chat_id: int, user_id: int, new_name: str) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
@@ -201,8 +201,8 @@ class ChatService:
             old_name = chat.name
             chat.name = new_name
             chat.save()
-            self._send_message(chat_id, f"The chat has been renamed {new_name}.")
-            self._send_event(
+            await self._send_message(chat_id, f"The chat has been renamed {new_name}.")
+            await self._send_event(
                 chat_id, "rename", {"old_name": old_name, "new_name": new_name}
             )
             return True
@@ -210,7 +210,7 @@ class ChatService:
             return False
 
     @db.atomic()
-    def invite(self, chat_id: int, user_id: int, invited_user_id: int) -> bool:
+    async def invite(self, chat_id: int, user_id: int, invited_user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
@@ -234,10 +234,10 @@ class ChatService:
                 # Also join parent chat
                 ChatUser.get_or_create(chat=parent_chat, user=user)
             ChatUser.create(chat=chat, user=invited_user)
-            self._send_message(
+            await self._send_message(
                 chat_id, f"{invited_user.name} has been invited by {user.name}."
             )
-            self._send_event(
+            await self._send_event(
                 chat_id,
                 "invite",
                 {
@@ -252,7 +252,7 @@ class ChatService:
             return False
 
     @db.atomic()
-    def check_send(self, chat_id: int, user_id: int) -> bool:
+    async def check_send(self, chat_id: int, user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
@@ -263,7 +263,7 @@ class ChatService:
             return False
 
     @db.atomic()
-    def check_create_session(self, chat_id: int, user_id: int) -> bool:
+    async def check_create_session(self, chat_id: int, user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
             if chat.parent is None:
@@ -275,7 +275,7 @@ class ChatService:
             return False
 
     @db.atomic()
-    def modify_user_permission(
+    async def modify_user_permission(
         self, chat_id: int, user_id: int, modified_user_id: int, name: str, value: bool
     ) -> bool:
         try:
@@ -307,7 +307,7 @@ class ChatService:
             return False
 
     @db.atomic()
-    def modify_permission(
+    async def modify_permission(
         self, chat_id: int, user_id: int, name: str, value: bool
     ) -> bool:
         try:
@@ -333,7 +333,7 @@ class ChatService:
             return False
 
     @db.atomic()
-    def get_user_permission(self, chat_id: int, user_id: int) -> dict[str, bool]:
+    async def get_user_permission(self, chat_id: int, user_id: int) -> dict[str, bool]:
         try:
             chat = Chat.get_by_id(chat_id)
             user = User.get_by_id(user_id)
@@ -345,7 +345,7 @@ class ChatService:
             return {}
 
     @db.atomic()
-    def get_permission(self, chat_id: int) -> dict[str, bool]:
+    async def get_permission(self, chat_id: int) -> dict[str, bool]:
         try:
             chat = Chat.get_by_id(chat_id)
             return {i: getattr(chat, i) for i in all_chat_permissions}
@@ -353,7 +353,7 @@ class ChatService:
             return {}
 
     @db.atomic()
-    def get_all_user_permission(self, chat_id: int) -> dict[int, dict[str, bool]]:
+    async def get_all_user_permission(self, chat_id: int) -> dict[int, dict[str, bool]]:
         try:
             chat = Chat.get_by_id(chat_id)
             chat_users = chat.chat_users
@@ -367,7 +367,7 @@ class ChatService:
             return {}
 
     @db.atomic()
-    def list_somebody_joined(self, id: int) -> list[tuple[int, str, int | None]]:
+    async def list_somebody_joined(self, id: int) -> list[tuple[int, str, int | None]]:
         # after json.dumps, tuple returned will become json Array
         try:
             user = User.get_by_id(id)
@@ -389,7 +389,7 @@ class ChatService:
             return []
 
     @db.atomic()
-    def list_sub_chats(self, id: int) -> list[tuple[int, str]]:
+    async def list_sub_chats(self, id: int) -> list[tuple[int, str]]:
         try:
             chat = Chat.get_by_id(id)
             sub_chats = chat.sub_chats

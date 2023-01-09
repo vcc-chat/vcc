@@ -1,3 +1,4 @@
+import os
 import io
 import uuid
 
@@ -8,10 +9,11 @@ import base
 
 class File:
     def __init__(self):
+
         self.minio = minio.Minio(
-            "localhost:9000",
-            access_key="minioadmin",
-            secret_key="minioadmin",
+            os.environ.get("MINIO_URL","localhost:9000"),
+            os.environ.get("MINIO_ACCESS","minioadmin"),
+            os.environ.get("MINIO_SECRET","minioadmin"),
             secure=False,
         )
 

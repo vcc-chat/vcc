@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # type: ignore
 import json
+import os
 
 from peewee import *
 from typing import Any, Literal
@@ -35,7 +36,7 @@ all_chat_permissions = ["public"]
 
 class ChatService:
     def __init__(self):
-        self._redis: redis.Redis[bytes] = redis.Redis()
+        self._redis: redis.Redis[bytes] = redis.Redis.from_url(os.environ.get("REDIS_URL","redis://localhost"))
 
     def _send_message(self, chat: int, msg: str) -> None:
         self._redis.publish(

@@ -170,8 +170,8 @@ class ChatService:
                     # Kick him from any sub-chat
                     i.chat_user.delete_instance()
             kicked_chat_user.delete_instance()
-            self._send_message(chat_id, f"{kicked_user.name} has been kicked.")
-            self._send_event(
+            await self._send_message(chat_id, f"{kicked_user.name} has been kicked.")
+            await self._send_event(
                 chat_id,
                 "kick",
                 {

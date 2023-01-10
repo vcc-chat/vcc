@@ -58,11 +58,11 @@ class Service(LineReceiver):
 
 
 class RpcServiceFactory(ClientFactory):
-    def __init__(self, name):
+    def __init__(self, name,async_mode=False):
         self.name = name
         self.eventloop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.eventloop)
-        self.async_mode = False
+        self.async_mode = async_mode
         self.services = {}
         self.funcs = {}
         self.done = Deferred()

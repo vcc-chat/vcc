@@ -105,9 +105,9 @@ export function CreateChatDialog({ open, setOpen }: {
   const [parentChat, setParentChat] = useState(-1)
   const [isCreateChat, setIsCreateChat] = useState(true)
   return (
-    <Dialog open={open}>
+    <Dialog open={open} css={{ overflow: "visible" }}>
       <DialogTitle>Create {isCreateChat ? "chat" : "session"}</DialogTitle>
-      <DialogContent>
+      <DialogContent css={{ overflow: "visible" }}>
         <DialogContentText>
           Enter the name of the {isCreateChat ? "chat" : "session"} you want to create and choose its parent chat.
         </DialogContentText>
@@ -192,92 +192,6 @@ export function CreateChatDialog({ open, setOpen }: {
 }
 
 
-function SettingsEdit({ id: uid, permission: permissionRawData }: {
-  id: number,
-  permission: Record<PermissionKey, boolean>
-}) {
-  const chat = useSelector(state => state.chat.value)
-  const queryClient = useQueryClient()
-  const [permissions, setPermissions] = useState({
-    kick: false,
-    rename: false,
-    invite: false,
-    modify_permission: false,
-    send: true,
-    create_sub_chat: false,
-    create_session: true
-  })
-  function setPermission(key: PermissionKey) {
-    return function (value: boolean) {
-      setPermissions({
-        ...permissions,
-        [key]: value
-      })
-    }
-  }
-  const { makeRequest, successAlert, errorAlert } = useNetwork()
-  function makeModifyPermissionRequest(name: PermissionKey) {
-    const value = permissions[name]
-    if (permissionRawData[name] == value) {
-      return Promise.resolve({
-        uid: 1,
-        type: RequestType.CTL_MPERM,
-        usrname: "",
-        msg: ""
-      })
-    }
-    const request = makeRequest({
-      type: RequestType.CTL_MPERM,
-      msg: {
-        "chat_id": chat,
-        "modified_user_id": uid,
-        "name": name,
-        "value": value
-      } as any
-    })
-    queryClient.invalidateQueries({
-      queryKey: ["user-permission", chat]
-    })
-    return request
-  }
-  useEffect(() => {
-    if (!permissionRawData) return
-    setPermissions(permissionRawData)
-  }, [permissionRawData])
-  return (
-    <SettingsGroup>
-      {allPermissions.map(key => (
-        <SettingsEditItem
-          checked={permissions[key]}
-          setChecked={setPermission(key)}
-          label={permissionKeyToName(key)}
-          key={key}
-        />
-      ))}
-      <Button onClick={async () => {
-        const result = await Promise.all(
-          allPermissions.map(makeModifyPermissionRequest)
-        )
-        const success = result
-          .map(req => !!req.uid)
-          .reduce((a, b) => a && b)
-        if (success) {
-          successAlert("Permission has successfully been modified.")
-        } else {
-          errorAlert("Permission denied.")
-        }
-      }} disabled={
-        allPermissions
-          .map((a) => permissionRawData[a] == permissions[a])
-          .reduce((a,b) => a && b)
-      }>
-        Change permission
-      </Button>
-    </SettingsGroup>
-  )
-}
-
-
 export function EditPermissionDialog({ open, setOpen, uid, username }: {
   open: boolean,
   setOpen: (value: boolean) => void,
@@ -289,6 +203,7 @@ export function EditPermissionDialog({ open, setOpen, uid, username }: {
   const { data: permissionRawData } = useQuery({
     queryKey: ["user-permission", chat],
     queryFn: async () => {
+      if (chat == null) return
       const { msg } = await makeRequest({
         type: RequestType.CTL_GPERM,
         uid: chat!,
@@ -308,7 +223,8 @@ export function EditPermissionDialog({ open, setOpen, uid, username }: {
     modify_permission: false,
     send: true,
     create_sub_chat: false,
-    create_session: true
+    create_session: true,
+    banned: false
   })
   function setPermission(key: PermissionKey) {
     return function (value: boolean) {
@@ -336,9 +252,6 @@ export function EditPermissionDialog({ open, setOpen, uid, username }: {
         "name": name,
         "value": value
       } as any
-    })
-    queryClient.invalidateQueries({
-      queryKey: ["user-permission", chat]
     })
     return request
   }
@@ -370,6 +283,9 @@ export function EditPermissionDialog({ open, setOpen, uid, username }: {
           const result = await Promise.all(
             allPermissions.map(makeModifyPermissionRequest)
           )
+          queryClient.invalidateQueries({
+            queryKey: ["user-permission", chat]
+          })
           const success = result
             .map(req => !!req.uid)
             .reduce((a, b) => a && b)

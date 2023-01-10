@@ -1,16 +1,35 @@
 import { createContext, useContext } from "react"
-import { RequestType, Request } from "./config"
-
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query"
+import { persistQueryClient } from "@tanstack/react-query-persist-client"
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
+import { broadcastQueryClient } from "@tanstack/query-broadcast-client-experimental"
+
+import { RequestType, Request } from "./config"
 import { useDispatch, useSelector } from "./store"
 import { changeAll } from "./state/chat"
+import { LoginType } from "./state/login"
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 2000
+      staleTime: 5000,
+      cacheTime: Infinity
     }
   }
+})
+
+const localStoragePersister = createSyncStoragePersister({
+  storage: localStorage
+})
+
+persistQueryClient({
+  queryClient,
+  persister: localStoragePersister
+})
+
+broadcastQueryClient({
+  queryClient,
+  broadcastChannel: "web-vcc"
 })
 
 export const NetworkContext = createContext<{
@@ -67,14 +86,38 @@ export function stringToColor(str: string) {
   return color;
 }
 
+export function responseToChatList(data: [number, string, number | null][]) {
+  const values = data.map(value => value[0])
+  const names = data.map(value => value[1])
+  const parentChats = Object.fromEntries(
+    data
+      .map<[number, number]>(([a, b, c]) => [c ?? -1, a])
+      .sort(([a, b], [c, d]) => +(a > c))
+      .reduce((a, [b, d]) => (
+        a.length ? (
+          c => c[0] == b ? (
+            a.slice(0, -1).concat([[b, c[1].concat(d)]])
+          ) : a.concat([[b, [d]]])
+        )(a.at(-1)!) : [[b, [d]]]
+      ) as [number, number[]][], [] as [number, number[]][])
+      .map<[number, number[]]>(([a, b], i, arr) => (
+        a == -1 ? [a, b.filter(a => !arr.map(([a, b]) => a).includes(a))] : [a, b]
+      ))
+      .reduce((a, b) => [
+        ...a, ...(b[0] == -1 ? b[1].map(a => [a, []] as [number, number[]]) : [b])
+      ], [] as [number, number[]][])
+  )
+  return { values, names, parentChats }
+}
+
 export function useChatList() {
-  const { makeRequest } = useNetwork()
   const dispatch = useDispatch()
-  const { status, data } = useQuery({
+  const enabled = useSelector(state => state.login.type) == LoginType.LOGIN_SUCCESS
+  const { isLoading, data, isFetching } = useQuery({
     queryKey: ["chat-list"],
     cacheTime: Infinity,
     queryFn: async () => {
-      const { msg: msgUntyped } = await makeRequest({
+      const { msg: msgUntyped } = await window.makeRequest({
         type: RequestType.CTL_LJOIN
       })
       const data = msgUntyped as unknown as [number, string, number | null][]
@@ -104,14 +147,16 @@ export function useChatList() {
         names,
         parentChats
       }
-    }
+    },
+    enabled
   })
   const queryClient = useQueryClient()
   const values = data?.values ??  []
   const names = data?.names ??  []
   const parentChats = data?.parentChats ?? {}
   return {
-    loading: status === "loading",
+    loading: isLoading,
+    fetching: isFetching,
     values,
     names,
     parentChats,

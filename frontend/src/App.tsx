@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense, ReactNode, memo } from "react"
+import { useEffect, useState, lazy, Suspense, ReactNode, memo, useCallback } from "react"
 import styled from "@emotion/styled"
 import { Global, css } from "@emotion/react"
 import useWebSocket, { ReadyState } from "react-use-websocket"
@@ -7,10 +7,9 @@ import {
   Route,
   createBrowserRouter,
   createRoutesFromElements,
-  RouterProvider,
-  redirect,
-  json
+  RouterProvider
 } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 
 import {
   Snackbar,
@@ -23,12 +22,13 @@ import {
 import { WEBSOCKET_PORT, RequestType, Request, WEBSOCKET_USE_PATH } from "./config"
 import { Notification, notify } from "./Notification"
 import { useSelector, useDispatch, saveMessage, restoreMessage } from './store'
-import { NetworkContext } from "./tools"
+import { NetworkContext, responseToChatList, useChatList } from "./tools"
 import { success, failed, LoginType, reset } from "./state/login"
 import { MyBackdrop } from "./Form"
 import { changeName, changeAll } from "./state/chat"
 import { addMessage, setMessages } from "./state/message"
 import * as loaders from "./loaders"
+import { usePlugin } from "./Plugin"
 
 const Invite = lazy(() => import("./pages/Invite"))
 const Login = lazy(() => import("./pages/Login"))
@@ -38,8 +38,8 @@ const Chat = lazy(() => import("./pages/Chat"))
 const Settings = lazy(() => import("./pages/Settings"))
 const SettingsActions = lazy(() => import("./pages/SettingsActions"))
 const SettingsInfo = lazy(() => import("./pages/SettingsInfo"))
-const SettingsUsers = lazy(() => import("./pages/SettingsUsers"))
 const ErrorElement = lazy(() => import("./pages/ErrorElement"))
+const Plugin = lazy(() => import("./pages/Plugin"))
 
 const Root = styled.div`
   display: flex;
@@ -74,14 +74,12 @@ function addSuspense(children: ReactNode) {
 }
 
 function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
-  const protocol = location.protocol == "http:" ? "ws" : "wss"
-  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = (useWebSocket<Request>(
-    !WEBSOCKET_USE_PATH
-    ? `${protocol}://${location.hostname}:${WEBSOCKET_PORT}/` 
-    : `${protocol}://${location.hostname}/ws/`
-  ))
+  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket<Request>(`wss://${location.hostname}/ws/`)
   const dispatch = useDispatch()
+  const queryClient = useQueryClient()
   const loginStatus = useSelector(state => state.login.type)
+  const { receiveHook } = usePlugin()
+  const { names: chatNames, values: chatValues } = useChatList()
 
   const [severity, setSeverity] = useState<any>("info")
   const [alertTitle, setAlertTitle] = useState("")
@@ -100,20 +98,16 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
     setAlertTitle("Error")
     setAlertContent(content)
   }
-  // number is RequestType
-  const [handleFunctionList, setHandleFunctionList] = useState<Record<string, Array<(value: Request) => void>>>({})
+  // string is uuid
+  const [handleFunctionList, setHandleFunctionList] = useState<Record<string, (value: Request) => void>>({})
 
   async function makeRequest(request: Request) {
     sendJsonMessage(request)
     return await new Promise<Request>(res => {
-      setHandleFunctionList(list => {
-        if (list[request.type] == undefined) {
-          list[request.type] = [res]
-        } else {
-          list[request.type].unshift(res)
-        }
-        return list
-      })
+      setHandleFunctionList(list => ({
+        ...list,
+        [request.uuid!]: res
+      }))
     })
   }
 
@@ -125,30 +119,44 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
 
   useEffect(() => {
     const message = lastJsonMessage
-    console.log({ message })
     if (message == null) return
-    const list = handleFunctionList[message.type]
-    if (list instanceof Array && list.length) {
-      list.pop()!(message)
-      setHandleFunctionList(handleFunctionList)
-      return
+    const func = handleFunctionList[message.uuid!]
+    if (func != undefined) {
+      func(message)
     }
     switch (message.type) {
       case RequestType.MSG_SEND:
         if (loginStatus != LoginType.LOGIN_SUCCESS) break
-        dispatch(addMessage({
-          chat: message.uid,
-          message: {
-            time: +new Date,
-            req: message
+        (async () => {
+          const newMessage = {
+            req: receiveHook ? await receiveHook(message) : message,
+            time: +new Date
           }
-        }))
-        notify(message.usrname, message.msg)
-        saveMessage({
-          time: +new Date,
-          req: message
-        })
+          const request = newMessage.req
+          if (request == null) return
+          dispatch(addMessage({
+            chat: request.uid,
+            message: newMessage
+          }))
+          notify(chatNames[chatValues.indexOf(request.uid)], `${request.usrname}: ${request.msg}`)
+          saveMessage(newMessage)
+          if (request.usrname == "system" && (
+            request.msg.includes("join") 
+            || request.msg.includes("quit") 
+            || request.msg.includes("kick")
+          )) {
+            queryClient.invalidateQueries({
+              queryKey: ["user-list", request.uid]
+            })
+          }
+        })()
         break
+      case RequestType.CTL_LJOIN:
+        queryClient.setQueryData(["chat-list"], () => {
+          const { values, names, parentChats } = responseToChatList(message.msg as any)
+          dispatch(changeAll([values, names]))
+          return { values, names, parentChats }
+        })
     }
   }, [lastMessage])
 
@@ -180,13 +188,22 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
     errorAlert
   }
 }
-
-async function makeRequest(req: Request) {
-  // hateful trick but work
+async function makeRequest(request: {
+  type: RequestType,
+  uid?: number,
+  usrname?: string,
+  msg?: string
+}) {
   while (window._makeRequest === undefined) {
     await loaders.wait()
   }
-  return await window._makeRequest(req)
+  return window._makeRequest({
+    type: request.type,
+    uid: request.uid ?? 0,
+    usrname: request.usrname ?? "",
+    msg: request.msg ?? "",
+    uuid: URL.createObjectURL(new Blob).slice(-36)
+  })
 }
 
 async function sendJsonMessage(req: Request) {
@@ -210,10 +227,10 @@ const router = createBrowserRouter(
           <Route index loader={loaders.settingsIndexLoader} />
           <Route path="null" element={<></>} loader={loaders.settingsLoader} />
           <Route path="info" element={addSuspense(<SettingsInfo />)} loader={loaders.settingsInfoLoader} />
-          <Route path="users" element={addSuspense(<SettingsUsers />)} loader={loaders.settingsUsersLoader} />
           <Route path="actions" element={addSuspense(<SettingsActions />)} loader={loaders.settingsActionsLoader} />
         </Route>
       </Route>
+      <Route path="/plugins" element={addSuspense(<Plugin />)} loader={loaders.pluginLoader} />
       <Route path="/login" element={addSuspense(<Login />)} loader={loaders.loginLoader} action={loaders.loginAction} />
       <Route path="/register" element={addSuspense(<Register />)} loader={loaders.registerLoader} action={loaders.registerAction} />
       <Route path="*" element={addSuspense(<ErrorElement content="404 Not Found" />)} />
@@ -239,9 +256,9 @@ function App() {
     successAlert,
     errorAlert
   } = useMessageWebSocket(setAlertOpen)
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setAlertOpen(false)
-  }
+  }, [setAlertOpen])
   return (
     <Root>
       <Global styles={css`

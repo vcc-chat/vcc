@@ -1,21 +1,26 @@
-import { useEffect, useState, useRef, useCallback, DragEvent } from "react"
+import { useEffect, useState, useRef, useCallback, DragEvent, memo } from "react"
 import { useParams, useFetcher } from "react-router-dom"
-
-import { RequestType, Request, RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { Messages, MessageBody, MessageTitle, Message, MessageTime, MessageAvatar, MessageUsername, MessageBodyMarkdown } from "../Messages"
+import remarkGithub, { Options as RemarkGithubOptions } from "remark-github"
+import { PrismAsyncLight as SyntaxHighlighter } from "react-syntax-highlighter"
+import { materialLight } from "react-syntax-highlighter/dist/esm/styles/prism"
+
+import { RequestType, Request, RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
+import { Messages, MessageBody, MessageTitle, Message, MessageTime, MessageAvatar, MessageUsername, MessageBodyMarkdown, MessageLink } from "../Messages"
 import { FormList, FormItem, FormInput, Form, FormInputs, Button } from "../Form"
 import { Toolbar } from "../Toolbar"
 import { useSelector } from "../store"
 import { useChatList, useNetwork } from "../tools"
+import { useChatActionData, wait } from "../loaders"
 
 function addLeadingZero(a: string | number) {
   a = a + ""
   return a.padStart(2, "0")
 }
 
-function MessageComponent({ prevMsg, nowMsg }: {
+
+const MessageComponent = memo(function MessageComponent({ prevMsg, nowMsg }: {
   prevMsg: RequestWithTime | null,
   nowMsg: RequestWithTime
 }) {
@@ -31,7 +36,7 @@ function MessageComponent({ prevMsg, nowMsg }: {
     ev.dataTransfer.setData("text/plain", `${req.usrname}: ${req.msg}`)
   }, [req.msg])
   return (
-    <Message key={+date} showTitle={showTitle}>
+    <Message key={nowMsg.time} showTitle={showTitle}>
       {showTitle && (
         <MessageTitle>
           <MessageAvatar name={req.usrname} />
@@ -44,7 +49,42 @@ function MessageComponent({ prevMsg, nowMsg }: {
       )}
       <MessageBody>
         <MessageBodyMarkdown>
-          <ReactMarkdown children={req.msg} remarkPlugins={[remarkGfm]} />
+          <ReactMarkdown children={req.msg} remarkPlugins={[remarkGfm, [remarkGithub, {
+            repository: "https://github.com/a/b",
+            mentionStrong: false,
+            buildUrl(values) {
+              if (values.type == "commit" || values.type == "compare") return false
+              if (values.type == "issue") {
+                if (values.user != "a" || values.project != "b") return false
+                return "/chats/" + values.no
+              }
+              if (values.type == "mention") {
+                return "/users/" + encodeURIComponent(values.user)
+              }
+            }
+          } as RemarkGithubOptions]]} components={{
+            a: ({node, href, children, ...props}) => (
+              <MessageLink link={href!} children={children} />
+            ),
+            code({node, inline, className, children, ...props}) {
+              const match = /language-(\w+)/.exec(className || '')
+              console.log(!inline && match)
+              return !inline && match ? (
+                <SyntaxHighlighter
+                  children={String(children).replace(/\n$/, '')}
+                  language={match[1]}
+                  wrapLongLines
+                  style={materialLight}
+                  showLineNumbers
+                  {...props as any}
+                />
+              ) : (
+                <code className={className} {...props}>
+                  {children}
+                </code>
+              )
+            }
+          }} />
         </MessageBodyMarkdown>
         {!showTitle && <MessageTime draggable onDragStart={dragStartHandler}>
           {addLeadingZero(date.getMonth() + 1)}-{addLeadingZero(date.getDate())}&nbsp;
@@ -53,7 +93,7 @@ function MessageComponent({ prevMsg, nowMsg }: {
       </MessageBody>
     </Message>
   )
-}
+})
 
 export default function Chat() {
   const [msgBody, setMsgBody] = useState("")
@@ -64,10 +104,11 @@ export default function Chat() {
   const chat = Number.isNaN(chatRaw) || !chats.includes(chatRaw) ? null : chatRaw
   const messageHistory = useSelector(state => state.message.value)
   const messages = chat == null || messageHistory[chat] == null ? [] : messageHistory[chat]
-  const { ready } = useNetwork()
+  const { ready, successAlert, errorAlert } = useNetwork()
   const ref = useRef<HTMLUListElement>(null)
   const fetcher = useFetcher()
   const session = useSelector(state => state.chat.session)
+  const result = useChatActionData()
   useEffect(() => {
     if (ref.current == null) return
     ref.current.scrollTo(0, ref.current!.scrollHeight) 
@@ -78,6 +119,14 @@ export default function Chat() {
       ref.current.scrollTo(0, ref.current.scrollHeight) 
     }
   }, [messages])
+  useEffect(() => {
+    if (result == undefined) return
+    if (result.ok) {
+      successAlert("The operation was successfully completed. ")
+    } else {
+      errorAlert("The operation is failed")
+    }
+  }, [result])
   const messagesShow = messages.filter(a => a.req.session == session)
   return (
     <>

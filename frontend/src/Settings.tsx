@@ -1,5 +1,5 @@
 import styled from "@emotion/styled"
-import { ReactNode } from "react"
+import { ChangeEvent, ReactNode, useCallback } from "react"
 import { Link, Outlet } from "react-router-dom"
 
 import {
@@ -64,22 +64,25 @@ export function SettingsEditItem({ checked, setChecked, label }: {
   setChecked: (checked: boolean) => void,
   label: string
 }) {
+  const onChangeHandler = useCallback((ev: ChangeEvent<HTMLInputElement>) => {
+    setChecked(ev.target.checked)
+  }, [setChecked])
   return (
     <SettingsControlLabel 
       control={
         <Switch 
           checked={checked} 
-          onChange={ev => setChecked(ev.target.checked)} 
+          onChange={onChangeHandler} 
         />
       } 
       label={label} 
     />
   )
 }
-export const allPermissions = ["kick", "rename", "invite", "modify_permission", "send", "create_sub_chat", "create_session"] as const
+export const allPermissions = ["kick", "rename", "invite", "modify_permission", "send", "create_sub_chat", "create_session", "banned"] as const
 export type PermissionKey = typeof allPermissions[number]
 
-export const allPermissionNames = ["kick", "rename", "invite", "modify permission", "send", "create sub-chats", "create session"] as const
+export const allPermissionNames = ["kick", "rename", "invite", "modify permission", "send", "create sub-chats", "create session", "being banned"] as const
 export type PermissionName = typeof allPermissionNames[number]
 
 export function permissionKeyToName(key: PermissionKey): PermissionName {
@@ -94,6 +97,9 @@ export function SettingsAccordion({ showID, index, setIndex, title, subtitle }: 
   subtitle?: string
 }) {
   const show = showID == index
+  const onChangeHandler = useCallback(() => {
+    setIndex(show ? undefined : showID)
+  }, [setIndex, show, showID])
   return (
     <Accordion expanded={show} onChange={() => setIndex(show ? undefined : showID)}>
       <AccordionSummary

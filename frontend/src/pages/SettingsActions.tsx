@@ -37,7 +37,6 @@ export default memo(function SettingsActions(props: {}) {
   }, [chatName])
 
   useEffect(() => {
-    console.log({ publicRaw })
     setPublic(publicRaw)
   }, [publicRaw])
 

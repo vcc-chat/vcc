@@ -34,11 +34,13 @@ import {
   Tune as TuneIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
-  MoreHoriz as MoreHorizIcon
+  MoreHoriz as MoreHorizIcon,
+  People as PeopleIcon,
+  Close as CloseIcon
 } from "@mui/icons-material"
 
 import { useSelector, useDispatch } from "./store"
-import { RequestType, MESSAGE_MIME_TYPE } from "./config"
+import { RequestType, MESSAGE_MIME_TYPE, Request } from "./config"
 import { ToolbarDialog, CreateChatDialog, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
 import { stringToColor, useChatList, useNetwork } from "./tools"
 import { changeName, changeValue, changeSession } from "./state/chat"
@@ -56,8 +58,13 @@ const RightSpaceIconButton = styled(IconButton)`
   margin-right: 0.1em;
 `
 
-export function NavBar({ toggle }: {
+const WhiteIconButton = styled(IconButton)`
+  color: white;
+`
+
+export function NavBar({ toggle, toggleRightSidebar }: {
   toggle: () => void
+  toggleRightSidebar: () => void
 }) {
   const chatName = useSelector(state => state.chat.name)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -87,11 +94,18 @@ export function NavBar({ toggle }: {
         >
           <AccountCircle />
         </RightIconButton>
+        {session == null && <WhiteIconButton 
+          size="large"
+          aria-haspopup="true"
+          onClick={toggleRightSidebar}
+        >
+          <PeopleIcon />
+        </WhiteIconButton>}
         <Menu
           anchorEl={anchorEl}
           open={menuOpen}
           onClose={() => {
-            setAnchorEl(null)
+            toggleRightSidebar()
           }}
           MenuListProps={{
             'aria-labelledby': 'basic-button',
@@ -287,20 +301,41 @@ export function Sidebar({ open, setOpen }: {
 
   const [joinChatDialogOpen, setJoinChatDialogOpen] = useState(false)
   const [createChatDialogOpen, setCreateChatDialogOpen] = useState(false)
+
+  const afterJoinHandler = useCallback((chat: number, req: Request) => {
+    if (req.uid) {
+      dispatch(changeName(req.usrname))
+      successAlert("You have joined the chat successfully. ")
+      dispatch(changeValue(chat))
+      refreshChats()
+    } else {
+      errorAlert("No such chat. ")
+    }
+  }, [dispatch, successAlert, errorAlert, refreshChats, dispatch])
+
+  const listCreateItemButtonClickHandler = useCallback(() => {
+    setCreateChatDialogOpen(true)
+    setOpen(false)
+  }, [setCreateChatDialogOpen, setOpen])
+
+  const listJoinItemButtonClickHandler = useCallback(() => {
+    setJoinChatDialogOpen(true)
+    setOpen(false)
+  }, [setCreateChatDialogOpen, setOpen])
+
+  const sidebarItems = useMemo(() => Object.entries<number[]>(parentChats).map(value => (
+    <SidebarItem
+      value={Number(value[0])}
+      setOpen={setOpen}
+      subChats={value[1]}
+      key={value[0]}
+    />
+  )), [parentChats, setOpen])
   
   return (
     <>
       <ToolbarDialog
-        afterJoin={(chat, req) => {
-          if (req.uid) {
-            dispatch(changeName(req.usrname))
-            successAlert("You have joined the chat successfully. ")
-            dispatch(changeValue(chat))
-            refreshChats()
-          } else {
-            errorAlert("No such chat. ")
-          }
-        }} 
+        afterJoin={afterJoinHandler} 
         typeNumber={RequestType.CTL_JOINS}
         typeString="join"
         open={joinChatDialogOpen}
@@ -314,10 +349,7 @@ export function Sidebar({ open, setOpen }: {
           </ListSubheader>
         }>
           <ListItem disablePadding>
-            <ListItemButton onClick={() => {
-              setCreateChatDialogOpen(true)
-              setOpen(false)
-            }}>
+            <ListItemButton onClick={listCreateItemButtonClickHandler}>
               <ListItemIcon>
                 <AddCircleOutlineOutlinedIcon />
               </ListItemIcon>
@@ -325,10 +357,7 @@ export function Sidebar({ open, setOpen }: {
             </ListItemButton> 
           </ListItem>
           <ListItem disablePadding>
-            <ListItemButton onClick={() => {
-              setJoinChatDialogOpen(true)
-              setOpen(false)
-            }}>
+            <ListItemButton onClick={listJoinItemButtonClickHandler}>
               <ListItemIcon>
                 <GroupAddOutlinedIcon />
               </ListItemIcon>
@@ -342,14 +371,7 @@ export function Sidebar({ open, setOpen }: {
             Chat
           </ListSubheader>
         }>
-          {Object.entries<number[]>(parentChats).map(value => (
-            <SidebarItem
-              value={Number(value[0])}
-              setOpen={setOpen}
-              subChats={value[1]}
-              key={value[0]}
-            />
-          ))}
+          {sidebarItems}
         </List>
         <Divider />
       </SidebarRoot>
@@ -371,8 +393,7 @@ const DividerAutoShow = styled(Divider)`
 `
 
 const UsersSidebarList = styled(List)`
-  max-width: 20em;
-  min-width: 10em;
+  flex: 1;
 `
 
 const OnlineBadge = styled(Badge)`
@@ -393,8 +414,80 @@ const CenterIconButton = styled(IconButton)`
   margin-bottom: auto;
 `
 
-export function UsersSidebar() {
+interface UsersSidebarRootPropsType {
+  fullScreen: boolean
+  open: boolean
+}
+
+const UsersSidebarRoot = styled.div`
+  max-width: ${({ open, fullScreen }: UsersSidebarRootPropsType) => open ? (fullScreen ? "100vw" : "15em") : "0"};
+  min-width: ${({ open, fullScreen }: UsersSidebarRootPropsType) => open ? (fullScreen ? "100vw" : "7em") : "0"};
+  overflow-y: ${({ open }: UsersSidebarRootPropsType) => open ? "auto" : "hidden"};
+  width: 100%;
+  overflow-x: hidden;
+  display: flex;
+  transition: max-width 0.3s ease, min-width 0.3s ease;
+  scrollbar-width: thin;
+  background: white;
+`
+
+function UserItem({ name, id, online, setAnchorEl, setHandleUsername, setHandleUserID }: {
+  name: string
+  id: number
+  online: boolean
+  setAnchorEl: (value: HTMLElement | null) => void
+  setHandleUsername: (value: string) => void
+  setHandleUserID: (value: number) => void
+}) {
+  const characters = name.split(" ")
+  const letter1 = (characters[0]?.[0] ?? "").toUpperCase()
+  const letter2 = (characters[1]?.[0] ?? "").toUpperCase()
+  const Badge = online ? OnlineBadge : OfflineBadge
+  const centerIconButtonClickHandler = useCallback((ev: MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(ev.currentTarget)
+    setHandleUsername(name)
+    setHandleUserID(id)
+  }, [name, id, setAnchorEl, setHandleUsername, setHandleUserID])
+  return (
+    <Fragment key={name}>
+      <DividerAutoShow />
+      <ListItem alignItems="flex-start">
+        <ListItemAvatar>
+          <Badge
+            overlap="circular"
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            variant="dot"
+          >
+            <AvatarColored color={stringToColor(name)}>{letter1}{letter2}</AvatarColored>
+          </Badge>
+        </ListItemAvatar>
+        <ListItemText
+          primary={name}
+          secondary={
+            <Typography
+              component="span"
+              variant="body2"
+              color={online ? "text.primary" : "text.secondary"}
+            >
+              {online ? "Online" : "Offline"}
+            </Typography>
+          }
+        />
+        <CenterIconButton onClick={centerIconButtonClickHandler}>
+          <MoreHorizIcon />
+        </CenterIconButton>
+      </ListItem>
+    </Fragment>
+  )
+}
+
+export function UsersSidebar({ open, setOpen }: {
+  open: boolean
+  setOpen: (value: boolean) => void
+}) {
   const chat = useSelector(state => state.chat.value)
+  const small = useMediaQuery(useTheme().breakpoints.down("sm"))
+  useMediaQuery(useTheme().breakpoints.down("sm"))
   const { makeRequest, successAlert, errorAlert } = useNetwork()
   const { refresh: refreshChats, values: chatValues, loading: chatValuesLoading } = useChatList()
   const navigate = useNavigate()
@@ -407,36 +500,52 @@ export function UsersSidebar() {
   const { data: usersData } = useQuery({
     queryKey: ["user-list", chat],
     queryFn: async () => {
+      if (chat == null) return []
+      console.log({ chat })
       const { msg } = await makeRequest({
         type: RequestType.CTL_USERS,
         uid: chat!
       })
       return msg as unknown as [number, string][]
     },
-    enabled: chat !== null
+    enabled: chat != null
+  })
+  const { data: permissionRawData } = useQuery({
+    queryKey: ["user-permission", chat],
+    queryFn: async () => {
+      if (chat == null) return
+      const { msg } = await makeRequest({
+        type: RequestType.CTL_GPERM,
+        uid: chat!,
+        usrname: "",
+        msg: ""
+      })
+      return msg as unknown as Record<number, Record<string, boolean>>
+    },
+    enabled: chat != null
   })
   const { data: onlineData } = useQuery({
     queryKey: ["is-online", usersData],
     queryFn: async () => {
-      console.log(usersData!.map(a => a[0]))
+      if (chat == null || usersData == null || !usersData.length) return []
       const { msg } = await makeRequest({
         type: RequestType.CTL_ISONL,
         msg: usersData!.map(a => a[0]) as any
       })
       return msg as unknown as boolean[]
     },
-    enabled: usersData !== undefined
+    enabled: chat != null && usersData != null && !usersData.length
   })
-  const users: [string, number, boolean][] = (() => {
+  const users: [string, number, boolean][] = useMemo(() => {
     if (onlineData === undefined) {
-     return usersData?.map(([id, name]) => [name, id, false]) ?? []
+     return usersData?.map?.(([id, name]) => [name, id, false]) ?? []
     } else {
-      return usersData!.map(([id, name], index) => [name, id, onlineData[index]])
+      return usersData?.map?.(([id, name], index) => [name, id, onlineData[index]]) ?? []
     }
-  })()
+  }, [usersData, onlineData])
 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-  const open = Boolean(anchorEl)
+  const menuOpen = Boolean(anchorEl)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [handleUsername, setHandleUsername] = useState("")
   const [handleUserID, setHandleUserID] = useState(0)
@@ -452,7 +561,6 @@ export function UsersSidebar() {
 
   const handleKickButtonClick = useCallback(async () => {
     setAnchorEl(null)
-    console.log({ chat })
     if (chat == undefined) return
     const { uid } = await makeRequest({
       type: RequestType.CTL_KICK,
@@ -462,68 +570,66 @@ export function UsersSidebar() {
     if (uid) {
       successAlert("User has been kicked.")
       refreshChats()
-      queryClient.invalidateQueries(["user-list", chat])
+      queryClient.invalidateQueries({ queryKey: ["user-list", chat] })
     } else {
       errorAlert("Permission denied.")
     }
   }, [chat, handleUserID])
 
+  const handleBanButtonClick = useCallback(async () => {
+    const ban = !permissionRawData?.[handleUserID]?.banned
+    const { uid } = await window.makeRequest({
+      type: RequestType.CTL_MPERM,
+      msg: {
+        "chat_id": chat,
+        "modified_user_id": handleUserID,
+        "name": "banned",
+        "value": ban
+      } as any
+    })
+    if (uid) {
+      successAlert(ban ? "User has been successfully banned." : "User has been successfully unbanned.")
+      refreshChats()
+      queryClient.invalidateQueries({ queryKey: ["user-list", chat] })
+    } else {
+      errorAlert("Permission denied.")
+    }
+  }, [handleUserID])
+
   return (
-    <>
+    <UsersSidebarRoot fullScreen={small} open={open}>
       <Menu
         anchorEl={anchorEl}
-        open={open}
+        open={menuOpen}
         onClose={handleClose}
       >
         <MenuItem onClick={handleKickButtonClick}>Kick</MenuItem>
+        <MenuItem onClick={handleBanButtonClick}>{permissionRawData?.[handleUserID]?.banned ? "Unban" : "Ban"}</MenuItem>
         <MenuItem onClick={handleModifyPermissionButtonClick}>Modify Permission</MenuItem>
       </Menu>
       <ModifyPermissionDialog open={dialogOpen} setOpen={setDialogOpen} uid={handleUserID} username={handleUsername} />
       <UsersSidebarList>
+        {small && (
+          <IconButton onClick={() => setOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        )}
         {users.map(user => {
           const [name, id, online] = user
-          const characters = name.split(" ")
-          const letter1 = (characters[0]?.[0] ?? "").toUpperCase()
-          const letter2 = (characters[1]?.[0] ?? "").toUpperCase()
-          const Badge = online ? OnlineBadge : OfflineBadge
           return (
-            <Fragment key={name}>
-              <DividerAutoShow />
-              <ListItem alignItems="flex-start">
-                <ListItemAvatar>
-                  <Badge
-                    overlap="circular"
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                    variant="dot"
-                  >
-                    <AvatarColored color={stringToColor(name)}>{letter1}{letter2}</AvatarColored>
-                  </Badge>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={name}
-                  secondary={
-                    <Typography
-                      component="span"
-                      variant="body2"
-                      color={online ? "text.primary" : "text.secondary"}
-                    >
-                      {online ? "Online" : "Offline"}
-                    </Typography>
-                  }
-                />
-                <IconButton onClick={ev => {
-                  setAnchorEl(ev.currentTarget)
-                  setHandleUsername(name)
-                  setHandleUserID(id)
-                }}>
-                  <MoreHorizIcon />
-                </IconButton>
-              </ListItem>
-            </Fragment>
+            <UserItem
+              name={name}
+              id={id}
+              online={online}
+              setAnchorEl={setAnchorEl}
+              setHandleUsername={setHandleUsername}
+              setHandleUserID={setHandleUserID}
+              key={id}
+            />
           )
         })}
       </UsersSidebarList>
-    </>
+    </UsersSidebarRoot>
   )
 }
 
@@ -536,22 +642,37 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   flex: 1;
+  transition: width 0.3s ease;
+  overflow-x: hidden;
+  width: ${({ small, rightSidebarOpen, sidebarOpen }: {
+    small: boolean
+    rightSidebarOpen: boolean
+    sidebarOpen: boolean
+  }) => (
+    small && rightSidebarOpen ? "0" : (sidebarOpen ? "auto" : "100%")
+  )};
 `
 
 export function MainLayout({ children }: {
   children: ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
+  const small = useMediaQuery(useTheme().breakpoints.down("sm"))
+  const session = useSelector(state => state.chat.session)
+  const toggleCallback = useCallback(() => setSidebarOpen(!sidebarOpen), [setSidebarOpen, sidebarOpen])
+  const toggleRightCallback = useCallback(() => setRightSidebarOpen(!rightSidebarOpen), [setRightSidebarOpen, rightSidebarOpen])
   return (
     <Root>
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-      <Container>
+      <Container small={small} sidebarOpen={sidebarOpen} rightSidebarOpen={rightSidebarOpen}>
         <NavBar 
-          toggle={() => setSidebarOpen(!sidebarOpen)}
+          toggle={toggleCallback}
+          toggleRightSidebar={toggleRightCallback}
         />
         {children}
       </Container>
-      <UsersSidebar />
+      {session == null && <UsersSidebar open={rightSidebarOpen} setOpen={setRightSidebarOpen} />}
     </Root>
   )
 }

@@ -1,5 +1,7 @@
 import styled from "@emotion/styled"
-import { Avatar } from "@mui/material"
+import { Avatar, Link } from "@mui/material"
+import { ReactNode, useMemo } from "react"
+import { Link as RouterLink } from "react-router-dom"
 
 import { stringToColor } from "./tools"
 
@@ -62,6 +64,23 @@ export const MessageTime = styled.div`
   font-size: 0.75rem;
   font-weight: var(--normal-weight);
 `
+
+export function MessageLink({ link, children }: {
+  link: string,
+  children: ReactNode
+}) {
+  const url = useMemo(() => (new URL(link, location.href)), [link])
+  const sameSite = url.host == location.host
+  if (sameSite) {
+    return (
+      <Link component={RouterLink} to={url.pathname} children={children} />
+    )
+  } else {
+    return (
+      <Link href={link} children={children} target="_blank" rel="noopener noreferrer" />
+    )
+  }
+}
 
 export const Message = styled.li<{
   showTitle: boolean

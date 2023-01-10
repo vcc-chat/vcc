@@ -62,17 +62,15 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
             username: str = json_result["usrname"]
             uid: int = json_result["uid"]
             msg: str = json_result["msg"]
+            uuid: str = json_result.get("uuid", str(uuid4()))
             async def send(type: str, *, uid: int=0, username: str="", msg: str="") -> None:
                 await websocket.send(json.dumps({
                     "type": type,
                     "uid": uid,
                     "usrname": username,
-                    "msg": msg
+                    "msg": msg,
+                    "uuid": uuid
                 }))
-            json_result = json.loads(json_msg)
-            username: str = json_result["usrname"]
-            uid: int = json_result["uid"]
-            msg: str = json_result["msg"]
             match json_result["type"]:
                 case "login":
                     login_result = await client.login(username, msg)

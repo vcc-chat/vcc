@@ -103,12 +103,13 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
 
   async function makeRequest(request: Request) {
     sendJsonMessage(request)
-    return await new Promise<Request>(res => {
+    const result = await new Promise<Request>(res => {
       setHandleFunctionList(list => ({
         ...list,
         [request.uuid!]: res
       }))
     })
+    return result
   }
 
   useEffect(() => {

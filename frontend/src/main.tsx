@@ -7,6 +7,8 @@ import App from './App'
 import store from './store'
 import { queryClient } from './tools'
 
+import './index.css'
+
 createRoot(document.getElementById('root')!).render(
   <Provider store={store}>
     <QueryClientProvider client={queryClient}>

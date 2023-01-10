@@ -5,10 +5,11 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle
+  DialogTitle,
+  Dialog,
+  Button
 } from "@mui/material"
 
-import { LoginButton, MyDialog } from "../Form"
 import { RequestType, Request } from "../config"
 import { useSelector, useDispatch } from "../store"
 import { useNetwork } from "../tools"
@@ -45,7 +46,7 @@ export default function Register(props: {}) {
   }, [result])
   return (
     <>
-      <MyDialog open={loginStatus == LoginType.NOT_LOGIN}>
+      <Dialog open={loginStatus == LoginType.NOT_LOGIN}>
         <Form method="post">
           <DialogTitle>Register</DialogTitle>
           <DialogContent>
@@ -80,11 +81,11 @@ export default function Register(props: {}) {
             />
           </DialogContent>
           <DialogActions>
-            <LoginButton size="medium" onClick={loginCallback}>Back to Login</LoginButton>
-            <LoginButton size="medium" type="submit">Register</LoginButton>
+            <Button className="m-1 mt-0" size="medium" onClick={loginCallback}>Back to Login</Button>
+            <Button className="m-1 mt-0" size="medium" type="submit">Register</Button>
           </DialogActions>
         </Form>
-      </MyDialog>
+      </Dialog>
     </>
   )
 }

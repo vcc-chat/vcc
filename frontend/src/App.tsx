@@ -1,8 +1,5 @@
 import { useEffect, useState, lazy, Suspense, ReactNode, memo, useCallback } from "react"
-import styled from "@emotion/styled"
-import { Global, css } from "@emotion/react"
 import useWebSocket, { ReadyState } from "react-use-websocket"
-import localforage from "localforage"
 import {
   Route,
   createBrowserRouter,
@@ -16,7 +13,8 @@ import {
   Alert,
   AlertTitle,
   CircularProgress,
-  CssBaseline
+  CssBaseline,
+  Backdrop
 } from "@mui/material"
 
 import { WEBSOCKET_PORT, RequestType, Request, WEBSOCKET_USE_PATH } from "./config"
@@ -24,7 +22,6 @@ import { Notification, notify } from "./Notification"
 import { useSelector, useDispatch, saveMessage, restoreMessage } from './store'
 import { NetworkContext, responseToChatList, useChatList } from "./tools"
 import { success, failed, LoginType, reset } from "./state/login"
-import { MyBackdrop } from "./Form"
 import { changeName, changeAll } from "./state/chat"
 import { addMessage, setMessages } from "./state/message"
 import * as loaders from "./loaders"
@@ -39,18 +36,6 @@ const Settings = lazy(() => import("./pages/Settings"))
 const SettingsActions = lazy(() => import("./pages/SettingsActions"))
 const SettingsInfo = lazy(() => import("./pages/SettingsInfo"))
 const ErrorElement = lazy(() => import("./pages/ErrorElement"))
-const Plugin = lazy(() => import("./pages/Plugin"))
-
-const Root = styled.div`
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  overflow: hidden;
-`
-
-const MyAlert = styled(Alert)`
-  width: 100%;
-`
 
 function Loading() {
   const [open, setOpen] = useState(false)
@@ -59,9 +44,9 @@ function Loading() {
     return () => clearTimeout(timeout)
   }, [])
   return (
-    <MyBackdrop open={open}>
+    <Backdrop open={open} className="text-white">
       <CircularProgress color="inherit" />
-    </MyBackdrop>
+    </Backdrop>
   )
 }
 
@@ -231,7 +216,6 @@ const router = createBrowserRouter(
           <Route path="actions" element={addSuspense(<SettingsActions />)} loader={loaders.settingsActionsLoader} />
         </Route>
       </Route>
-      <Route path="/plugins" element={addSuspense(<Plugin />)} loader={loaders.pluginLoader} />
       <Route path="/login" element={addSuspense(<Login />)} loader={loaders.loginLoader} action={loaders.loginAction} />
       <Route path="/register" element={addSuspense(<Register />)} loader={loaders.registerLoader} action={loaders.registerAction} />
       <Route path="*" element={addSuspense(<ErrorElement content="404 Not Found" />)} />
@@ -261,46 +245,7 @@ function App() {
     setAlertOpen(false)
   }, [setAlertOpen])
   return (
-    <Root>
-      <Global styles={css`
-        html {
-          --gray-50: #F8FAFC;
-          --gray-100: #F1F5F9;
-          --gray-200: #E2E8F0;
-          --gray-300: #CBD5E1;
-          --gray-400: #94A3B8;
-          --gray-500: #64748B;
-          --gray-600: #475569;
-          --gray-700: #334155;
-          --gray-800: #1E293B;
-          --gray-900: #0F172A;
-          --normal-weight: 400;
-          --bold-weight: 700;
-          --icon-font: "Material Symbols Outlined";
-          scroll-behavior: smooth;
-          font-size: 16px;
-          line-height: 1.5;
-          letter-spacing: 0.01em;
-          overflow: hidden;
-          font-family: "Noto Sans SC", "Open Sans", "Gill Sans", Roboto, Arial, Helvetica, sans-serif;
-          font-weight: var(--normal-weight);
-          letter-spacing: 0.01rem;
-          background-color: var(--gray-50);
-          color: var(--gray-900);
-          height: 100%;
-        }
-        body {
-          margin: 0;
-          height: 100%;
-        }
-        *, *::before, *::after {
-          box-sizing: border-box;
-        }
-        #root {
-          height: 100%;
-          display: flex;
-        }
-      `} />
+    <div className="flex-1 flex flex-col overflow-hidden">
       <CssBaseline />
       <NetworkContext.Provider value={{
         ready,
@@ -310,14 +255,14 @@ function App() {
       }}>
         <Notification />
         <Snackbar open={alertOpen} autoHideDuration={6000} onClose={handleClose}>
-          <MyAlert onClose={handleClose} severity={severity}>
+          <Alert onClose={handleClose} severity={severity} className="w-full">
             <AlertTitle>{alertTitle}</AlertTitle>
             {alertContent}
-          </MyAlert>
+          </Alert>
         </Snackbar>
         <SubRouter />
       </NetworkContext.Provider>
-    </Root>
+    </div>
   )
 }
 

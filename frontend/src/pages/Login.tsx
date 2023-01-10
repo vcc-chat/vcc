@@ -10,10 +10,11 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  CircularProgress
+  CircularProgress,
+  Button,
+  Backdrop
 } from "@mui/material"
 
-import { LoginButton, MyBackdrop, MyDialog } from "../Form"
 import { useSelector, useDispatch } from "../store"
 import { change as changeUsername } from "../state/username"
 import { reset, startGet, success, failed, LoginType } from "../state/login"
@@ -63,7 +64,7 @@ export function LoginDialog(props: {}) {
   }, [loginStatus])
   return (
     <>
-      <MyDialog open={loginStatus == LoginType.NOT_LOGIN}>
+      <Dialog open={loginStatus == LoginType.NOT_LOGIN}>
         <Form method="post" onSubmit={() => {
           dispatch(startGet())
         }}>
@@ -100,16 +101,16 @@ export function LoginDialog(props: {}) {
             />
           </DialogContent>
           <DialogActions>
-            <LoginButton size="medium" onClick={() => {
+            <Button size="medium" onClick={() => {
               navigate("/register")
-            }}>Register</LoginButton>
-            <LoginButton size="medium" type="submit">Login</LoginButton>
+            }} className="m-1 mt-0">Register</Button>
+            <Button className="m-1 mt-0" size="medium" type="submit">Login</Button>
           </DialogActions>
         </Form>
-      </MyDialog>
-      <MyBackdrop open={loginStatus == LoginType.LOGIN_LOADING}>
+      </Dialog>
+      <Backdrop className="text-white" open={loginStatus == LoginType.LOGIN_LOADING}>
         <CircularProgress color="inherit" />
-      </MyBackdrop>
+      </Backdrop>
       <LoginErrorDialog open={loginStatus == LoginType.LOGIN_FAILED}></LoginErrorDialog>
     </>
   )

@@ -1,8 +1,8 @@
-import styled from "@emotion/styled"
 import { ReactNode, useState, useEffect, useCallback, DragEvent, Fragment, useMemo, MouseEvent } from "react"
 import localforage from "localforage"
 import { useNavigate, useFetcher, FetcherWithComponents } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import classNames from "classnames"
 
 import {
   AppBar,
@@ -45,23 +45,6 @@ import { ToolbarDialog, CreateChatDialog, EditPermissionDialog as ModifyPermissi
 import { stringToColor, useChatList, useNetwork } from "./tools"
 import { changeName, changeValue, changeSession } from "./state/chat"
 
-const RightIconButton = styled(IconButton)`
-  margin-left: auto;
-  color: white;
-`
-
-const PaddingTypography = styled(Typography)`
-  padding-right: 0.5em;
-` as any
-
-const RightSpaceIconButton = styled(IconButton)`
-  margin-right: 0.1em;
-`
-
-const WhiteIconButton = styled(IconButton)`
-  color: white;
-`
-
 export function NavBar({ toggle, toggleRightSidebar }: {
   toggle: () => void
   toggleRightSidebar: () => void
@@ -73,34 +56,37 @@ export function NavBar({ toggle, toggleRightSidebar }: {
   return (
     <AppBar position="static">
       <Toolbar>
-        <RightSpaceIconButton
+        <IconButton
           size="large"
           edge="start"
           color="inherit"
           aria-label="menu"
           onClick={toggle}
+          className="mr-0.5"
         >
           <MenuIcon />
-        </RightSpaceIconButton>
-        <PaddingTypography variant="h6" component="div">
+        </IconButton>
+        <Typography variant="h6" component="div" className="ml-2 flex-1">
           {session ?? chatName}
-        </PaddingTypography>
-        <RightIconButton 
+        </Typography>
+        <IconButton 
           size="large"
           aria-haspopup="true"
           onClick={event => {
             setAnchorEl(event.currentTarget)
           }}
+          color="inherit"
         >
           <AccountCircle />
-        </RightIconButton>
-        {session == null && <WhiteIconButton 
+        </IconButton>
+        {session == null && <IconButton 
           size="large"
           aria-haspopup="true"
           onClick={toggleRightSidebar}
+          color="inherit"
         >
           <PeopleIcon />
-        </WhiteIconButton>}
+        </IconButton>}
         <Menu
           anchorEl={anchorEl}
           open={menuOpen}
@@ -127,29 +113,6 @@ export function NavBar({ toggle, toggleRightSidebar }: {
     </AppBar>
   )
 }
-
-type PropType = {
-  open: boolean
-  desktop: boolean
-}
-
-const SidebarRoot = styled.div`
-  max-width: ${({ open, desktop }: PropType) => open ? (desktop ? "14em" : "100vw") : "0"};
-  min-width: ${({ open, desktop }: PropType) => !desktop && open ? "100vw" : "0"};
-  overflow-y: ${({ open }: PropType) => open ? "auto" : "hidden"};
-  overflow-x: hidden;
-  width: 100%;
-  transition: max-width 0.3s ease, min-width 0.3s ease;
-  scrollbar-width: thin;
-`
-
-const SubChatListItem = styled(ListItem)`
-  text-indent: 1em;
-`
-
-const SessionListItem = styled(ListItem)`
-  text-indent: 2em;
-`
 
 function sendMessage(fetcher: FetcherWithComponents<any>, chat: number, msg: string, session: string | null) {
   fetcher.submit({ msg, session: session ?? "" }, {
@@ -187,7 +150,7 @@ function SubChatSidebarItem({ chat, clickHandler, settingsClickHandler, setOpen 
   const [fold, setFold] = useState(true)
   return (
     <>
-      <SubChatListItem disablePadding secondaryAction={
+      <ListItem className="indent-4" disablePadding secondaryAction={
         <>
           {!!sessions.length && (
             <IconButton onClick={() => {
@@ -209,16 +172,16 @@ function SubChatSidebarItem({ chat, clickHandler, settingsClickHandler, setOpen 
             <ListItemText primary={chatNames[chatValues.indexOf(chat)]} />
           </ListItemButton>
         </Tooltip>
-      </SubChatListItem>
+      </ListItem>
       {!!sessions.length && !fold && sessions.map(session => (
-        <SessionListItem disablePadding key={session} onDragOver={dragOverHandler} onDrop={dropHandler(fetcher, chat, session)}>
+        <ListItem className="indent-8" disablePadding key={session} onDragOver={dragOverHandler} onDrop={dropHandler(fetcher, chat, session)}>
           <ListItemButton onClick={() => {
             setOpen(false)
             clickHandler(chat, chatNames[chatValues.indexOf(chat)], session)
           }} selected={chat === chatValue && currentSession == session}>
             <ListItemText primary={session} />
           </ListItemButton>
-        </SessionListItem>
+        </ListItem>
       ))}
     </>
   )
@@ -297,7 +260,6 @@ export function Sidebar({ open, setOpen }: {
   const { successAlert, errorAlert } = useNetwork()
   const { refresh: refreshChats, parentChats } = useChatList()
   const theme = useTheme()
-  const desktop = useMediaQuery(theme.breakpoints.up('sm'))
 
   const [joinChatDialogOpen, setJoinChatDialogOpen] = useState(false)
   const [createChatDialogOpen, setCreateChatDialogOpen] = useState(false)
@@ -342,7 +304,13 @@ export function Sidebar({ open, setOpen }: {
         setOpen={setJoinChatDialogOpen}
       />
       <CreateChatDialog open={createChatDialogOpen} setOpen={setCreateChatDialogOpen} />
-      <SidebarRoot open={open} aria-hidden={!open} desktop={desktop}>
+      <div 
+        aria-hidden={!open} 
+        className={classNames("duration-300 overflow-x-hidden w-full transition-all no-scrollbar", {
+          "sm:max-w-xs max-w-full sm:w-xs w-full overflow-y-auto": open,
+          "max-w-0 overflow-y-hidden": !open
+        })}
+      >
         <List subheader={
           <ListSubheader component="div">
             Actions
@@ -374,91 +342,45 @@ export function Sidebar({ open, setOpen }: {
           {sidebarItems}
         </List>
         <Divider />
-      </SidebarRoot>
+      </div>
     </>
   )
 }
 
-const AvatarColored = styled(Avatar)`
-  background-color: ${({ color }: { color: string }) => color};
-  width: 36px;
-  height: 36px;
-  font-size: 1.125rem;
-`
-
-const DividerAutoShow = styled(Divider)`
-  &:nth-of-type(1) {
-    display: none;
-  }
-`
-
-const UsersSidebarList = styled(List)`
-  flex: 1;
-`
-
-const OnlineBadge = styled(Badge)`
-  & .MuiBadge-badge {
-    background-color: #44b700;
-    color: #44b700;
-  }
-`
-const OfflineBadge = styled(Badge)`
-  & .MuiBadge-badge {
-    background-color: var(--gray-300);
-    color: var(--gray-300);
-  }
-`
-
-const CenterIconButton = styled(IconButton)`
-  margin-top: auto;
-  margin-bottom: auto;
-`
-
-interface UsersSidebarRootPropsType {
-  fullScreen: boolean
-  open: boolean
-}
-
-const UsersSidebarRoot = styled.div`
-  max-width: ${({ open, fullScreen }: UsersSidebarRootPropsType) => open ? (fullScreen ? "100vw" : "15em") : "0"};
-  min-width: ${({ open, fullScreen }: UsersSidebarRootPropsType) => open ? (fullScreen ? "100vw" : "7em") : "0"};
-  overflow-y: ${({ open }: UsersSidebarRootPropsType) => open ? "auto" : "hidden"};
-  width: 100%;
-  overflow-x: hidden;
-  display: flex;
-  transition: max-width 0.3s ease, min-width 0.3s ease;
-  scrollbar-width: thin;
-  background: white;
-`
-
-function UserItem({ name, id, online, setAnchorEl, setHandleUsername, setHandleUserID }: {
+function UserItem({ name, id, online, setAnchorEl, setHandleUsername, setHandleUserID, first }: {
   name: string
   id: number
   online: boolean
   setAnchorEl: (value: HTMLElement | null) => void
   setHandleUsername: (value: string) => void
   setHandleUserID: (value: number) => void
+  first: boolean
 }) {
   const characters = name.split(" ")
   const letter1 = (characters[0]?.[0] ?? "").toUpperCase()
   const letter2 = (characters[1]?.[0] ?? "").toUpperCase()
-  const Badge = online ? OnlineBadge : OfflineBadge
+  // const Badge = online ? OnlineBadge : OfflineBadge
   const centerIconButtonClickHandler = useCallback((ev: MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(ev.currentTarget)
     setHandleUsername(name)
     setHandleUserID(id)
   }, [name, id, setAnchorEl, setHandleUsername, setHandleUserID])
   return (
-    <Fragment key={name}>
-      <DividerAutoShow />
+    <>
+      {!first && <Divider />}
       <ListItem alignItems="flex-start">
         <ListItemAvatar>
           <Badge
             overlap="circular"
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             variant="dot"
+            classes={{
+              badge: online ? "bg-green-400 text-green-400" : "bg-gray-300 text-gray-300"
+            }}
           >
-            <AvatarColored color={stringToColor(name)}>{letter1}{letter2}</AvatarColored>
+            <Avatar className="w-9 h-9 text-lg" style={{
+              backgroundColor: stringToColor(name)
+            }}>{letter1}{letter2}</Avatar>
           </Badge>
         </ListItemAvatar>
         <ListItemText
@@ -473,11 +395,11 @@ function UserItem({ name, id, online, setAnchorEl, setHandleUsername, setHandleU
             </Typography>
           }
         />
-        <CenterIconButton onClick={centerIconButtonClickHandler}>
+        <IconButton onClick={centerIconButtonClickHandler} className="my-auto">
           <MoreHorizIcon />
-        </CenterIconButton>
+        </IconButton>
       </ListItem>
-    </Fragment>
+    </>
   )
 }
 
@@ -597,7 +519,10 @@ export function UsersSidebar({ open, setOpen }: {
   }, [handleUserID])
 
   return (
-    <UsersSidebarRoot fullScreen={small} open={open}>
+    <div className={classNames("w-full overflow-x-hidden flex transition-all duration-300 no-scrollbar bg-white", {
+      "max-w-full sm:max-w-xs w-full sm:w-xs overflow-y-auto": open,
+      "max-w-0 overflow-y-hidden": !open
+    })}>
       <Menu
         anchorEl={anchorEl}
         open={menuOpen}
@@ -608,13 +533,13 @@ export function UsersSidebar({ open, setOpen }: {
         <MenuItem onClick={handleModifyPermissionButtonClick}>Modify Permission</MenuItem>
       </Menu>
       <ModifyPermissionDialog open={dialogOpen} setOpen={setDialogOpen} uid={handleUserID} username={handleUsername} />
-      <UsersSidebarList>
+      <List className="flex-1">
         {small && (
           <IconButton onClick={() => setOpen(false)}>
             <CloseIcon />
           </IconButton>
         )}
-        {users.map(user => {
+        {users.map((user, index) => {
           const [name, id, online] = user
           return (
             <UserItem
@@ -625,33 +550,14 @@ export function UsersSidebar({ open, setOpen }: {
               setHandleUsername={setHandleUsername}
               setHandleUserID={setHandleUserID}
               key={id}
+              first={!index}
             />
           )
         })}
-      </UsersSidebarList>
-    </UsersSidebarRoot>
+      </List>
+    </div>
   )
 }
-
-const Root = styled.div`
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-`
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  transition: width 0.3s ease;
-  overflow-x: hidden;
-  width: ${({ small, rightSidebarOpen, sidebarOpen }: {
-    small: boolean
-    rightSidebarOpen: boolean
-    sidebarOpen: boolean
-  }) => (
-    small && rightSidebarOpen ? "0" : (sidebarOpen ? "auto" : "100%")
-  )};
-`
 
 export function MainLayout({ children }: {
   children: ReactNode
@@ -663,16 +569,16 @@ export function MainLayout({ children }: {
   const toggleCallback = useCallback(() => setSidebarOpen(!sidebarOpen), [setSidebarOpen, sidebarOpen])
   const toggleRightCallback = useCallback(() => setRightSidebarOpen(!rightSidebarOpen), [setRightSidebarOpen, rightSidebarOpen])
   return (
-    <Root>
+    <div className="flex flex-1 overflow-hidden">
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-      <Container small={small} sidebarOpen={sidebarOpen} rightSidebarOpen={rightSidebarOpen}>
+      <div className={classNames("flex flex-col flex-1 transition-all duration-300 overflow-x-hidden", small && rightSidebarOpen ? "w-0" : sidebarOpen ? "w-auto" : "w-full")}>
         <NavBar 
           toggle={toggleCallback}
           toggleRightSidebar={toggleRightCallback}
         />
         {children}
-      </Container>
+      </div>
       {session == null && <UsersSidebar open={rightSidebarOpen} setOpen={setRightSidebarOpen} />}
-    </Root>
+    </div>
   )
 }

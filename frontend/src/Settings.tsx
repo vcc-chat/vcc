@@ -1,13 +1,9 @@
-import styled from "@emotion/styled"
 import { ChangeEvent, ReactNode, useCallback } from "react"
-import { Link, Outlet } from "react-router-dom"
+import { Outlet } from "react-router-dom"
 
 import {
   Typography,
   Switch,
-  List,
-  Button as PureButton,
-  FormGroup,
   FormControlLabel,
   Accordion,
   AccordionDetails,
@@ -15,49 +11,6 @@ import {
 } from "@mui/material"
 
 import { ExpandMore as ExpandMoreIcon } from "@mui/icons-material"
-
-export const SettingsItemText = styled.div`
-  margin-bottom: 0.5em;
-  font-size: 1.1em;
-`
-
-export const SettingsRoot = styled.div`
-  padding: 2em;
-  display: flex;
-  flex-direction: column;
-`
-
-export const SettingsLink = styled(Link)`
-  color: var(--gray-500);
-  &:hover {
-    color: var(--gray-700);
-  }
-  word-break: break-all;
-`
-
-export const SettingsList = styled(List)`
-  border: 1px solid var(--gray-200);
-  border-radius: 0.2em;
-`
-
-export const SettingsFormItem = styled.div`
-  display: flex;
-`
-
-export const SettingsButton = styled(PureButton)`
-  margin-top: auto;
-  margin-bottom: auto;
-  margin-right: auto;
-  margin-left: 1em;
-`
-
-export const SettingsGroup = styled(FormGroup)`
-  display: flex;
-  flex-direction: row;
-  gap: 0.5em;
-`
-
-const SettingsControlLabel = styled(FormControlLabel)``
 
 export function SettingsEditItem({ checked, setChecked, label }: {
   checked: boolean,
@@ -68,7 +21,7 @@ export function SettingsEditItem({ checked, setChecked, label }: {
     setChecked(ev.target.checked)
   }, [setChecked])
   return (
-    <SettingsControlLabel 
+    <FormControlLabel 
       control={
         <Switch 
           checked={checked} 
@@ -101,7 +54,7 @@ export function SettingsAccordion({ showID, index, setIndex, title, subtitle }: 
     setIndex(show ? undefined : showID)
   }, [setIndex, show, showID])
   return (
-    <Accordion expanded={show} onChange={() => setIndex(show ? undefined : showID)}>
+    <Accordion expanded={show} onChange={onChangeHandler}>
       <AccordionSummary
         expandIcon={<ExpandMoreIcon />}
       >

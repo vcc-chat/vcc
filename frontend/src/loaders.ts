@@ -375,7 +375,3 @@ export function useRegisterActionData() {
     success: boolean
   } | undefined
 }
-
-export async function pluginLoader() {
-  return await authLoader()
-}

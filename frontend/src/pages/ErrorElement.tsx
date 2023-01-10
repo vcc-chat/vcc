@@ -1,46 +1,17 @@
-import styled from "@emotion/styled"
-import { Link as RawLink, useRouteError, isRouteErrorResponse } from "react-router-dom"
-
-const Root = styled.div`
-  flex: 1;
-  background: var(--gray-900);
-  display: flex;
-`
-
-const Center = styled.div`
-  margin: auto;
-  font-family: monospace;
-  font-size: 2em;
-  display: flex;
-  flex-direction: column;
-`
-
-const Item = styled.div`
-  color: var(--gray-100);
-  margin-left: auto;
-  margin-right: auto;
-`
-
-const Link = styled(RawLink)`
-  color: inherit;
-  text-decoration: none;
-  &:hover {
-    color: var(--gray-50);
-  }
-`
+import { Link, useRouteError, isRouteErrorResponse } from "react-router-dom"
 
 export default function NotFound({ content }: {
   content: string
 }) {
   const error = useRouteError()
   return (
-    <Root>
-      <Center>
-        <Item>{isRouteErrorResponse(error) ? `${error.status} ${error.data}` : content}</Item>
-        <Item>
-          <Link to="/">Go back to home</Link>
-        </Item>
-      </Center>
-    </Root>
+    <div className="flex-1 bg-gray-900 flex">
+      <div className="m-auto font-mono text-3xl flex flex-col text-gray-100">
+        <div className="mx-auto">{isRouteErrorResponse(error) ? `${error.status} ${error.data}` : content}</div>
+        <div className="mx-auto">
+          <Link className="text-gray-100 no-underline hover:text-gray-50" to="/">Go back to home</Link>
+        </div>
+      </div>
+    </div>
   )
 }

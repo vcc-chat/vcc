@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react"
-import styled from "@emotion/styled"
 import {
   SpeedDial,
   SpeedDialIcon,
@@ -12,10 +11,6 @@ import {
   DialogTitle,
   TextField,
   Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Autocomplete
 } from "@mui/material"
 import { GroupRemoveOutlined as GroupRemoveOutlinedIcon } from "@mui/icons-material"
@@ -28,23 +23,11 @@ import { changeValue as changeChat, addSession } from "./state/chat"
 import { LoginType } from "./state/login"
 import { useChatList, useNetwork } from "./tools"
 import {
-  SettingsGroup,
   SettingsEditItem,
   allPermissions,
   PermissionKey,
   permissionKeyToName,
 } from "./Settings"
-
-const ToolbarRoot = styled(SpeedDial)`
-  position: fixed;
-  bottom: 64px;
-  right: 16px;
-`
-
-const DialogForm = styled.div`
-  display: flex;
-  flex-direction: column;
-`
 
 export function ToolbarDialog({ afterJoin, typeNumber, typeString, open, setOpen }: {
   afterJoin: (arg0: number, req: Request) => void,
@@ -111,7 +94,7 @@ export function CreateChatDialog({ open, setOpen }: {
         <DialogContentText>
           Enter the name of the {isCreateChat ? "chat" : "session"} you want to create and choose its parent chat.
         </DialogContentText>
-        <DialogForm>
+        <div className="flex flex-col">
           <TextField 
             autoFocus 
             label={isCreateChat ? "Chat name" : "Session name"} 
@@ -153,7 +136,7 @@ export function CreateChatDialog({ open, setOpen }: {
               option.id == value.id && option.label == value.label
             )}
           />
-        </DialogForm>
+        </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setOpen(false)}>close</Button>
@@ -266,7 +249,7 @@ export function EditPermissionDialog({ open, setOpen, uid, username }: {
         <DialogContentText>
           Modify permission of {username}.
         </DialogContentText>
-        <DialogForm>
+        <div className="flex flex-col">
           {allPermissions.map(key => (
             <SettingsEditItem
               checked={permissions[key]}
@@ -275,7 +258,7 @@ export function EditPermissionDialog({ open, setOpen, uid, username }: {
               key={key}
             />
           ))}
-        </DialogForm>
+        </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setOpen(false)}>close</Button>
@@ -318,7 +301,7 @@ export function Toolbar(props: {}) {
   const { refresh: refreshChats, values: chats } = useChatList()
   return (
     <>
-      <ToolbarRoot ariaLabel="toolbar" icon={<SpeedDialIcon />} hidden={loginStatus != LoginType.LOGIN_SUCCESS || chat == null}>
+      <SpeedDial ariaLabel="toolbar" icon={<SpeedDialIcon />} hidden={loginStatus != LoginType.LOGIN_SUCCESS || chat == null} className="fixed bottom-16 right-4">
         <SpeedDialAction icon={<GroupRemoveOutlinedIcon />} tooltipTitle="quit chat" onClick={async () => {
           if (chat == null) return
           if (chats.length) {
@@ -337,7 +320,7 @@ export function Toolbar(props: {}) {
             errorAlert("Unexpected error: You haven't quit the chat successfully. ")
           }
         }} />
-      </ToolbarRoot>
+      </SpeedDial>
     </>
   )
 }

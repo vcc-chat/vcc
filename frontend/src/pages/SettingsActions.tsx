@@ -1,9 +1,9 @@
 import { useState, memo, useEffect } from "react"
-import styled from "@emotion/styled"
 import {
   TextField,
   FormControlLabel,
-  Switch
+  Switch,
+  Button
 } from "@mui/material"
 import { useQueryClient } from "@tanstack/react-query"
 
@@ -11,15 +11,7 @@ import { RequestType } from "../config"
 
 import { useSelector } from "../store"
 import { useChatList, useNetwork } from "../tools"
-import {
-  SettingsFormItem,
-  SettingsButton
-} from "../Settings"
 import { useSettingsActionsLoaderData } from "../loaders"
-
-const SwitchLabel = styled(FormControlLabel)`
-  margin-left: 1em;
-`
 
 export default memo(function SettingsActions(props: {}) {
   const chat = useSelector(state => state.chat.value)
@@ -75,19 +67,19 @@ export default memo(function SettingsActions(props: {}) {
   }
 
   return (
-    <SettingsFormItem>
+    <div className="flex">
       <TextField label="Rename" value={renameValue} onChange={ev => {
         setRenameValue(ev.target.value)
       }} />
-      <SwitchLabel label="Public" control={<Switch checked={publicValue} onChange={ev => setPublic(ev.target.checked)} />} />
-      <SettingsButton disabled={publicRaw == publicValue && renameValue == chatName} onClick={() => {
+      <FormControlLabel className="ml-4" label="Public" control={<Switch checked={publicValue} onChange={ev => setPublic(ev.target.checked)} />} />
+      <Button className="m-auto ml-4" disabled={publicRaw == publicValue && renameValue == chatName} onClick={() => {
         if (renameValue != chatName) {
           rename()
         }
         if (publicRaw != publicValue) {
           modifyPublic()
         }
-      }}>Change</SettingsButton>
-    </SettingsFormItem>
+      }}>Change</Button>
+    </div>
   )
 })

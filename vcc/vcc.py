@@ -7,6 +7,7 @@ import logging
 import json
 import warnings
 import uuid
+import os
 
 from functools import wraps
 from redis.asyncio.client import PubSub
@@ -77,7 +78,9 @@ class RpcExchanger:
     """Low-level api which is hard to use"""
     _sock: socket.socket
     _redis: redis.Redis[bytes]
-    def __init__(self, *, rpc_host: str | None=None, rpc_port: int | None=None, redis_url: str="redis://localhost:6379") -> None:
+
+    
+    def __init__(self, *, rpc_host: str | None=None, rpc_port: int | None=None, redis_url: str | None=None) -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.bind(("0.0.0.0", 0))
         self._sock = sock
@@ -88,7 +91,7 @@ class RpcExchanger:
         redis_url = getenv("REDIS_URL", "redis://localhost:6379") if redis_url is None else redis_url
 
         self._socket_address = (rpc_host, rpc_port)
-        self._redis = redis.Redis.from_url(redis_url)
+        self._redis = redis.Redis.from_url(cast(Any, redis_url))
         self._responses: dict[str, Any] = {}
         self._recv_lock = asyncio.Lock()
         self.rpc = RpcExchangerRpcHandler(self)
@@ -456,6 +459,22 @@ class RpcExchangerClient:
         self.check_joined(chat_id)
         return cast(dict[int, dict[ChatUserPermissionName, bool]], await self._rpc.chat.get_all_user_permission(chat_id=chat_id))
 
+    async def file_new_object(self, name: str, bucket: str="file") -> tuple[str, str]:
+        self.check_authorized()
+        return cast(tuple[str, str], await self._rpc.file.new_object(name=name, bucket=bucket))
+
+    async def file_new_object_with_content(self, name: str, content: str, bucket: str="file") -> str:
+        self.check_authorized()
+        return cast(str, await self._rpc.file.new_object_with_content(name=name, content=content, bucket=bucket))
+
+    async def file_get_object(self, id: str, bucket: str="file") -> tuple[str, str]:
+        self.check_authorized()
+        return cast(tuple[str, str], await self._rpc.file.get_object(id=id, bucket=bucket))
+
+    async def file_get_object_content(self, id: str, bucket: str="file") -> tuple[str, str]:
+        self.check_authorized()
+        return cast(tuple[str, str], await self._rpc.file.get_object_content(id=id, bucket=bucket))
+
     def __aiter__(self) -> RpcExchangerClient:
         return self
 
@@ -487,7 +506,7 @@ class RpcExchangerClient:
             return message_callback_handler
         elif type == "event" and event_type is not None:
             def event_callback_handler(callback: EventCallback) -> EventCallback:
-                self._event_callbacks[event_type] = callback
+                self._event_callbacks[cast(Any, event_type)] = callback
                 return callback
             return event_callback_handler
         else:

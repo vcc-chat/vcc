@@ -54,8 +54,7 @@ class Service(LineReceiver):
         if "res" in data:
             return
         if data["type"] == "call":
-            self.factory.eventloop.create_task(self.a_do_request(data))
-
+            asyncio.run_coroutine_threadsafe(self.a_do_request(data),self.factory.eventloop)
 
 class RpcServiceFactory(ClientFactory):
     def __init__(self, name,async_mode=False):
@@ -66,7 +65,9 @@ class RpcServiceFactory(ClientFactory):
         self.services = {}
         self.funcs = {}
         self.done = Deferred()
-
+        asyncio.run
+        #threading._start_new_thread(self.eventloop.run_until_complete, (self.loop(),))
+        threading._start_new_thread(self.eventloop.run_forever, ())
     def buildProtocol(self, addr):
         return Service(self)
 
@@ -77,7 +78,6 @@ class RpcServiceFactory(ClientFactory):
     def clientConnectionLost(self, connector, reason):
         log.debug(reason)
         self.done.callback(None)
-
     def register(self, instance):
         services = {
             i: getattr(instance, i)
@@ -104,10 +104,8 @@ class RpcServiceFactory(ClientFactory):
 
     async def loop(self):
         while 1:
-            await asyncio.sleep(10**-10)
-
+            asyncio.Future
     def connect(self, host=None, port=None):
-        threading._start_new_thread(self.eventloop.run_until_complete, (self.loop(),))
         if host is None and port is None:
             host, port = self.get_host()
 

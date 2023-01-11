@@ -1,10 +1,8 @@
 import { memo } from "react"
 import { useMatches, useNavigate, useParams, Outlet } from "react-router-dom"
+import classNames from "classnames"
 
 import { useSelector } from "../store"
-import {
-  SettingsAccordion
-} from "../Settings"
 
 export default memo(function Settings(props: {}) {
   const matches = useMatches()
@@ -19,8 +17,19 @@ export default memo(function Settings(props: {}) {
 
   return (
     <div className="p-8 flex flex-col">
-      <SettingsAccordion title="Basic Information" showID="info" subtitle="Name, ID and invite link" index={showSettings} setIndex={setShowSettings} />
-      <SettingsAccordion title="Actions" showID="actions" subtitle="Rename chat" index={showSettings} setIndex={setShowSettings} />
+      <div className="tabs mb-4">
+        <a className={classNames("tab tab-bordered", {
+          "tab-active": showSettings == "info"
+        })} onClick={() => {
+          setShowSettings("info")
+        }}>Basic Information</a> 
+        <a className={classNames("tab tab-bordered", {
+          "tab-active": showSettings == "actions"
+        })} onClick={() => {
+          setShowSettings("actions")
+        }}>Actions</a> 
+      </div>
+      {showSettings != "null" && <Outlet />}
     </div>
   )
 })

@@ -1,10 +1,4 @@
 import { useState, memo, useEffect } from "react"
-import {
-  TextField,
-  FormControlLabel,
-  Switch,
-  Button
-} from "@mui/material"
 import { useQueryClient } from "@tanstack/react-query"
 
 import { RequestType } from "../config"
@@ -67,19 +61,26 @@ export default memo(function SettingsActions(props: {}) {
   }
 
   return (
-    <div className="flex">
-      <TextField label="Rename" value={renameValue} onChange={ev => {
+    <div className="flex form-control space-y-4">
+      <label className="label">
+        <span className="label-text">Chat name</span>
+      </label>
+      <input type="text" placeholder="Rename" className="input mr-auto" value={renameValue} onChange={ev => {
         setRenameValue(ev.target.value)
       }} />
-      <FormControlLabel className="ml-4" label="Public" control={<Switch checked={publicValue} onChange={ev => setPublic(ev.target.checked)} />} />
-      <Button className="m-auto ml-4" disabled={publicRaw == publicValue && renameValue == chatName} onClick={() => {
+      {/* <FormControlLabel className="ml-4" label="Public" control={<Switch checked={publicValue} onChange={ev => setPublic(ev.target.checked)} />} /> */}
+      <label className="label cursor-pointer mr-auto">
+        <span className="label-text mr-4">Public</span> 
+        <input type="checkbox" className="toggle" checked={publicValue} onChange={ev => setPublic(ev.target.checked)} />
+      </label>
+      <button className="btn mr-auto" disabled={publicRaw == publicValue && renameValue == chatName} onClick={() => {
         if (renameValue != chatName) {
           rename()
         }
         if (publicRaw != publicValue) {
           modifyPublic()
         }
-      }}>Change</Button>
+      }}>Change</button>
     </div>
   )
 })

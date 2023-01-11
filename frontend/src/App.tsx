@@ -8,15 +8,6 @@ import {
 } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 
-import {
-  Snackbar,
-  Alert,
-  AlertTitle,
-  CircularProgress,
-  CssBaseline,
-  Backdrop
-} from "@mui/material"
-
 import { WEBSOCKET_PORT, RequestType, Request, WEBSOCKET_USE_PATH } from "./config"
 import { Notification, notify } from "./Notification"
 import { useSelector, useDispatch, saveMessage, restoreMessage } from './store'
@@ -26,6 +17,7 @@ import { changeName, changeAll } from "./state/chat"
 import { addMessage, setMessages } from "./state/message"
 import * as loaders from "./loaders"
 import { usePlugin } from "./Plugin"
+import classNames from "classnames"
 
 const Invite = lazy(() => import("./pages/Invite"))
 const Login = lazy(() => import("./pages/Login"))
@@ -36,17 +28,13 @@ const Settings = lazy(() => import("./pages/Settings"))
 const SettingsActions = lazy(() => import("./pages/SettingsActions"))
 const SettingsInfo = lazy(() => import("./pages/SettingsInfo"))
 const ErrorElement = lazy(() => import("./pages/ErrorElement"))
+const CreateChat = lazy(() => import("./pages/CreateChat"))
 
 function Loading() {
-  const [open, setOpen] = useState(false)
-  useEffect(() => {
-    const timeout = setTimeout(() => setOpen(true), 300)
-    return () => clearTimeout(timeout)
-  }, [])
   return (
-    <Backdrop open={open} className="text-white">
-      <CircularProgress color="inherit" />
-    </Backdrop>
+    <>
+      <div className="radial-progress m-auto animate-spin" style={{"--value": 60, "--size": "3rem"} as any} />
+    </>
   )
 }
 
@@ -58,7 +46,7 @@ function addSuspense(children: ReactNode) {
   )
 }
 
-function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
+function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setErrorAlertOpen: (open: boolean) => void) {
   const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket<Request>(`wss://${location.hostname}/ws/`)
   const dispatch = useDispatch()
   const queryClient = useQueryClient()
@@ -66,22 +54,23 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
   const { receiveHook } = usePlugin()
   const { names: chatNames, values: chatValues } = useChatList()
 
-  const [severity, setSeverity] = useState<any>("info")
-  const [alertTitle, setAlertTitle] = useState("")
   const [alertContent, setAlertContent] = useState("")
 
   function successAlert(content: string) {
-    setAlertOpen(true)
-    setSeverity("success")
-    setAlertTitle("Success")
+    setSuccessAlertOpen(true)
     setAlertContent(content)
+    setTimeout(() => {
+      setSuccessAlertOpen(false)
+    }, 5000)
   }
 
   function errorAlert(content: string) {
-    setAlertOpen(true)
-    setSeverity("error")
-    setAlertTitle("Error")
+    setErrorAlertOpen(true)
     setAlertContent(content)
+    setTimeout(() => {
+      setErrorAlertOpen(false)
+
+    }, 5000)
   }
   // string is uuid
   const [handleFunctionList, setHandleFunctionList] = useState<Record<string, (value: Request) => void>>({})
@@ -114,6 +103,7 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
       case RequestType.MSG_SEND:
         if (loginStatus != LoginType.LOGIN_SUCCESS) break
         (async () => {
+          if (message.msg == "") return
           const newMessage = {
             req: receiveHook ? await receiveHook(message) : message,
             time: +new Date
@@ -149,10 +139,7 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
   useEffect(() => {
     if (readyState !== ReadyState.CLOSED) return
     const timeout = setTimeout(() => {
-      setAlertOpen(true)
-      setSeverity("error")
-      setAlertTitle("Error")
-      setAlertContent("An unexpected error occurred. ")
+      errorAlert("An unexpected error occurred. ")
     }, 2000)
     return () => clearTimeout(timeout)
   }, [readyState])
@@ -167,8 +154,6 @@ function useMessageWebSocket(setAlertOpen: (arg1: boolean) => void) {
     },
     makeRequest,
     ready: readyState === ReadyState.OPEN,
-    severity,
-    alertTitle,
     alertContent,
     successAlert,
     errorAlert
@@ -207,6 +192,7 @@ const router = createBrowserRouter(
     <Route errorElement={addSuspense(<ErrorElement content="500 Internal Server Error" />)}>
       <Route path="/" loader={loaders.homeLoader} />
       <Route path="/chats/invite/" element={addSuspense(<Invite />)} loader={loaders.inviteLoader} />
+      <Route path="/chats/create/" element={addSuspense(<CreateChat />)} loader={loaders.createChatLoader} />
       <Route path="/chats/:id/" element={addSuspense(<ChatRoot />)}>
         <Route index element={addSuspense(<Chat />)} action={loaders.chatAction} loader={loaders.chatLoader} />
         <Route path="settings/" element={<Settings />}>
@@ -231,22 +217,22 @@ function SubRouter() {
 
 function App() {
   const [alertOpen, setAlertOpen] = useState(false)
+  const [successAlertOpen, setSuccessAlertOpen] = useState(false)
+  const [errorAlertOpen, setErrorAlertOpen] = useState(false)
   const { 
     sendJsonMessage, 
     makeRequest, 
     ready, 
-    severity, 
-    alertTitle, 
     alertContent,
     successAlert,
     errorAlert
-  } = useMessageWebSocket(setAlertOpen)
+  } = useMessageWebSocket(setSuccessAlertOpen, setErrorAlertOpen)
   const handleClose = useCallback(() => {
-    setAlertOpen(false)
+    setSuccessAlertOpen(false)
+    setErrorAlertOpen(false)
   }, [setAlertOpen])
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <CssBaseline />
       <NetworkContext.Provider value={{
         ready,
         makeRequest,
@@ -254,12 +240,18 @@ function App() {
         errorAlert
       }}>
         <Notification />
-        <Snackbar open={alertOpen} autoHideDuration={6000} onClose={handleClose}>
-          <Alert onClose={handleClose} severity={severity} className="w-full">
-            <AlertTitle>{alertTitle}</AlertTitle>
-            {alertContent}
-          </Alert>
-        </Snackbar>
+        <div className={classNames("alert alert-success shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", successAlertOpen || "hidden")}>
+          <div>
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6 fill-none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>Success: {alertContent}</span>
+          </div>
+        </div>
+        <div className={classNames("alert alert-error shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", errorAlertOpen || "hidden")}>
+          <div>
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6 fill-none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>Error! {alertContent}</span>
+          </div>
+        </div>
         <SubRouter />
       </NetworkContext.Provider>
     </div>

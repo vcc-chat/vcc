@@ -86,6 +86,17 @@ export function stringToColor(str: string) {
   return color;
 }
 
+export function stringToNumber(str: string) {
+  let hash = 0;
+  let i;
+
+  for (i = 0; i < str.length; i += 1) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return hash;
+}
+
 export function responseToChatList(data: [number, string, number | null][]) {
   const values = data.map(value => value[0])
   const names = data.map(value => value[1])
@@ -157,8 +168,8 @@ export function useChatList() {
   return {
     loading: isLoading,
     fetching: isFetching,
-    values,
-    names,
+    values: values as number[],
+    names: names as string[],
     parentChats,
     refresh() {
       queryClient.invalidateQueries({

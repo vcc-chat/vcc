@@ -2,40 +2,13 @@
 import { useEffect, useState } from "react"
 import { useNavigate, Form } from "react-router-dom"
 import localforage from "localforage"
-import {
-  Button as PureButton,
-  TextField,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  CircularProgress,
-  Button,
-  Backdrop
-} from "@mui/material"
+import classNames from "classnames"
 
 import { useSelector, useDispatch } from "../store"
 import { change as changeUsername } from "../state/username"
 import { reset, startGet, success, failed, LoginType } from "../state/login"
 import { useLoginActionData } from "../loaders"
-
-export function LoginErrorDialog({ open }: {
-  open: boolean
-}) {
-  const dispatch = useDispatch()
-  return (
-    <Dialog open={open}>
-      <DialogTitle>Login failed</DialogTitle>
-      <DialogContent>
-        <DialogContentText>Wrong username or password, maybe you can try it again later. </DialogContentText>
-      </DialogContent>
-      <DialogActions>
-        <PureButton size="medium" color="error" onClick={() => dispatch(reset())}>retry</PureButton>
-      </DialogActions>
-    </Dialog>
-  )
-}
+import { useNetwork } from "../tools"
 
 export function LoginDialog(props: {}) {
   const [password, setPassword] = useState("")
@@ -44,6 +17,7 @@ export function LoginDialog(props: {}) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const loginActionData = useLoginActionData()
+  const { errorAlert } = useNetwork()
   useEffect(() => {
     (async () => {
       if (loginActionData === undefined) return
@@ -52,6 +26,7 @@ export function LoginDialog(props: {}) {
         await localforage.setItem("token", loginActionData.token)
         navigate("/")
       } else {
+        errorAlert("Operation failed")
         dispatch(failed())
       }
     })()
@@ -64,54 +39,52 @@ export function LoginDialog(props: {}) {
   }, [loginStatus])
   return (
     <>
-      <Dialog open={loginStatus == LoginType.NOT_LOGIN}>
-        <Form method="post" onSubmit={() => {
+      <div className={classNames("hero min-h-screen bg-base-200", {
+        "hidden": loginStatus != LoginType.NOT_LOGIN
+      })}>
+        <Form method="post" className="hero-content flex-col lg:flex-row-reverse" onSubmit={() => {
           dispatch(startGet())
         }}>
-          <DialogTitle>Login</DialogTitle>
-          <DialogContent>
-            <DialogContentText>
-              To send messages, you must login first.
-            </DialogContentText>
-            <TextField
-              autoFocus
-              margin="dense"
-              label="User name"
-              name="username"
-              type="text"
-              fullWidth
-              variant="standard"
-              value={username}
-              onChange={ev => {
-                dispatch(changeUsername(ev.target.value))
-              }}
-            />
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Password"
-              name="password"
-              type="password"
-              fullWidth
-              variant="standard"
-              value={password}
-              onChange={ev => {
-                setPassword(ev.target.value)
-              }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button size="medium" onClick={() => {
-              navigate("/register")
-            }} className="m-1 mt-0">Register</Button>
-            <Button className="m-1 mt-0" size="medium" type="submit">Login</Button>
-          </DialogActions>
+          <div className="text-center lg:text-left">
+            <h1 className="text-5xl font-bold">Login now!</h1>
+            <p className="py-6">To send messages, you need to login first.</p>
+          </div>
+          <div className="card flex-shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
+            <div className="card-body">
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Username</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Username"
+                  className="input input-bordered"
+                  name="username" 
+                  value={username}
+                  onChange={ev => {
+                    dispatch(changeUsername(ev.target.value))
+                  }}
+                />
+              </div>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Password</span>
+                </label>
+                <input type="password" placeholder="Password" className="input input-bordered" name="password" />
+              </div>
+              <div className="form-control mt-6">
+                <div className="flex w-full">
+                  <button className="btn" onClick={() => {
+                    navigate("/register")
+                    console.log(1)
+                  }} type="button">Go to register</button>
+                  <button className="ml-2 flex-1 btn btn-primary" type="submit">Login</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </Form>
-      </Dialog>
-      <Backdrop className="text-white" open={loginStatus == LoginType.LOGIN_LOADING}>
-        <CircularProgress color="inherit" />
-      </Backdrop>
-      <LoginErrorDialog open={loginStatus == LoginType.LOGIN_FAILED}></LoginErrorDialog>
+      </div>
     </>
   )
 }

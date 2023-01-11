@@ -27,6 +27,12 @@ async function authLoader(jumpToLogin: boolean = true) {
   if (loginStatus == LoginType.LOGIN_SUCCESS) {
     return new Response()
   }
+  if (loginStatus == LoginType.NOT_LOGIN) {
+    if (jumpToLogin) {
+      return redirect("/login")
+    }
+    return new Response()
+  }
   if (typeof token == "string") {
     const req = await window.makeRequest({
       type: RequestType.CTL_TOKEN,
@@ -161,6 +167,7 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
   if (chatString == null || msg == null || typeof msg != "string") {
     throw badRequest()
   }
+  if (msg == "") return { ok: true }
   const chat = parseInt(chatString)
   if (Number.isNaN(chat)) {
     throw badRequest()
@@ -374,4 +381,8 @@ export function useRegisterActionData() {
   return useActionData() as {
     success: boolean
   } | undefined
+}
+
+export function createChatLoader() {
+  return authLoader()
 }

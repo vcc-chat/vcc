@@ -355,9 +355,7 @@ export function PluginProvider({ children }: {
     <>
       <iframe sandbox="allow-scripts" ref={iframeRef} src={createIframeSrc(complete ? codeQueries.map(
         query => (query.isSuccess ? query.data.content : "")
-      ) : [])} css={{
-        display: "none"
-      }} onLoad={onLoadHandler} {...{
+      ) : [])} className="hidden" onLoad={onLoadHandler} {...{
         credentialless: "credentialless"
       }} />
       <PluginContext.Provider value={{

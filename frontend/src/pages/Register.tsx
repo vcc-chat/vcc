@@ -1,14 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate, Form } from "react-router-dom"
-import {
-  TextField,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  Dialog,
-  Button
-} from "@mui/material"
+import classNames from "classnames"
 
 import { RequestType, Request } from "../config"
 import { useSelector, useDispatch } from "../store"
@@ -46,46 +38,50 @@ export default function Register(props: {}) {
   }, [result])
   return (
     <>
-      <Dialog open={loginStatus == LoginType.NOT_LOGIN}>
-        <Form method="post">
-          <DialogTitle>Register</DialogTitle>
-          <DialogContent>
-            <DialogContentText>
-              Don't have an account? Register one! You don't need any personal information.
-            </DialogContentText>
-            <TextField
-              autoFocus
-              margin="dense"
-              name="username"
-              label="User name"
-              type="text"
-              fullWidth
-              variant="standard"
-              value={username}
-              onChange={ev => {
-                setUsername(ev.target.value)
-              }}
-            />
-            <TextField
-              autoFocus
-              margin="dense"
-              name="password"
-              label="Password"
-              type="password"
-              fullWidth
-              variant="standard"
-              value={password}
-              onChange={ev => {
-                setPassword(ev.target.value)
-              }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button className="m-1 mt-0" size="medium" onClick={loginCallback}>Back to Login</Button>
-            <Button className="m-1 mt-0" size="medium" type="submit">Register</Button>
-          </DialogActions>
+      <div className={classNames("hero min-h-screen bg-base-200", {
+        "hidden": loginStatus != LoginType.NOT_LOGIN
+      })}>
+        <Form method="post" className="hero-content flex-col lg:flex-row-reverse">
+          <div className="text-center lg:text-left">
+            <h1 className="text-5xl font-bold">Register now!</h1>
+            <p className="py-6">Don't have an account? Register one! You don't need any personal information.</p>
+          </div>
+          <div className="card flex-shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
+            <div className="card-body">
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Username</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Username"
+                  className="input input-bordered"
+                  name="username" 
+                  value={username}
+                  onChange={ev => {
+                    setUsername(ev.target.value)
+                  }}
+                />
+              </div>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Password</span>
+                </label>
+                <input type="password" placeholder="Password" className="input input-bordered" name="password" />
+              </div>
+              <div className="form-control mt-6">
+                <div className="flex w-full">
+                  <button className="btn" onClick={() => {
+                    navigate("/login")
+                    console.log(1)
+                  }} type="button">Go to login</button>
+                  <button className="ml-2 flex-1 btn btn-primary" type="submit">Register</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </Form>
-      </Dialog>
+      </div>
     </>
   )
 }

@@ -1,6 +1,5 @@
-import { Avatar, Link } from "@mui/material"
 import { ReactNode, useMemo } from "react"
-import { Link as RouterLink } from "react-router-dom"
+import { Link } from "react-router-dom"
 
 import { stringToColor } from "./tools"
 
@@ -11,11 +10,15 @@ export function MessageAvatar({ name }: {
   const letter1 = (characters[0]?.[0] ?? "").toUpperCase()
   const letter2 = (characters[1]?.[0] ?? "").toUpperCase()
   return (
-    <Avatar style={{
-      backgroundColor: stringToColor(name)
-    }} className="w-9 h-9 text-lg">
-      {letter1}{letter2}
-    </Avatar>
+    <div className="chat-image avatar placeholder">
+      <div className="rounded-full w-9 h-9" style={{
+        backgroundColor: stringToColor(name)
+      }}>
+        <span className="text-white">
+          {letter1}{letter2}
+        </span>
+      </div>
+    </div>
   )
 }
 
@@ -27,11 +30,11 @@ export function MessageLink({ link, children }: {
   const sameSite = url.host == location.host
   if (sameSite) {
     return (
-      <Link component={RouterLink} to={url.pathname} children={children} />
+      <Link className="link" to={url.pathname}>{children}</Link>
     )
   } else {
     return (
-      <Link href={link} children={children} target="_blank" rel="noopener noreferrer" />
+      <a className="link" target="_blank" rel="noopener noreferrer">{children}</a>
     )
   }
 }

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import functools
 import os
 import logging
 import threading
@@ -11,6 +12,33 @@ from twisted.protocols.basic import LineReceiver
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
+
+
+class ServiceExport():
+    def __init__(self,func=None,async_mode=False):
+        self.async_mode=async_mode
+        if func is None:
+            self.func=None
+            return
+        self.func=func
+        self.__annotations__=self.func.__annotations__
+    def __call__(self,*args,**kwargs):
+        if self.func is None:
+            self.func=args[0]
+            return self
+        return self.func(*args,**kwargs)
+
+class ServiceMeta(type):
+    def __new__(cls, clsname, bases, dct):
+        exports=[]
+        exports_async=[]
+        for i in dct:
+            attr=dct[i]
+            if isinstance(attr,ServiceExport):
+                ([exports,exports_async][attr.async_mode]).append(attr)
+        print( dct|{"exports":exports,"exports_async":exports_async})
+        return type(clsname, bases, dct|{"exports":exports,"exports_async":exports_async})
+
 
 
 class Service(LineReceiver):
@@ -65,7 +93,6 @@ class RpcServiceFactory(ClientFactory):
         self.services = {}
         self.funcs = {}
         self.done = Deferred()
-        asyncio.run
         #threading._start_new_thread(self.eventloop.run_until_complete, (self.loop(),))
         threading._start_new_thread(self.eventloop.run_forever, ())
     def buildProtocol(self, addr):

@@ -218,7 +218,7 @@ class ChatService:
             chat_user = ChatUser.get(chat=chat, user=user)
             if chat_user.banned:
                 return False
-            if not chat_user.invite or chat.public:
+            if not chat_user.invite and not chat.public:
                 return False
             try:
                 # Include banned

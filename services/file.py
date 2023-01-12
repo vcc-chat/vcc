@@ -3,6 +3,8 @@ import io
 import uuid
 
 import minio
+from minio.commonconfig import ComposeSource
+
 
 import base
 
@@ -21,10 +23,10 @@ class File:
         if not self.minio.bucket_exists(bucket):
             self.minio.make_bucket(bucket)
 
-    def new_object(self, name, bucket="file"):
+    def new_object(self, name,id=None,bucket="file"):
         self._create_bucket(bucket)
-
-        id = str(uuid.uuid4())
+        if id==None:
+            id = str(uuid.uuid4())
         url = url = self.minio.get_presigned_url(
             "PUT", bucket, id, extra_query_params={"X-Amz-Meta-realname": name}
         )
@@ -33,7 +35,6 @@ class File:
 
     def new_object_with_content(self, name, content, bucket="file"):
         self._create_bucket(bucket)
-
         id = str(uuid.uuid4())
         data = io.BytesIO(content.encode())
         self.minio.put_object(
@@ -44,7 +45,12 @@ class File:
             metadata={"X-Amz-Meta-realname": name},
         )
         return id
-
+    # When I am writing this,I thinks I dont need this now
+    # def compose_object(self,sources,name,id=None,bucket="file"):
+    #     if id==None:
+    #         id = str(uuid.uuid4())
+    #     sources=list(map(lambda x:ComposeSource(bucket+"/"+x),sources))
+    #     self.minio.compose_object(bucket,id,sourc es)
     def get_object(self, id, bucket="file"):
         self._create_bucket(bucket)
 

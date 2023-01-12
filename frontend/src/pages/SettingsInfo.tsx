@@ -16,7 +16,7 @@ export default memo(function SettingsInfo(props: {}) {
       <div className="mb-2 text-lg">ID: {chat}</div>
       {inviteLink != null && (
         <div className="mb-2 text-lg">Invite Link:&nbsp;
-          <Link className="text-gray-500 hover:text-gray-700 break-all" to={inviteLink}>{location.origin}{inviteLink}</Link>
+          <Link className="link break-all" to={inviteLink}>{location.origin}{inviteLink}</Link>
         </div>
       )}
     </>

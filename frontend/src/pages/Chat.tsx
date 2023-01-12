@@ -33,12 +33,11 @@ const MessageComponent = memo(function MessageComponent({ prevMsg, nowMsg }: {
   return (
     <li key={nowMsg.time} className={classNames("chat", req.usrname == selfUsername ? "chat-end" : "chat-start")}>
       <MessageAvatar name={req.usrname} />
-      <div className={"chat-header flex"}>
-        {req.usrname == selfUsername || req.usrname}
+      <div className={classNames("chat-header flex space-x-2", req.usrname == selfUsername ? "flex-row-reverse" : "flex-row")}>
+        {req.usrname}
         <div className="text-xs opacity-50 mx-2 my-auto" draggable onDragStart={dragStartHandler}>
           {formatDistance(date, new Date)}
         </div>
-        {req.usrname == selfUsername && req.usrname}
       </div>
       <div className={classNames("prose prose-headings:text-inherit chat-bubble", [
         "chat-bubble-primary",
@@ -137,46 +136,42 @@ export default function Chat() {
             ))
           }
         </ul>
-        <div className="mt-auto mb-2 mx-1 flex flex-col relative">
-          <fetcher.Form method="post" onSubmit={ev => {
-            setMsgBody("")
-          }}>
-            <div className="flex flex-col rounded-lg overflow-hidden">
-              <input
-                type="text"
-                placeholder="Message"
-                className="input input-lg w-full"
-                name="msg"
-                disabled={!ready || chat == null}
-                autoComplete="off"
-                onChange={event => {
-                  setMsgBody(event.target.value)
-                }} 
-                onKeyDown={event => {
-                  if (event.keyCode == 10 || event.keyCode == 13) {
-                    if (event.ctrlKey || event.metaKey) {
-                      setMsgBody(msgBody + "\n")
-                    } else {
-                      fetcher.submit(
-                        { msg: msgBody, session: session ?? "" },
-                        { method: "post" }
-                      )
-                      setMsgBody("")
-                      event.preventDefault()
-                    }
-                  }
-                }}
-                value={msgBody} 
-              />
-            </div>
-            <input type="hidden" name="session" value={session ?? ""} />
-            <div className="absolute bottom-0 right-0">
-              <button className={classNames("btn btn-ghost", {
-                "btn-disabled": !ready || chat == null
-              })} type="submit">send</button>
-            </div>
-          </fetcher.Form>
-        </div>
+        <fetcher.Form method="post" className="mt-auto mb-2 mx-1 flex relative" onSubmit={ev => {
+          setMsgBody("")
+        }}>
+          <input
+            type="text"
+            placeholder="Message"
+            className="input input-lg w-full"
+            name="msg"
+            disabled={!ready || chat == null}
+            autoComplete="off"
+            onChange={event => {
+              setMsgBody(event.target.value)
+            }} 
+            onKeyDown={event => {
+              if (event.keyCode == 10 || event.keyCode == 13) {
+                if (event.ctrlKey || event.metaKey) {
+                  setMsgBody(msgBody + "\n")
+                } else {
+                  fetcher.submit(
+                    { msg: msgBody, session: session ?? "" },
+                    { method: "post" }
+                  )
+                  setMsgBody("")
+                  event.preventDefault()
+                }
+              }
+            }}
+            value={msgBody} 
+          />
+          <input type="hidden" name="session" value={session ?? ""} />
+          <div className="absolute bottom-0 right-0">
+            <button className={classNames("btn btn-ghost", {
+              "btn-disabled": !ready || chat == null
+            })} type="submit">send</button>
+          </div>
+        </fetcher.Form>
       </div>
     </>
   )

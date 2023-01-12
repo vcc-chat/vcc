@@ -5,11 +5,11 @@ export default function NotFound({ content }: {
 }) {
   const error = useRouteError()
   return (
-    <div className="flex-1 bg-gray-900 flex">
-      <div className="m-auto font-mono text-3xl flex flex-col text-gray-100">
-        <div className="mx-auto">{isRouteErrorResponse(error) ? `${error.status} ${error.data}` : content}</div>
-        <div className="mx-auto">
-          <Link className="text-gray-100 no-underline hover:text-gray-50" to="/">Go back to home</Link>
+    <div className="hero min-h-screen bg-base-200">
+      <div className="hero-content text-center">
+        <div className="max-w-md">
+          <h1 className="text-5xl font-bold">{isRouteErrorResponse(error) ? `${error.status} ${error.data}` : content}</h1>
+          <Link className="btn btn-primary mt-4" to="/">Go back to home</Link>
         </div>
       </div>
     </div>

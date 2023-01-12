@@ -375,7 +375,7 @@ export function UsersSidebar({ open, setOpen }: {
       })
       return msg as unknown as boolean[]
     },
-    enabled: chat != null && usersData != null && !usersData.length
+    enabled: chat != null && usersData != null && !!usersData?.length
   })
   const users: [string, number, boolean][] = useMemo(() => {
     if (onlineData === undefined) {
@@ -455,7 +455,7 @@ export function UsersSidebar({ open, setOpen }: {
   )
 
   return (
-    <div className={classNames("w-full overflow-x-hidden flex transition-all duration-300 no-scrollbar bg-white", {
+    <div className={classNames("w-full overflow-x-hidden flex transition-all duration-300 no-scrollbar bg-base-100", {
       "sm:max-w-xs max-w-full sm:w-xs w-full overflow-y-auto": open,
       "max-w-0 overflow-y-hidden": !open
     })}>

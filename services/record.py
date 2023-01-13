@@ -4,6 +4,7 @@ import os
 import time
 
 import base
+from base import ServiceExport as export
 import vcc
 import redis.asyncio as redis
 import aiohttp
@@ -22,7 +23,7 @@ def timer(interval, func=None):
     return wrapper
 
 
-class Record:
+class Record(metaclass=base.ServiceMeta):
     async def record_worker(self):
         async for i in self._pubsub.listen():
             if i["type"] == "pmessage":
@@ -70,7 +71,10 @@ class Record:
         await self._pubsub.psubscribe("messages:*")
         asyncio.get_event_loop().create_task(self.record_worker())
         return await self.flush_worker()
-
+    @export(async_mode=True)
+    async def hello(self):
+        print("hello")
+        return "hello world"
     def __init__(self):
         self._vcc = vcc.RpcExchanger()
         self._redis = redis.Redis.from_url(
@@ -78,9 +82,6 @@ class Record:
         )
         self._pubsub = self._redis.pubsub()
         asyncio.get_event_loop().create_task(self._ainit())
-
-    def attach(self, chatid):
-        return chatid
 
 
 if __name__ == "__main__":

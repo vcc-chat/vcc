@@ -23,7 +23,9 @@ class RpcProtocol(LineReceiver):
             self.send({"res": "error", "error": "not json"})
             return
         if "res" in data:
-            return
+            match data['res']:
+                case "error" if self.role=="service":
+                    self.factory.make_respond(data["jobid"], data["error"],error=True)
         match data["type"]:
             case "handshake":
                 self.do_handshake(data)
@@ -51,8 +53,8 @@ class RpcProtocol(LineReceiver):
         data = {"type": "call", "service": service, "data": data, "jobid": jobid}
         self.send(data)
 
-    def make_respond(self, jobid, data):
-        data = {"type": "resp", "data": data, "jobid": jobid}
+    def make_respond(self, jobid, data,error):
+        data = {"type": "resp", "data": data, "jobid": jobid,"error":error}
         self.send(data)
 
 
@@ -122,8 +124,9 @@ class RpcServer(protocol.Factory):
         else:
             self.providers[service[0]].make_request(service[1], data, jobid)
 
-    def make_respond(self, jobid, data):
-        self.promises[jobid].make_respond(jobid, data)
+    def make_respond(self, jobid, data,error=False):
+
+        self.promises[jobid].make_respond(jobid, data,error)
         del self.promises[jobid]
 
     def buildProtocol(self, addr):

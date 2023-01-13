@@ -4,6 +4,7 @@ import functools
 import os
 import logging
 import threading
+import traceback
 
 from twisted.internet import task
 from twisted.internet.defer import Deferred
@@ -30,7 +31,15 @@ class ServiceExport:
             return self
 
     def __get__(self, instance, _):
-        return type(self.func.__name__,(),{"__call__":functools.partial(self.func, instance),"__annotations__":self.__annotations__})()
+        return type(
+            self.func.__name__,
+            (),
+            {
+                "__call__": functools.partial(self.func, instance),
+                "__annotations__": self.__annotations__,
+                "co_argcount": self.func.__code__.co_argcount,
+            },
+        )()
 
 
 class ServiceMeta(type):
@@ -67,16 +76,21 @@ class Service(LineReceiver):
     async def a_do_request(self, data):
         service = data["service"]
         func = self.factory.funcs[service]
-        try: #FIXME: This try-except may make debug hard
+        param=data["data"]
+        if len(param.keys())!=getattr(func,"__code__",func).co_argcount-1:
+            self.send({"res": "error", "error": "wrong format","jobid": data["jobid"]})
+            return
+        try:  # FIXME: This try-except may make debug hard
             if service in self.factory.async_func:
-                print(func())            resp = await func(**data["data"])
+                print(func())
+                resp = await func(**data["data"])
             else:
                 resp = await self.factory.eventloop.run_in_executor(
                     None, lambda: func(**data["data"])
                 )
             self.send({"type": "respond", "data": resp, "jobid": data["jobid"]})
-        except TypeError:
-            self.send({"res": "error", "error": "wrong format"})
+        except Exception as e:
+            self.send({"res": "error", "error": "server error","data":traceback.format_exc(),"jobid": data["jobid"]})
 
     def lineReceived(self, data):
         try:

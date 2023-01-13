@@ -14,31 +14,37 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
-class ServiceExport():
-    def __init__(self,func=None,async_mode=False):
-        self.async_mode=async_mode
+class ServiceExport:
+    def __init__(self, func=None, async_mode=False):
+        self.async_mode = async_mode
         if func is None:
-            self.func=None
+            self.func = None
             return
-        self.func=func
-        self.__annotations__=self.func.__annotations__
-    def __call__(self,*args,**kwargs):
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
         if self.func is None:
-            self.func=args[0]
+            self.func = args[0]
+            self.__name__ = self.func.__name__
+            self.__annotations__ = self.func.__annotations__
             return self
-        return self.func(*args,**kwargs)
+
+    def __get__(self, instance, _):
+        return type(self.func.__name__,(),{"__call__":functools.partial(self.func, instance),"__annotations__":self.__annotations__})()
+
 
 class ServiceMeta(type):
     def __new__(cls, clsname, bases, dct):
-        exports=[]
-        exports_async=[]
+        exports = []
+        exports_async = []
         for i in dct:
-            attr=dct[i]
-            if isinstance(attr,ServiceExport):
-                ([exports,exports_async][attr.async_mode]).append(attr)
-        print( dct|{"exports":exports,"exports_async":exports_async})
-        return type(clsname, bases, dct|{"exports":exports,"exports_async":exports_async})
-
+            attr = dct[i]
+            if isinstance(attr, ServiceExport):
+                ([exports, exports_async][attr.async_mode]).append(attr.__name__)
+        print(dct | {"exports": exports, "exports_async": exports_async})
+        if exports != {} or exports_async != {}:
+            dct = dct | {"exports": exports, "exports_async": exports_async}
+        return type(clsname, bases, dct)
 
 
 class Service(LineReceiver):
@@ -59,11 +65,11 @@ class Service(LineReceiver):
         )
 
     async def a_do_request(self, data):
-        print(2)
-        func = self.factory.funcs[data["service"]]
-        try:
-            if self.factory.async_mode:
-                resp = await func(**data["data"])
+        service = data["service"]
+        func = self.factory.funcs[service]
+        try: #FIXME: This try-except may make debug hard
+            if service in self.factory.async_func:
+                print(func())            resp = await func(**data["data"])
             else:
                 resp = await self.factory.eventloop.run_in_executor(
                     None, lambda: func(**data["data"])
@@ -82,10 +88,13 @@ class Service(LineReceiver):
         if "res" in data:
             return
         if data["type"] == "call":
-            asyncio.run_coroutine_threadsafe(self.a_do_request(data),self.factory.eventloop)
+            asyncio.run_coroutine_threadsafe(
+                self.a_do_request(data), self.factory.eventloop
+            )
+
 
 class RpcServiceFactory(ClientFactory):
-    def __init__(self, name,async_mode=False):
+    def __init__(self, name, async_mode=False):
         self.name = name
         self.eventloop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.eventloop)
@@ -93,8 +102,9 @@ class RpcServiceFactory(ClientFactory):
         self.services = {}
         self.funcs = {}
         self.done = Deferred()
-        #threading._start_new_thread(self.eventloop.run_until_complete, (self.loop(),))
+        # threading._start_new_thread(self.eventloop.run_until_complete, (self.loop(),))
         threading._start_new_thread(self.eventloop.run_forever, ())
+
     def buildProtocol(self, addr):
         return Service(self)
 
@@ -105,12 +115,29 @@ class RpcServiceFactory(ClientFactory):
     def clientConnectionLost(self, connector, reason):
         log.debug(reason)
         self.done.callback(None)
+
     def register(self, instance):
-        services = {
-            i: getattr(instance, i)
-            for i in dir(instance)
-            if i[0] != "_" and hasattr(getattr(instance, i), "__call__")
-        }
+        self.instance = instance
+        if hasattr(instance, "exports") or hasattr(instance, "exports_async"):
+            services = {
+                i: getattr(instance, i)
+                for i in (
+                    getattr(instance, "exports", [])
+                    + getattr(instance, "exports_async", [])
+                )
+                if i[0] != "_" and hasattr(getattr(instance, i), "__call__")
+            }
+            self.async_func = getattr(instance, "exports_async", [])
+        else:
+            services = {
+                i: getattr(instance, i)
+                for i in dir(instance)
+                if i[0] != "_" and hasattr(getattr(instance, i), "__call__")
+            }
+            if self.async_mode:
+                self.async_func = list(services.keys())
+            else:
+                self.async_func = []
         annotations = {
             key1: {
                 key2: str(value2) if str(value2)[0] != "<" else value2.__name__
@@ -132,6 +159,7 @@ class RpcServiceFactory(ClientFactory):
     async def loop(self):
         while 1:
             asyncio.Future
+
     def connect(self, host=None, port=None):
         if host is None and port is None:
             host, port = self.get_host()

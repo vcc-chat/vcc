@@ -1,37 +1,25 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit"
-import { Request, RequestWithTime } from "../config"
+import { StateCreator } from "zustand"
+import { RequestWithTime } from "../config"
 
-interface MessageType {
-  value: Record<number, RequestWithTime[]>
+interface MessageState {
+  messages: Record<number, RequestWithTime[]>
+  addMessage: (message: RequestWithTime) => void
 }
 
-const messageState: MessageType = {
-  value: {}
-}
-
-const messageSlice = createSlice({
-  name: "message",
-  initialState: messageState,
-  reducers: {
-    add(state, action: PayloadAction<{
-      chat: number,
-      message: RequestWithTime
-    }>) {
-      const { chat, message } = action.payload
-      if (Object.hasOwn(state.value, chat)) {
-        const messages = state.value[chat]
-        const lastMessage = messages.at(-1)!
-        messages.push(message)
-      } else {
-        state.value[chat] = [message]
+const createMessageSlice: StateCreator<MessageState> = (set) => ({
+  messages: {},
+  addMessage(message: RequestWithTime) {
+    const chat = message.req.uid
+    set(value => {
+      const values = value.messages
+      return {
+        messages: {
+          ...values,
+          [chat]: values[chat]?.concat?.(message) ?? [message]
+        }
       }
-    },
-    set(state, action: PayloadAction<Record<number, RequestWithTime[]>>) {
-      state.value = action.payload
-    }
+    })
   }
 })
 
-export const { add: addMessage, set: setMessages } = messageSlice.actions
-
-export default messageSlice.reducer
+export default createMessageSlice

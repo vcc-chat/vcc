@@ -10,11 +10,9 @@ import { useQueryClient } from "@tanstack/react-query"
 
 import { WEBSOCKET_PORT, RequestType, Request, WEBSOCKET_USE_PATH } from "./config"
 import { Notification, notify } from "./Notification"
-import { useSelector, useDispatch, saveMessage, restoreMessage } from './store'
 import { NetworkContext, responseToChatList, useChatList } from "./tools"
-import { success, failed, LoginType, reset } from "./state/login"
-import { changeName, changeAll } from "./state/chat"
-import { addMessage, setMessages } from "./state/message"
+import { LoginType } from "./state/login"
+import useStore from "./store"
 import * as loaders from "./loaders"
 import { usePlugin } from "./Plugin"
 import classNames from "classnames"
@@ -48,11 +46,12 @@ function addSuspense(children: ReactNode) {
 
 function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setErrorAlertOpen: (open: boolean) => void) {
   const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket<Request>(`wss://${location.hostname}/ws/`)
-  const dispatch = useDispatch()
   const queryClient = useQueryClient()
-  const loginStatus = useSelector(state => state.login.type)
+  const loginStatus = useStore(state => state.type)
   const { receiveHook } = usePlugin()
   const { names: chatNames, values: chatValues } = useChatList()
+  const addMessage = useStore(state => state.addMessage)
+  const changeAllChats = useStore(state => state.changeAllChat)
 
   const [alertContent, setAlertContent] = useState("")
 
@@ -110,12 +109,8 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
           }
           const request = newMessage.req
           if (request == null) return
-          dispatch(addMessage({
-            chat: request.uid,
-            message: newMessage
-          }))
+          addMessage(newMessage)
           notify(chatNames[chatValues.indexOf(request.uid)], `${request.usrname}: ${request.msg}`)
-          saveMessage(newMessage)
           if (request.usrname == "system" && (
             request.msg.includes("join") 
             || request.msg.includes("quit") 
@@ -130,7 +125,7 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
       case RequestType.CTL_LJOIN:
         queryClient.setQueryData(["chat-list"], () => {
           const { values, names, parentChats } = responseToChatList(message.msg as any)
-          dispatch(changeAll([values, names]))
+          changeAllChats(values, names)
           return { values, names, parentChats }
         })
     }
@@ -143,10 +138,6 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
     }, 2000)
     return () => clearTimeout(timeout)
   }, [readyState])
-
-  useEffect(() => {(async () => {
-    dispatch(setMessages(await restoreMessage()))
-  })()}, [])
   
   return {
     sendJsonMessage(req: Request) {
@@ -216,7 +207,6 @@ function SubRouter() {
 }
 
 function App() {
-  const [alertOpen, setAlertOpen] = useState(false)
   const [successAlertOpen, setSuccessAlertOpen] = useState(false)
   const [errorAlertOpen, setErrorAlertOpen] = useState(false)
   const { 
@@ -227,10 +217,6 @@ function App() {
     successAlert,
     errorAlert
   } = useMessageWebSocket(setSuccessAlertOpen, setErrorAlertOpen)
-  const handleClose = useCallback(() => {
-    setSuccessAlertOpen(false)
-    setErrorAlertOpen(false)
-  }, [setAlertOpen])
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <NetworkContext.Provider value={{

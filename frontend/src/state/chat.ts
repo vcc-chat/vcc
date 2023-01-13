@@ -1,58 +1,57 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit"
+import { StateCreator } from "zustand"
 
-// session before
-interface ChatType {
-  value: number | null,
-  name: string | null,
+interface ChatState {
+  chat: number | null,
+  chatName: string | null,
   sessions: [number, string][],
-  session: string | null
+  session: string | null,
+  changeChatName(name: string): void,
+  changeChat(value: number | null): void,
+  changeAllChat(chats: number[], chatNames: string[]): void,
+  changeSession(session: string | null): void
+  addSession(chat: number, session: string): void
 }
-
-const chatState: ChatType = {
-  value: null,
-  name: null,
+const createChatSlice: StateCreator<ChatState> = set => ({
+  chat: null,
+  chatName: null,
   sessions: [],
-  session: null
-}
-
-const chatSlice = createSlice({
-  name: "chat",
-  initialState: chatState,
-  reducers: {
-    changeName(state: ChatType, action: PayloadAction<string>) {
-      state.name = action.payload
-    },
-    changeValue(state: ChatType, action: PayloadAction<number | null>) {
-      state.value = action.payload
-    },
-    changeAll(state: ChatType, action: PayloadAction<[number[], string[]]>) {
-      const { payload } = action
-      const [values, names] = payload
-      if (state.name == null || state.value == null) {
-        if (payload) {
-          state.value = values[0]
-          state.name = names[0]
+  session: null,
+  changeChatName(name) {
+    set({
+      chatName: name
+    })
+  },
+  changeChat(value) {
+    set({
+      chat: value
+    })
+  },
+  changeAllChat(chats, chatNames) {
+    set(({ chat, chatName }) => {
+      if (chatName == null || chat == null) {
+        if (chats.length) {
+          return { chat: chats[0], chatName: chatNames[0] }
         }
-        return
       }
-      if (!~payload.findIndex(a => a[0] == state.value && a[1] == state.name)) {
-        state.value = values[0]
-        state.name = names[0]
+      if (!chats.includes(chat!) || !chatNames.includes(chatName!)) {
+        return { chat: chats[0], chatName: chatNames[0] }
       }
-    },
-    addSession(state: ChatType, action: PayloadAction<[number, string]>) {
-      const { payload } = action
-      if (!~state.sessions.findIndex(([a, b]) => a == payload[0] && b == payload[1])) {
-        state.sessions.push(payload)
+      return {}
+    })
+  },
+  changeSession(session: string | null) {
+    set({ session })
+  },
+  addSession(chat: number, session: string) {
+    set(({ sessions }) => {
+      if (sessions.find(sess => sess[0] == chat && sess[1] == session) != undefined) {
+        return {}
       }
-    },
-    changeSession(state: ChatType, action: PayloadAction<string | null>) {
-      const { payload } = action
-      state.session = payload
-    }
+      return {
+        sessions: sessions.concat([chat, session])
+      }
+    })
   }
 })
 
-export const { changeName, changeValue, changeAll, addSession, changeSession } = chatSlice.actions
-
-export default chatSlice.reducer
+export default createChatSlice

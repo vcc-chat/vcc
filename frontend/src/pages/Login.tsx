@@ -1,35 +1,34 @@
 
 import { useEffect, useState } from "react"
 import { useNavigate, Form } from "react-router-dom"
-import localforage from "localforage"
 import classNames from "classnames"
 
-import { useSelector, useDispatch } from "../store"
-import { change as changeUsername } from "../state/username"
-import { reset, startGet, success, failed, LoginType } from "../state/login"
+import { LoginType } from "../state/login"
+import useStore from "../store"
 import { useLoginActionData } from "../loaders"
 import { useNetwork } from "../tools"
 
 export function LoginDialog(props: {}) {
-  const [password, setPassword] = useState("")
-  const username = useSelector(state => state.username.value)
-  const loginStatus = useSelector(state => state.login.type)
-  const dispatch = useDispatch()
+  const username = useStore(state => state.username)
+  const changeUsername = useStore(state => state.changeUsername)
   const navigate = useNavigate()
   const loginActionData = useLoginActionData()
   const { errorAlert } = useNetwork()
+  const success = useStore(state => state.success)
+  const failed = useStore(state => state.failed)
+  const startGet = useStore(state => state.startGet)
+  const loginStatus = useStore(state => state.type)
+  const setToken = useStore(state => state.setToken)
   useEffect(() => {
-    (async () => {
-      if (loginActionData === undefined) return
-      if (loginActionData.success) {
-        dispatch(success())
-        await localforage.setItem("token", loginActionData.token)
-        navigate("/")
-      } else {
-        errorAlert("Operation failed")
-        dispatch(failed())
-      }
-    })()
+    if (loginActionData === undefined) return
+    if (loginActionData.success) {
+      success()
+      setToken(loginActionData.token)
+      navigate("/")
+    } else {
+      errorAlert("Operation failed")
+      failed()
+    }
   }, [loginActionData])
 
   useEffect(() => {
@@ -43,7 +42,7 @@ export function LoginDialog(props: {}) {
         "hidden": loginStatus != LoginType.NOT_LOGIN
       })}>
         <Form method="post" className="hero-content flex-col lg:flex-row-reverse" onSubmit={() => {
-          dispatch(startGet())
+          startGet()
         }}>
           <div className="text-center lg:text-left">
             <h1 className="text-5xl font-bold">Login now!</h1>
@@ -62,7 +61,7 @@ export function LoginDialog(props: {}) {
                   name="username" 
                   value={username}
                   onChange={ev => {
-                    dispatch(changeUsername(ev.target.value))
+                    changeUsername(ev.target.value)
                   }}
                 />
               </div>

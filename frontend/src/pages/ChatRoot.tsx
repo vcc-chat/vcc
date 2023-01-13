@@ -2,8 +2,7 @@ import { useEffect } from "react"
 import { useParams, useNavigate, Outlet } from "react-router-dom"
 
 import { MainLayout } from "../Sidebar"
-import { useDispatch, useSelector } from "../store"
-import { changeName, changeValue } from "../state/chat"
+import useStore from "../store"
 import { useChatList } from "../tools"
 
 export default function Chat(props: {}) {
@@ -11,14 +10,15 @@ export default function Chat(props: {}) {
   const { values: chats, names: chatNames } = useChatList()
   const chatRaw = Number(params.id)
   const chat = Number.isNaN(chatRaw) || !chats.includes(chatRaw) ? null : chatRaw
-  const chatNow = useSelector(state => state.chat.value)
-  const dispatch = useDispatch()
+  const chatNow = useStore(state => state.chat)
   const navigate = useNavigate()
+  const changeValue = useStore(state => state.changeChat)
+  const changeName = useStore(state => state.changeChatName)
 
   useEffect(() => {
     if (chatNow != chat) {
-      dispatch(changeValue(chat))
-      dispatch(changeName(chat == null ? "" : chatNames[chats.indexOf(chat)]))
+      changeValue(chat)
+      changeName(chat == null ? "" : chatNames[chats.indexOf(chat)])
     }
   }, [chat, chatNow])
 

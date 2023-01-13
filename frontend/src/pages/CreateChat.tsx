@@ -2,14 +2,13 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useChatList, useNetwork } from "../tools"
 import { RequestType } from "../config"
-import { addSession } from "../state/chat"
-import { useDispatch } from "../store"
+import useStore from "../store"
 
 export default function CreateChat() {
   const { values: chats, names: chatNames, parentChats, refresh } = useChatList()
   const { makeRequest, successAlert, errorAlert } = useNetwork()
-  const dispatch = useDispatch()
   const navigate = useNavigate()
+  const addSession = useStore(state => state.addSession)
 
   const [chatName, setChatName] = useState("")
   const [parentChat, setParentChat] = useState(-1)
@@ -74,7 +73,7 @@ export default function CreateChat() {
                   })
                   if (uid) {
                     successAlert("You have joined the session successfully. ")
-                    dispatch(addSession([parentChat, chatName]))
+                    addSession(parentChat, chatName)
                     navigate(`/chats/${parentChat}`)
                   } else {
                     errorAlert("Permission denied. ")

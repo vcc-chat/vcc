@@ -3,15 +3,15 @@ import { useNavigate, Form } from "react-router-dom"
 import classNames from "classnames"
 
 import { RequestType, Request } from "../config"
-import { useSelector, useDispatch } from "../store"
 import { useNetwork } from "../tools"
 import { useRegisterActionData } from "../loaders"
 import { LoginType } from "../state/login"
+import useStore from "../store"
 
 export default function Register(props: {}) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
-  const loginStatus = useSelector(state => state.login.type)
+  const loginStatus = useStore(state => state.type)
   const navigate = useNavigate()
   const { successAlert, errorAlert } = useNetwork()
   const result = useRegisterActionData()

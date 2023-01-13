@@ -47,7 +47,6 @@ export default defineConfig({
       modules: [
         autoComplete("react"),
         autoComplete("react-dom"),
-        autoComplete("localforage"),
         {
           name: "@tanstack/react-query",
           var: "ReactQuery",

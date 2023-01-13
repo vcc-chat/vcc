@@ -2,7 +2,6 @@ import { memo } from "react"
 import { useMatches, useNavigate, useParams, Outlet } from "react-router-dom"
 import classNames from "classnames"
 
-import { useSelector } from "../store"
 
 export default memo(function Settings(props: {}) {
   const matches = useMatches()

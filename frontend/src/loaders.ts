@@ -10,8 +10,7 @@ import localforage from "localforage"
 
 import { RequestType } from "./config"
 import store from "./store"
-import { change as changeUsername } from "./state/username"
-import { success, reset, LoginType } from "./state/login"
+import { LoginType } from "./state/login"
 import { queryClient } from "./tools"
 import { PermissionKey, allPermissions } from "./Settings"
 
@@ -22,8 +21,7 @@ export function wait() {
 }
 
 async function authLoader(jumpToLogin: boolean = true) {
-  const token = await localforage.getItem("token")
-  const loginStatus = store.getState().login.type
+  const loginStatus = store.getState().type
   if (loginStatus == LoginType.LOGIN_SUCCESS) {
     return new Response()
   }
@@ -33,6 +31,7 @@ async function authLoader(jumpToLogin: boolean = true) {
     }
     return new Response()
   }
+  const token = store.getState().token
   if (typeof token == "string") {
     const req = await window.makeRequest({
       type: RequestType.CTL_TOKEN,
@@ -41,17 +40,19 @@ async function authLoader(jumpToLogin: boolean = true) {
       msg: token
     })
     if (req.uid != null) {
-      store.dispatch(changeUsername(req.usrname))
-      store.dispatch(success())
+      store.setState({
+        username: req.usrname
+      })
+      store.getState().success()
     } else {
-      localforage.removeItem("token")
-      store.dispatch(reset())
+      store.getState().reset()
+      store.getState().setToken(null)
       if (jumpToLogin) {
         return redirect("/login")
       }
     }
   } else {
-    store.dispatch(reset())
+    store.getState().reset()
     if (jumpToLogin) {
       return redirect("/login")
     }
@@ -191,7 +192,7 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
     const rawRequest = {
       uid: chat,
       type: RequestType.MSG_SEND,
-      usrname: store.getState().username.value,
+      usrname: store.getState().username,
       msg: msg,
       session: (session || null) as unknown as string
     }

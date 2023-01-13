@@ -1,6 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit"
-
-// login
+import { StateCreator } from "zustand"
 
 export const enum LoginType {
   NOT_LOGIN = 0,
@@ -10,36 +8,44 @@ export const enum LoginType {
   TOKEN_LOGIN = 4
 }
 
-interface LoginObjectType {
+interface LoginState {
   type: LoginType
+  username: string
+  token: string | null
+  success: () => void
+  failed: () => void
+  startGet: () => void
+  reset: () => void
+  tokenLogin: () => void,
+  setToken: (token: string | null) => void,
+  changeUsername: (username: string) => void
 }
 
-const loginState: LoginObjectType = {
-  type: LoginType.TOKEN_LOGIN
-}
-
-const loginSlice = createSlice({
-  name: "login",
-  initialState: loginState,
-  reducers: {
-    success(state: LoginObjectType) {
-      state.type = LoginType.LOGIN_SUCCESS
-    },
-    failed(state: LoginObjectType) {
-      state.type = LoginType.LOGIN_FAILED
-    },
-    startGet(state: LoginObjectType) {
-      state.type = LoginType.LOGIN_LOADING
-    },
-    reset(state: LoginObjectType) {
-      state.type = LoginType.NOT_LOGIN
-    },
-    tokenLogin(state: LoginObjectType) {
-      state.type = LoginType.TOKEN_LOGIN
-    }
+const createLoginSlice: StateCreator<LoginState> = set => ({
+  type: LoginType.TOKEN_LOGIN,
+  username: "",
+  token: null,
+  success() {
+    set({ type: LoginType.LOGIN_SUCCESS })
+  },
+  failed() {
+    set({ type: LoginType.LOGIN_FAILED })
+  },
+  startGet() {
+    set({ type: LoginType.LOGIN_LOADING })
+  },
+  reset() {
+    set({ type: LoginType.NOT_LOGIN })
+  },
+  tokenLogin() {
+    set({ type: LoginType.TOKEN_LOGIN })
+  },
+  setToken(token: string | null) {
+    set({ token })
+  },
+  changeUsername(username: string) {
+    set({ username: username })
   }
 })
 
-export const { success, failed, startGet, reset, tokenLogin } = loginSlice.actions
-
-export default loginSlice.reducer
+export default createLoginSlice

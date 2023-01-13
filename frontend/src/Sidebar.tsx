@@ -1,5 +1,4 @@
 import { ReactNode, useState, useEffect, useCallback, DragEvent, Fragment, useMemo, MouseEvent, useId } from "react"
-import localforage from "localforage"
 import { useNavigate, useFetcher, FetcherWithComponents } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import classNames from "classnames"
@@ -15,19 +14,18 @@ import MoreHorizIcon from "@material-design-icons/svg/outlined/more_horiz.svg"
 import PeopleIcon from "@material-design-icons/svg/outlined/people.svg"
 import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
 
-import { useSelector, useDispatch } from "./store"
 import { RequestType, MESSAGE_MIME_TYPE, Request } from "./config"
 import { ToolbarDialog, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
 import { stringToColor, useChatList, useNetwork } from "./tools"
-import { changeName, changeValue, changeSession } from "./state/chat"
+import useStore from "./store"
 
 export function NavBar({ toggle, toggleRightSidebar }: {
   toggle: () => void
   toggleRightSidebar: () => void
 }) {
-  const chatName = useSelector(state => state.chat.name)
+  const chatName = useStore(state => state.chatName)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const session = useSelector(state => state.chat.session)
+  const session = useStore(state => state.session)
   const menuOpen = !!anchorEl
   return (
     <div className="navbar bg-base-100">
@@ -46,7 +44,7 @@ export function NavBar({ toggle, toggleRightSidebar }: {
           </label>
           <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
             <li><a onClick={async () => {
-              await localforage.removeItem("token")
+              useStore.setState({ token: null })
               location.href = "/login"
             }}>Logout</a></li>
           </ul>
@@ -87,12 +85,12 @@ function SubChatSidebarItem({ chat, clickHandler, settingsClickHandler, setOpen 
   clickHandler: (value: number, name: string, session: string | null) => void
   settingsClickHandler: (value: number, name: string) => () => void
 }) {
-  const chatValue = useSelector(state => state.chat.value)
+  const chatValue = useStore(state => state.chat)
   const { values: chatValues, names: chatNames } = useChatList()
-  const sessions = useSelector(state => state.chat.sessions)
+  const sessions = useStore(state => state.sessions)
     .filter(([id, session]) => id == chat)
     .map(([chat, session]) => session)
-  const currentSession = useSelector(state => state.chat.session)
+  const currentSession = useStore(state => state.session)
   const fetcher = useFetcher()
   const [fold, setFold] = useState(true)
   return (
@@ -135,23 +133,25 @@ function SidebarItem({ value, setOpen, subChats }: {
   setOpen: (value: boolean) => void
   subChats: number[]
 }) {
-  const dispatch = useDispatch()
   const navigate = useNavigate()
-  const chatValue = useSelector(state => state.chat.value)
+  const chatValue = useStore(state => state.chat)
   const { values: chatValues, names: chatNames } = useChatList()
-  const session = useSelector(state => state.chat.session)
+  const session = useStore(state => state.session)
+  const changeValue = useStore(state => state.changeChat)
+  const changeName = useStore(state => state.changeChatName)
+  const changeSession = useStore(state => state.changeSession)
   const [fold, setFold] = useState(true)
   const fetcher = useFetcher()
   const clickHandler = useCallback((value: number, name: string, session: string | null = null) => {
-    dispatch(changeValue(value))
-    dispatch(changeName(name))
-    dispatch(changeSession(session))
+    changeValue(value)
+    changeName(name)
+    changeSession(session)
     navigate(`/chats/${value}`)
   }, [])
   const settingsClickHandler = useCallback((value: number, name: string) => {
     return function () {
-      dispatch(changeValue(value))
-      dispatch(changeName(name))
+      changeValue(value)
+      changeName(name)
       navigate(`/chats/${value}/settings/null`)
       setOpen(false)
     }
@@ -193,23 +193,25 @@ export function Sidebar({ open, setOpen }: {
   open: boolean,
   setOpen: (value: boolean) => void
 }) {
-  const dispatch = useDispatch()
   const navigate = useNavigate()
   const { successAlert, errorAlert } = useNetwork()
   const { refresh: refreshChats, parentChats } = useChatList()
 
   const [joinChatDialogOpen, setJoinChatDialogOpen] = useState(false)
 
+  const changeValue = useStore(state => state.changeChat)
+  const changeName = useStore(state => state.changeChatName)
+
   const afterJoinHandler = useCallback((chat: number, req: Request) => {
     if (req.uid) {
-      dispatch(changeName(req.usrname))
+      changeName(req.usrname)
+      changeValue(chat)
       successAlert("You have joined the chat successfully. ")
-      dispatch(changeValue(chat))
       refreshChats()
     } else {
       errorAlert("No such chat. ")
     }
-  }, [dispatch, successAlert, errorAlert, refreshChats, dispatch])
+  }, [successAlert, errorAlert, refreshChats])
 
   const listCreateItemButtonClickHandler = useCallback(() => {
     navigate("/chats/create")
@@ -328,7 +330,7 @@ export function UsersSidebar({ open, setOpen }: {
   open: boolean
   setOpen: (value: boolean) => void
 }) {
-  const chat = useSelector(state => state.chat.value)
+  const chat = useStore(state => state.chat)
   const { makeRequest, successAlert, errorAlert } = useNetwork()
   const { refresh: refreshChats, values: chatValues, loading: chatValuesLoading } = useChatList()
   const navigate = useNavigate()
@@ -389,7 +391,7 @@ export function UsersSidebar({ open, setOpen }: {
   const [handleUsername, setHandleUsername] = useState("")
   const [handleUserID, setHandleUserID] = useState(0)
 
-  const username = useSelector(state => state.username.value)
+  const username = useStore(state => state.username)
 
   const handleModifyPermissionButtonClick = useCallback(() => {
     setDialogOpen(true)
@@ -489,7 +491,7 @@ export function MainLayout({ children }: {
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
-  const session = useSelector(state => state.chat.session)
+  const session = useStore(state => state.session)
   const toggleCallback = useCallback(() => setSidebarOpen(!sidebarOpen), [setSidebarOpen, sidebarOpen])
   const toggleRightCallback = useCallback(() => setRightSidebarOpen(!rightSidebarOpen), [setRightSidebarOpen, rightSidebarOpen])
   const leftSidebarID = useId()

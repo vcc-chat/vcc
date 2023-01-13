@@ -1,8 +1,8 @@
 import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { useQueries } from "@tanstack/react-query"
-import localforage from "localforage"
 
 import { Request } from "./config"
+import useStore from "./store"
 
 async function getMetaInfo(urlString: string) {
   const response = await fetch(urlString)
@@ -101,16 +101,17 @@ const workerInitCode = `(${function () {
   const readOnlySet = new WeakSet<any>()
 
   const ObjectClone = Object
+  const freeze = Object.freeze
   const ProxyClone = Proxy
   const reflectApply = Reflect.apply
 
   function toReadOnly(obj: any) {
     if (toReadOnlySet.has(obj)) return
-    if (Object.isFrozen(obj)) return
+    if ((typeof obj != "function" && typeof obj != "object") || obj == null) return
     toReadOnlySet.add(obj)
     const names = ObjectClone.getOwnPropertyNames(obj)
     if (names == undefined) {
-      Object.freeze(obj)
+      freeze(obj)
       return
     }
     for (const i of names) {
@@ -118,7 +119,7 @@ const workerInitCode = `(${function () {
         obj[i] = readOnly(obj[i])
       } catch (e) {}
     }
-    Object.freeze(obj)
+    freeze(obj)
   }
   
   function readOnly(obj: any): any {
@@ -248,14 +249,10 @@ function createIframeSrc(originalScripts: string[]) {
 
 const PluginContext = createContext<{
   receiveHook: null | ((message: Request) => Promise<Request>),
-  sendHook: null | ((message: Request) => Promise<Request>),
-  plugins: string[],
-  setPlugins: ((value: string[]) => void) | null
+  sendHook: null | ((message: Request) => Promise<Request>)
 }>({
   receiveHook: null,
-  sendHook: null,
-  plugins: [],
-  setPlugins: null
+  sendHook: null
 })
 
 export function PluginProvider({ children }: {
@@ -266,7 +263,8 @@ export function PluginProvider({ children }: {
 
   const [receiveHook, setReceiveHook] = useState<null | ((message: Request) => Promise<Request>)>(null)
   const [sendHook, setSendHook] = useState<null | ((message: Request) => Promise<Request>)>(null)
-  const [urls, setUrls] = useState<string[]>([])
+
+  const urls = useStore(state => state.pluginLinks)
 
   const codeQueries = useQueries({
     queries: urls.map(url => ({
@@ -293,16 +291,10 @@ export function PluginProvider({ children }: {
 
     window.addEventListener("message", callback, true)
 
-    localforage
-      .getItem("plugin")
-      .then(data => {
-        if (data != undefined) {
-          setUrls(data as string[])
-        }
-      })
-
     ;(window as any).testPlugin = function (code: string[]) {
-      setUrls(code)
+      useStore.setState({
+        pluginLinks: code
+      })
     }
 
     ;(window as any).sendHook = null
@@ -360,9 +352,7 @@ export function PluginProvider({ children }: {
       }} />
       <PluginContext.Provider value={{
         receiveHook,
-        sendHook,
-        plugins: urls,
-        setPlugins: setUrls
+        sendHook
       }}>
         {children}
       </PluginContext.Provider>

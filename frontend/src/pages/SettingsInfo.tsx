@@ -1,12 +1,12 @@
 import { memo } from "react"
 import { Link } from "react-router-dom"
 
-import { useSelector } from "../store"
+import useStore from "../store"
 import { useSettingsInfoLoaderData } from "../loaders"
 
 export default memo(function SettingsInfo(props: {}) {
-  const chat = useSelector(state => state.chat.value)
-  const chatName = useSelector(state => state.chat.name)
+  const chat = useStore(state => state.chat)
+  const chatName = useStore(state => state.chatName)
 
   const { inviteLink } = useSettingsInfoLoaderData()
 

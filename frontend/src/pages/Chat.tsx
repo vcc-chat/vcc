@@ -10,7 +10,7 @@ import formatDistance from "date-fns/formatDistance"
 
 import { RequestType, Request, RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
 import { MessageAvatar, MessageLink } from "../Messages"
-import { useSelector } from "../store"
+import useStore from "../store"
 import { stringToNumber, useChatList, useNetwork } from "../tools"
 import { useChatActionData, wait } from "../loaders"
 
@@ -29,7 +29,7 @@ const MessageComponent = memo(function MessageComponent({ prevMsg, nowMsg }: {
     }))
     ev.dataTransfer.setData("text/plain", `${req.usrname}: ${req.msg}`)
   }, [req.msg])
-  const selfUsername = useSelector(state => state.username.value)
+  const selfUsername = useStore(state => state.username)
   return (
     <li key={nowMsg.time} className={classNames("chat", req.usrname == selfUsername ? "chat-end" : "chat-start")}>
       <MessageAvatar name={req.usrname} />
@@ -92,16 +92,16 @@ const MessageComponent = memo(function MessageComponent({ prevMsg, nowMsg }: {
 export default function Chat() {
   const [msgBody, setMsgBody] = useState("")
   const params = useParams()
-  const username = useSelector(state => state.username.value)
+  const username = useStore(state => state.username)
   const { values: chats } = useChatList()
   const chatRaw = Number(params.id)
   const chat = Number.isNaN(chatRaw) || !chats.includes(chatRaw) ? null : chatRaw
-  const messageHistory = useSelector(state => state.message.value)
+  const messageHistory = useStore(state => state.messages)
   const messages = chat == null || messageHistory[chat] == null ? [] : messageHistory[chat]
   const { ready, successAlert, errorAlert } = useNetwork()
   const ref = useRef<HTMLUListElement>(null)
   const fetcher = useFetcher()
-  const session = useSelector(state => state.chat.session)
+  const session = useStore(state => state.session)
   const result = useChatActionData()
   useEffect(() => {
     if (ref.current == null) return

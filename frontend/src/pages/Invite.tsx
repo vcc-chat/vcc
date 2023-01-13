@@ -3,9 +3,8 @@ import { useNavigate, useSearchParams, useLoaderData } from "react-router-dom"
 
 
 import { RequestType, Request } from "../config"
-import { useSelector, useDispatch } from "../store"
 import { useChatList, useNetwork } from "../tools"
-import { changeValue } from "../state/chat"
+import useStore from "../store"
 import classNames from "classnames"
 
 
@@ -13,8 +12,8 @@ export default function Invite(props: {}) {
   const { makeRequest, ready, successAlert, errorAlert } = useNetwork()
   const { chat, token } = useLoaderData() as { chat: number, token: string }
   const { refresh: refreshChats, values: chats } = useChatList()
-  const dispatch = useDispatch()
   const navigate = useNavigate()
+  const changeValue = useStore(state => state.changeChat)
   return (
     <>
       {ready && (
@@ -47,7 +46,7 @@ export default function Invite(props: {}) {
                   console.log(uid)
                   if (uid) {
                     successAlert("You have joined the chat successfully. ")
-                    dispatch(changeValue(chat))
+                    changeValue(chat)
                     refreshChats()
                   } else {
                     errorAlert("Unexpected error occurred. ")

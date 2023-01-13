@@ -1,50 +1,35 @@
-import { configureStore } from '@reduxjs/toolkit'
-import { TypedUseSelectorHook, useDispatch as useRawDispatch, useSelector as useRawSelector } from 'react-redux'
-import localforage from 'localforage'
-import type { RequestWithTime } from './config'
-import loginReducer from "./state/login"
-import chatReducer from "./state/chat"
-import usernameReducer from './state/username'
-import messageReducer from "./state/message"
+import { create } from "zustand"
+import { persist, devtools } from "zustand/middleware"
 
-const store = configureStore({
-  reducer: {
-    login: loginReducer,
-    chat: chatReducer,
-    username: usernameReducer,
-    message: messageReducer
-  }
-})
+import createMessageSlice from "./state/message"
+import createLoginSlice from "./state/login"
+import createChatSlice from "./state/chat"
+import createPluginSlice from "./state/plugin"
 
-export default store
-export type RootState = ReturnType<typeof store.getState>
-export type AppDispatch = typeof store.dispatch
-export const useDispatch: () => AppDispatch = useRawDispatch
-export const useSelector: TypedUseSelectorHook<RootState> = useRawSelector
+const useStore = create<
+  ReturnType<typeof createMessageSlice>
+  & ReturnType<typeof createChatSlice>
+  & ReturnType<typeof createLoginSlice>
+  & ReturnType<typeof createPluginSlice>
+>()(
+  devtools(
+    persist(
+      (...a) => ({
+        ...createMessageSlice(...a),
+        ...createChatSlice(...a),
+        ...createLoginSlice(...a),
+        ...createPluginSlice(...a)
+      }),
+      {
+        name: "zustand-store",
+        partialize: state => ({
+          messages: state.messages,
+          token: state.token,
+          pluginLinks: state.pluginLinks
+        })
+      }
+    )
+  )
+)
 
-let messagesCached: RequestWithTime[] = []
-
-function copy<T>(obj: T): T {
-  return JSON.parse(JSON.stringify(obj))
-}
-
-export async function saveMessage(msgRaw: RequestWithTime) {
-  const msg: RequestWithTime = copy(msgRaw)
-  const req1 = msg.req
-  const req2 = messagesCached.at(-1)?.req
-  messagesCached.push(msg)
-  await localforage.setItem("messages", messagesCached)
-}
-
-export async function restoreMessage() {
-  messagesCached = (await localforage.getItem<RequestWithTime[]>("messages")) ?? []
-  let messages: Record<number, RequestWithTime[]> = {}
-  for (const i of messagesCached) {
-    if (messages[i.req.uid]) {
-      messages[i.req.uid].push(copy(i))
-    } else {
-      messages[i.req.uid] = [copy(i)]
-    }
-  }
-  return messages
-}
+export default useStore

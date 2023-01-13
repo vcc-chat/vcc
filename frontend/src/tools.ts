@@ -5,9 +5,8 @@ import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persist
 import { broadcastQueryClient } from "@tanstack/query-broadcast-client-experimental"
 
 import { RequestType, Request } from "./config"
-import { useDispatch, useSelector } from "./store"
-import { changeAll } from "./state/chat"
 import { LoginType } from "./state/login"
+import useStore from "./store"
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -122,8 +121,8 @@ export function responseToChatList(data: [number, string, number | null][]) {
 }
 
 export function useChatList() {
-  const dispatch = useDispatch()
-  const enabled = useSelector(state => state.login.type) == LoginType.LOGIN_SUCCESS
+  const enabled = useStore(state => state.type) == LoginType.LOGIN_SUCCESS
+  const changeAll = useStore(state => state.changeAllChat)
   const { isLoading, data, isFetching } = useQuery({
     queryKey: ["chat-list"],
     cacheTime: Infinity,
@@ -152,7 +151,7 @@ export function useChatList() {
             ...a, ...(b[0] == -1 ? b[1].map(a => [a, []] as [number, number[]]) : [b])
           ], [] as [number, number[]][])
       )
-      dispatch(changeAll([values, names]))
+      changeAll(values, names)
       return {
         values,
         names,

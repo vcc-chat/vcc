@@ -3,13 +3,13 @@ import { useQueryClient } from "@tanstack/react-query"
 
 import { RequestType } from "../config"
 
-import { useSelector } from "../store"
+import useStore from "../store"
 import { useChatList, useNetwork } from "../tools"
 import { useSettingsActionsLoaderData } from "../loaders"
 
 export default memo(function SettingsActions(props: {}) {
-  const chat = useSelector(state => state.chat.value)
-  const chatName = useSelector(state => state.chat.name)
+  const chat = useStore(state => state.chat)
+  const chatName = useStore(state => state.chatName)
   const { refresh: refreshChats } = useChatList()
   const { makeRequest, successAlert, errorAlert } = useNetwork()
   const [renameValue, setRenameValue] = useState("")

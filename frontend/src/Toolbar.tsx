@@ -3,9 +3,8 @@ import { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
 
-
+import useStore from "./store"
 import { Request, RequestType } from "./config"
-import { useSelector } from "./store"
 import { useNetwork } from "./tools"
 import {
   SettingsEditItem,
@@ -65,7 +64,7 @@ export function EditPermissionDialog({ open, setOpen, uid, username, modifyPermi
   modifyPermissionDialogID: string
 }) {
   const { makeRequest, successAlert, errorAlert } = useNetwork()
-  const chat = useSelector(state => state.chat.value)
+  const chat = useStore(state => state.chat)
   const { data: permissionRawData } = useQuery({
     queryKey: ["user-permission", chat],
     queryFn: async () => {

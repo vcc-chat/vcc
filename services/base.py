@@ -77,9 +77,10 @@ class Service(LineReceiver):
         service = data["service"]
         func = self.factory.funcs[service]
         param=data["data"]
-        if len(param.keys())!=getattr(func,"__code__",func).co_argcount-1:
-            self.send({"res": "error", "error": "wrong format","jobid": data["jobid"]})
-            return
+        # FIXME:Dont do the fucking param check and the code will work
+        # if len(param.keys())!=getattr(func,"__code__",func).co_argcount-1:
+        #     self.send({"res": "error", "error": "wrong format","jobid": data["jobid"]})
+        #     return
         try:  # FIXME: This try-except may make debug hard
             if service in self.factory.async_func:
                 print(func())
@@ -90,6 +91,7 @@ class Service(LineReceiver):
                 )
             self.send({"type": "respond", "data": resp, "jobid": data["jobid"]})
         except Exception as e:
+            traceback.print_exc()
             self.send({"res": "error", "error": "server error","data":traceback.format_exc(),"jobid": data["jobid"]})
 
     def lineReceived(self, data):

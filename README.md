@@ -1,1 +1,1 @@
-# web-vcc: The web version of vcc
+# web-vcc: The web-based gateway of vcc

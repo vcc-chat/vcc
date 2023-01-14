@@ -202,8 +202,6 @@ async def loop(websocket: WebSocketServerProtocol, exchanger: RpcExchanger) -> N
     send_loop_task: asyncio.Task[None]
     recv_loop_task: asyncio.Task[None]
     websocket.request_headers
-    remote_ip: str = websocket.request_headers["X-Real-IP"] if websocket.remote_address[0] == "127.0.0.1" else websocket.remote_address[0]
-    logging.info(f"{websocket.id}:{remote_ip} connected")
     async with exchanger.create_client() as client:
         send_loop_task = asyncio.create_task(send_loop(websocket, client))
         recv_loop_task = asyncio.create_task(recv_loop(websocket, client))

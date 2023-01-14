@@ -83,7 +83,6 @@ class Service(LineReceiver):
         #     return
         try:  # FIXME: This try-except may make debug hard
             if service in self.factory.async_func:
-                print(func())
                 resp = await func(**data["data"])
             else:
                 resp = await self.factory.eventloop.run_in_executor(

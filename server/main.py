@@ -55,7 +55,8 @@ class RpcProtocol(LineReceiver):
         self.send(data)
 
     def make_respond(self, jobid, data,error):
-        data = {"type": "resp", "data": data, "jobid": jobid,"error":error}
+        data = {"type": "resp", "data": data, "jobid": jobid}| ({"error":error} if error else {})
+        print(data)
         self.send(data)
 
 
@@ -126,7 +127,6 @@ class RpcServer(protocol.Factory):
             self.providers[service[0]].make_request(service[1], data, jobid)
 
     def make_respond(self, jobid, data,error=False):
-
         self.promises[jobid].make_respond(jobid, data,error)
         del self.promises[jobid]
 

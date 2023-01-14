@@ -387,3 +387,7 @@ export function useRegisterActionData() {
 export function createChatLoader() {
   return authLoader()
 }
+
+export function fileDownloadLoader() {
+  return authLoader()
+}

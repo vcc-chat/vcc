@@ -11,7 +11,7 @@ export function SettingsEditItem({ checked, setChecked, label }: {
   return (
     <div className="form-control">
       <label className="label cursor-pointer">
-        <span className="label-text">{label}</span> 
+        <span className="label-text capitalize">{label}</span> 
         <input type="checkbox" className="toggle" checked={checked} onChange={onChangeHandler} />
       </label>
     </div>

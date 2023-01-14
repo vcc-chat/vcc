@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef, useCallback, DragEvent, memo } from "react"
+import { useEffect, useState, useRef, useCallback, DragEvent, memo, useId } from "react"
+import { createPortal } from "react-dom"
 import { useParams, useFetcher } from "react-router-dom"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -7,6 +8,8 @@ import remarkGithub, { Options as RemarkGithubOptions } from "remark-github"
 import classNames from "classnames"
 // import { materialLight } from "react-syntax-highlighter/dist/esm/styles/prism"
 import formatDistance from "date-fns/formatDistance"
+import FileUploadIcon from "@material-design-icons/svg/outlined/file_upload.svg"
+import SendIcon from "@material-design-icons/svg/filled/send.svg"
 
 import { RequestType, Request, RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
 import { MessageAvatar, MessageLink } from "../Messages"
@@ -89,6 +92,55 @@ const MessageComponent = memo(function MessageComponent({ prevMsg, nowMsg }: {
   )
 })
 
+export function FileUploadDialog({ id }: {
+  id: string
+}) {
+  const { makeRequest } = useNetwork()
+  const fileInputID = useId()
+  const ref = useRef<HTMLInputElement | null>(null)
+  const files = ref.current?.files
+  const file = files?.[0]
+  const fetcher = useFetcher()
+  const session = useStore(state => state.session) ?? ""
+  const checkboxRef = useRef<HTMLInputElement | null>(null)
+  return createPortal((
+    <>
+      <input type="checkbox" id={id} className="modal-toggle" ref={checkboxRef} />
+      <div className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">Upload file</h3>
+          <p className="py-4">Upload a file{file ? (` (current file: ${file.name})`) : ""}.</p>
+          <input className="hidden" type="file" id={fileInputID} ref={ref} />
+          <label htmlFor={fileInputID} className="btn">Upload</label>
+          <div className="modal-action">
+            <label htmlFor={id} className="btn btn-ghost">Close</label>
+            <button className="btn btn-primary" disabled={!files?.length} type="button" onClick={async () => {
+              if (!file) return
+              const { usrname: id, msg: url } = await makeRequest({
+                type: RequestType.CTL_UPLOA,
+                msg: file.name
+              })
+              console.log({ id, url })
+              const { ok } = await fetch(url, {
+                method: "PUT",
+                body: file
+              })
+              console.log({ ok })
+              fetcher.submit({
+                session,
+                msg: `[${file.name} download](/files/${id})`
+              }, {
+                method: "post"
+              })
+              checkboxRef.current!.checked = false
+            }}>Upload to server</button>
+          </div>
+        </div>
+      </div>
+    </>
+  ), document.body)
+}
+
 export default function Chat() {
   const [msgBody, setMsgBody] = useState("")
   const params = useParams()
@@ -98,11 +150,12 @@ export default function Chat() {
   const chat = Number.isNaN(chatRaw) || !chats.includes(chatRaw) ? null : chatRaw
   const messageHistory = useStore(state => state.messages)
   const messages = chat == null || messageHistory[chat] == null ? [] : messageHistory[chat]
-  const { ready, successAlert, errorAlert } = useNetwork()
+  const { makeRequest, ready, successAlert, errorAlert } = useNetwork()
   const ref = useRef<HTMLUListElement>(null)
   const fetcher = useFetcher()
   const session = useStore(state => state.session)
   const result = useChatActionData()
+  const fileUploadDialogID = useId()
   useEffect(() => {
     if (ref.current == null) return
     ref.current.scrollTo(0, ref.current!.scrollHeight) 
@@ -124,6 +177,7 @@ export default function Chat() {
   const messagesShow = messages.filter(a => a.req.session == session)
   return (
     <>
+      <FileUploadDialog id={fileUploadDialogID} />
       <div className="flex flex-col overflow-hidden p-2 h-full flex-1">
         <ul ref={ref} className="flex flex-col m-0 p-0 overflow-auto no-scrollbar flex-1 space-y-1">
           {messagesShow
@@ -166,10 +220,15 @@ export default function Chat() {
             value={msgBody} 
           />
           <input type="hidden" name="session" value={session ?? ""} />
-          <div className="absolute bottom-0 right-0">
-            <button className={classNames("btn btn-ghost", {
-              "btn-disabled": !ready || chat == null
-            })} type="submit">send</button>
+          <div className="btn-group absolute bottom-0 right-0">
+            <label className={classNames("btn btn-ghost btn-square", {
+              "btn-disabled": chat == null || !ready
+            })} htmlFor={fileUploadDialogID}>
+              <FileUploadIcon />
+            </label>
+            <button className="btn btn-ghost btn-square" disabled={chat == null || !ready} type="submit">
+              <SendIcon />
+            </button>
           </div>
         </fetcher.Form>
       </div>

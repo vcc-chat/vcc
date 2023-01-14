@@ -21,7 +21,9 @@ export const enum RequestType {
   CTL_GCPER = "chat_get_permission",
   CTL_MCPER = "chat_modify_permission",
   CTL_JSESS = "session_join",
-  CTL_ISONL = "is_online"
+  CTL_ISONL = "is_online",
+  CTL_UPLOA = "file_upload",
+  CTL_DOWNL = "file_download",
 }
 
 export type Request = {
@@ -38,5 +40,4 @@ export interface RequestWithTime {
   req: Request
 }
 
-export const WEBSOCKET_USE_PATH = import.meta.env.PROD
 export const MESSAGE_MIME_TYPE = "application/x-web-vcc.message+json"

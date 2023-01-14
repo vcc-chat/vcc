@@ -8,7 +8,7 @@ import {
 } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 
-import { WEBSOCKET_PORT, RequestType, Request, WEBSOCKET_USE_PATH } from "./config"
+import { WEBSOCKET_PORT, RequestType, Request } from "./config"
 import { Notification, notify } from "./Notification"
 import { NetworkContext, responseToChatList, useChatList } from "./tools"
 import { LoginType } from "./state/login"
@@ -27,6 +27,7 @@ const SettingsActions = lazy(() => import("./pages/SettingsActions"))
 const SettingsInfo = lazy(() => import("./pages/SettingsInfo"))
 const ErrorElement = lazy(() => import("./pages/ErrorElement"))
 const CreateChat = lazy(() => import("./pages/CreateChat"))
+const FileDownload = lazy(() => import("./pages/FileDownload"))
 
 function Loading() {
   return (
@@ -193,6 +194,7 @@ const router = createBrowserRouter(
           <Route path="actions" element={addSuspense(<SettingsActions />)} loader={loaders.settingsActionsLoader} />
         </Route>
       </Route>
+      <Route path="/files/:id" element={addSuspense(<FileDownload />)} loader={loaders.fileDownloadLoader} />
       <Route path="/login" element={addSuspense(<Login />)} loader={loaders.loginLoader} action={loaders.loginAction} />
       <Route path="/register" element={addSuspense(<Register />)} loader={loaders.registerLoader} action={loaders.registerAction} />
       <Route path="*" element={addSuspense(<ErrorElement content="404 Not Found" />)} />

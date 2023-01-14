@@ -13,12 +13,10 @@ import {
   permissionKeyToName,
 } from "./Settings"
 
-export function ToolbarDialog({ afterJoin, typeNumber, typeString, open, setOpen, id }: {
+export function ToolbarDialog({ afterJoin, typeNumber, typeString, id }: {
   afterJoin: (arg0: number, req: Request) => void,
   typeNumber: RequestType,
   typeString: string,
-  open: boolean,
-  setOpen: (arg0: boolean) => void,
   id: string
 }) {
   const [dialogValue, setDialogValue] = useState("")
@@ -26,32 +24,31 @@ export function ToolbarDialog({ afterJoin, typeNumber, typeString, open, setOpen
   const { makeRequest } = useNetwork()
   return createPortal((
     <>
-    <input type="checkbox" id={id} className="modal-toggle" />
-    <div className="modal">
-      <div className="modal-box">
-        <h3 className="font-bold text-lg">{title} chat</h3>
-        <p className="py-4">Enter the chat number you want to {typeString}.</p>
-        <input className="input" autoFocus placeholder="Chat id" value={dialogValue} onChange={ev => setDialogValue(ev.target.value)} />
-        <div className="modal-action">
-          <label htmlFor={id} className="btn">Close</label>
-          <button className="btn" onClick={async () => {
-            let chat: number
-            try {
-              chat = parseInt(dialogValue)
-            } catch (e) {
-              return
-            }
-            if (chat === null) return
-            const request = await makeRequest({
-              uid: chat,
-              type: typeNumber
-            })
-            setOpen(false)
-            afterJoin(chat, request)
-          }}>{typeString}</button>
+      <input type="checkbox" id={id} className="modal-toggle" />
+      <div className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">{title} chat</h3>
+          <p className="py-4">Enter the chat number you want to {typeString}.</p>
+          <input className="input" autoFocus placeholder="Chat id" value={dialogValue} onChange={ev => setDialogValue(ev.target.value)} />
+          <div className="modal-action">
+            <label htmlFor={id} className="btn">Close</label>
+            <button className="btn" onClick={async () => {
+              let chat: number
+              try {
+                chat = parseInt(dialogValue)
+              } catch (e) {
+                return
+              }
+              if (chat === null) return
+              const request = await makeRequest({
+                uid: chat,
+                type: typeNumber
+              })
+              afterJoin(chat, request)
+            }}>{typeString}</button>
+          </div>
         </div>
       </div>
-    </div>
     </>
   ), document.body)
 }

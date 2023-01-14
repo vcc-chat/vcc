@@ -186,6 +186,12 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                             "chat_invite",
                             uid=cast(Any, None)
                         )
+                case "file_upload":
+                    url, id = await client.file_new_object(msg)
+                    await send("file_upload", username=id, msg=url)
+                case "file_download":
+                    url, name = await client.file_get_object(msg)
+                    await send("file_download", username=name, msg=url)
                 case _:
                     await websocket.close(1008)
                     return

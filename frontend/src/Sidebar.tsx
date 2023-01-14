@@ -217,11 +217,6 @@ export function Sidebar({ open, setOpen }: {
     navigate("/chats/create")
   }, [])
 
-  const listJoinItemButtonClickHandler = useCallback(() => {
-    setJoinChatDialogOpen(true)
-    setOpen(false)
-  }, [setJoinChatDialogOpen, setOpen])
-
   const sidebarItems = useMemo(() => Object.entries<number[]>(parentChats).map(value => (
     <SidebarItem
       value={Number(value[0])}
@@ -239,8 +234,6 @@ export function Sidebar({ open, setOpen }: {
         afterJoin={afterJoinHandler} 
         typeNumber={RequestType.CTL_JOINS}
         typeString="join"
-        open={joinChatDialogOpen}
-        setOpen={setJoinChatDialogOpen}
         id={joinChatDialogID}
       />
       <div 
@@ -270,10 +263,10 @@ export function Sidebar({ open, setOpen }: {
         </label>
       </ul>
       <div className="divider my-0" />
-      <ul className="flex flex-col">
-        <div className="opacity-80 text-sm m-4">Chat</div>
-        {sidebarItems}
-      </ul>
+        <ul className="flex flex-col">
+          <div className="opacity-80 text-sm m-4">Chat</div>
+          {sidebarItems}
+        </ul>
       </div>
     </>
   )

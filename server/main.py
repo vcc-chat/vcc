@@ -26,6 +26,7 @@ class RpcProtocol(LineReceiver):
             match data['res']:
                 case "error" if self.role=="service":
                     self.factory.make_respond(data["jobid"], data["error"],error=True)
+            return
         match data["type"]:
             case "handshake":
                 self.do_handshake(data)

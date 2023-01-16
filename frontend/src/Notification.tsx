@@ -17,6 +17,7 @@ export function notify(title: string, body: string) {
 export function Notification(props: {}) {
   const [open, setOpen] = useState(false)
   useEffect(() => {
+    if (!window.Notification) return
     if (window.Notification.permission == "granted" || window.Notification.permission == "denied") return
     if (location.protocol != "https") return
     const id = setTimeout(() => {

@@ -1,0 +1,55 @@
+{
+  "Message": "输入信息",
+  "Download File": "下载文件",
+  "Upload file": "上传文件",
+  "Upload a file": "上传一个文件",
+  "current file: ": "当前文件：",
+  "The operation was successfully completed. ": "操作成功完成",
+  "The operation is failed": "操作失败",
+  "Upload to server": "上传并发送",
+  "Close": "关闭",
+  "Upload": "上传",
+
+  "Create your ": "创建你的",
+  "chat": "聊天",
+  "session": "会话",
+  "Create a chat and talk with your friends in it. ": "创建一个聊天并在其中与你的朋友交谈",
+  "Create a session and talk on a topic. ": "创建一个会话并就一个话题进行交流",
+  "Name": "名称",
+  "Parent Chat": "父聊天",
+  "None": "无",
+  "You have created the chat successfully. ": "你已成功创建了聊天",
+  "You haven't created the chat successfully. ": "你没有成功地创建了聊天",
+  "You have created/joined the session successfully. ": "你已成功地创建或加入了会话",
+  "Permission denied. ": "权限不足",
+  "Create": "创建",
+
+  "Go back to home": "回到首页",
+
+  "Join chat": "加入聊天",
+  "You have already joined chat": "你已经成功加入了聊天",
+  "go back to home": "回到首页",
+  "Would you like to join chat ": "你是否要加入聊天",
+  "You have joined the chat successfully. ": "你已经成功加入了聊天",
+  "Unexpected error occurred. ": "未知错误发生",
+  "join": "加入",
+
+  "Operation failed": "操作失败",
+  "To send messages, you need to login first.": "你必须先登录以发送信息",
+  "Login now!": "现在登录！",
+  "Username": "用户名",
+  "Password": "密码",
+  "Go to register": "去注册",
+  "Login": "登录",
+
+  "The account has been registered successfully, you can login now. ": "账号已注册，你现在可以登录了。",
+  "Operation failed. ": "操作失败",
+  "Don't have an account? Register one! You don't need any personal information.": "没有账号？注册一个！你不需要任何个人信息。",
+  "Go to login": "去登录",
+  "Register": "注册",
+  "Register now!": "现在注册！",
+
+  "Basic Information": "基本信息",
+  "Actions": "其他操作"
+
+}

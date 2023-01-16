@@ -1,6 +1,7 @@
 import { memo } from "react"
 import { useMatches, useNavigate, useParams, Outlet } from "react-router-dom"
 import classNames from "classnames"
+import { useTranslation } from "react-i18next"
 
 
 export default memo(function Settings(props: {}) {
@@ -13,6 +14,7 @@ export default memo(function Settings(props: {}) {
       relative: "path"
     })
   }
+  const { t } = useTranslation()
 
   return (
     <div className="p-8 flex flex-col">
@@ -21,12 +23,12 @@ export default memo(function Settings(props: {}) {
           "tab-active": showSettings == "info"
         })} onClick={() => {
           setShowSettings("info")
-        }}>Basic Information</a> 
+        }}>{t("Basic Information")}</a> 
         <a className={classNames("tab tab-bordered", {
           "tab-active": showSettings == "actions"
         })} onClick={() => {
           setShowSettings("actions")
-        }}>Actions</a> 
+        }}>{t("Actions")}</a> 
       </div>
       {showSettings != "null" && <Outlet />}
     </div>

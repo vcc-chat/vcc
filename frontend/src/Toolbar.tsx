@@ -163,7 +163,7 @@ export function EditPermissionDialog({ open, setOpen, uid, username, modifyPermi
                       .map((a) => permissionOriginal[a] == permissions[a])
                       .reduce((a,b) => a && b)
                   )
-                }>Change permission</button>
+                }>Apply</button>
               </div>
             </div>
           </div>

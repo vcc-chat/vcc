@@ -2,13 +2,14 @@
 import { useEffect, useState } from "react"
 import { useNavigate, Form } from "react-router-dom"
 import classNames from "classnames"
+import { useTranslation } from "react-i18next"
 
 import { LoginType } from "../state/login"
 import useStore from "../store"
 import { useLoginActionData } from "../loaders"
 import { useNetwork } from "../tools"
 
-export function LoginDialog(props: {}) {
+export default function Login(props: {}) {
   const username = useStore(state => state.username)
   const changeUsername = useStore(state => state.changeUsername)
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ export function LoginDialog(props: {}) {
   const startGet = useStore(state => state.startGet)
   const loginStatus = useStore(state => state.type)
   const setToken = useStore(state => state.setToken)
+  const { t } = useTranslation()
   useEffect(() => {
     if (loginActionData === undefined) return
     if (loginActionData.success) {
@@ -26,7 +28,7 @@ export function LoginDialog(props: {}) {
       setToken(loginActionData.token)
       navigate("/")
     } else {
-      errorAlert("Operation failed")
+      errorAlert(t("Operation failed"))
       failed()
     }
   }, [loginActionData])
@@ -45,18 +47,18 @@ export function LoginDialog(props: {}) {
           startGet()
         }}>
           <div className="text-center lg:text-left">
-            <h1 className="text-5xl font-bold">Login now!</h1>
-            <p className="py-6">To send messages, you need to login first.</p>
+            <h1 className="text-5xl font-bold">{t("Login now!")}</h1>
+            <p className="py-6">{t("To send messages, you need to login first.")}</p>
           </div>
           <div className="card flex-shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
             <div className="card-body">
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Username</span>
+                  <span className="label-text">{t("Username")}</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="Username"
+                  placeholder={t("Username") ?? undefined}
                   className="input input-bordered"
                   name="username" 
                   value={username}
@@ -67,17 +69,17 @@ export function LoginDialog(props: {}) {
               </div>
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Password</span>
+                  <span className="label-text">{t("Password")}</span>
                 </label>
-                <input type="password" placeholder="Password" className="input input-bordered" name="password" />
+                <input type="password" placeholder={t("Password") ?? undefined} className="input input-bordered" name="password" />
               </div>
               <div className="form-control mt-6">
                 <div className="flex w-full">
                   <button className="btn" onClick={() => {
                     navigate("/register")
                     console.log(1)
-                  }} type="button">Go to register</button>
-                  <button className="ml-2 flex-1 btn btn-primary" type="submit">Login</button>
+                  }} type="button">{t("Go to register")}</button>
+                  <button className="ml-2 flex-1 btn btn-primary" type="submit">{t("Login")}</button>
                 </div>
               </div>
             </div>
@@ -85,11 +87,5 @@ export function LoginDialog(props: {}) {
         </Form>
       </div>
     </>
-  )
-}
-
-export default function Login() {
-  return (
-    <LoginDialog />
   )
 }

@@ -41,6 +41,12 @@ export default defineConfig({
             purpose: "any maskable"
           }
         ]
+      },
+      workbox: {
+        globPatterns: [
+          "**/*.{js,css,html,ico,png,svg}",
+          "locales/**/*.json"
+        ]
       }
     }),
     importToCDN({
@@ -59,13 +65,6 @@ export default defineConfig({
     })
   ],
   resolve: {
-    alias: {
-      "@mui/base": "@mui/base/modern",
-      "@mui/material": "@mui/material/modern",
-      "@mui/styled-engine": "@mui/styled-engine/modern",
-      "@mui/system": "@mui/system/modern",
-      "@mui/utils": "@mui/utils/modern"
-    },
     preserveSymlinks: true
   },
   server: {

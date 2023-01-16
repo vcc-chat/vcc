@@ -34,8 +34,8 @@ export function NavBar({ toggle, toggleRightSidebar }: {
           <MenuIcon />
         </button>
       </div>
-      <div className="flex-1">
-        <a className="btn btn-ghost normal-case text-xl">{session ?? chatName}</a>
+      <div className="flex-auto overflow-hidden">
+        <a className="btn btn-ghost normal-case text-xl text-ellipsis">{session ?? chatName}</a>
       </div>
       <div className="flex-none">
         <div className="dropdown dropdown-end">
@@ -91,7 +91,6 @@ function SubChatSidebarItem({ chat, clickHandler, settingsClickHandler, setOpen 
     .filter(([id, session]) => id == chat)
     .map(([chat, session]) => session)
   const currentSession = useStore(state => state.session)
-  const fetcher = useFetcher()
   const [fold, setFold] = useState(true)
   return (
     <>
@@ -136,12 +135,10 @@ function SidebarItem({ value, setOpen, subChats }: {
   const navigate = useNavigate()
   const chatValue = useStore(state => state.chat)
   const { values: chatValues, names: chatNames } = useChatList()
-  const session = useStore(state => state.session)
   const changeValue = useStore(state => state.changeChat)
   const changeName = useStore(state => state.changeChatName)
   const changeSession = useStore(state => state.changeSession)
   const [fold, setFold] = useState(true)
-  const fetcher = useFetcher()
   const clickHandler = useCallback((value: number, name: string, session: string | null = null) => {
     changeValue(value)
     changeName(name)
@@ -196,8 +193,6 @@ export function Sidebar({ open, setOpen }: {
   const navigate = useNavigate()
   const { successAlert, errorAlert } = useNetwork()
   const { refresh: refreshChats, parentChats } = useChatList()
-
-  const [joinChatDialogOpen, setJoinChatDialogOpen] = useState(false)
 
   const changeValue = useStore(state => state.changeChat)
   const changeName = useStore(state => state.changeChatName)
@@ -309,7 +304,7 @@ function UserItem({ name, id, online, setHandleUsername, setHandleUserID, first,
           <span className="opacity-50 text-sm mt-1">{online ? "Online" : "Offline"}</span>
         </div>
         <div className="dropdown dropdown-end">
-          <button tabIndex={0} onClick={centerIconButtonClickHandler} className="btn btn-ghost my-auto">
+          <button onClick={centerIconButtonClickHandler} className="btn btn-ghost btn-square my-auto">
             <MoreHorizIcon />
           </button>
           {menu}
@@ -385,10 +380,6 @@ export function UsersSidebar({ open, setOpen }: {
   const [handleUserID, setHandleUserID] = useState(0)
 
   const username = useStore(state => state.username)
-
-  const handleModifyPermissionButtonClick = useCallback(() => {
-    setDialogOpen(true)
-  }, [])
 
   const handleKickButtonClick = useCallback(async () => {
     if (chat == undefined) return

@@ -80,7 +80,7 @@ export default memo(function SettingsActions(props: {}) {
         if (publicRaw != publicValue) {
           modifyPublic()
         }
-      }}>Change</button>
+      }}>Apply</button>
     </div>
   )
 })

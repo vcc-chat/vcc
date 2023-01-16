@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate, useSearchParams, useLoaderData } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 
 
 import { RequestType, Request } from "../config"
@@ -14,6 +15,7 @@ export default function Invite(props: {}) {
   const { refresh: refreshChats, values: chats } = useChatList()
   const navigate = useNavigate()
   const changeValue = useStore(state => state.changeChat)
+  const { t } = useTranslation()
   return (
     <>
       {ready && (
@@ -23,11 +25,11 @@ export default function Invite(props: {}) {
           })}>
             <div className="hero-content text-center">
               <div className="max-w-md">
-                <h1 className="text-5xl font-bold">Join chat</h1>
-                <p className="py-6">You have already joined chat {chat}.</p>
+                <h1 className="text-5xl font-bold">{t("Join chat")}</h1>
+                <p className="py-6">{t("You have already joined chat")}{chat}.</p>
                 <button className="btn btn-primary" onClick={async () => {
                   navigate("/")
-                }}>go back to home</button>
+                }}>{t("go back to home")}</button>
               </div>
             </div>
           </div>
@@ -36,8 +38,8 @@ export default function Invite(props: {}) {
           })}>
             <div className="hero-content text-center">
               <div className="max-w-md">
-                <h1 className="text-5xl font-bold">Join chat</h1>
-                <p className="py-6">Would you like to join chat {chat}?</p>
+                <h1 className="text-5xl font-bold">{t("Join chat")}</h1>
+                <p className="py-6">{t("Would you like to join chat ")}{chat}?</p>
                 <button className="btn btn-primary" onClick={async () => {
                   const { uid } = await makeRequest({
                     type: RequestType.CTL_INVIT,
@@ -45,14 +47,14 @@ export default function Invite(props: {}) {
                   })
                   console.log(uid)
                   if (uid) {
-                    successAlert("You have joined the chat successfully. ")
+                    successAlert(t("You have joined the chat successfully. "))
                     changeValue(chat)
                     refreshChats()
                   } else {
-                    errorAlert("Unexpected error occurred. ")
+                    errorAlert(t("Unexpected error occurred. "))
                   }
                   navigate("/")
-                }}>join</button>
+                }}>{t("join")}</button>
               </div>
             </div>
           </div>

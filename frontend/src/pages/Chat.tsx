@@ -1,9 +1,12 @@
-import { useEffect, useState, useRef, useCallback, DragEvent, memo, useId } from "react"
+import { useEffect, useState, useRef, useCallback, DragEvent, memo, useId, DetailedHTMLProps } from "react"
 import { createPortal } from "react-dom"
-import { useParams, useFetcher } from "react-router-dom"
+import { useParams, useFetcher, Link } from "react-router-dom"
+import { useTranslation } from "react-i18next"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkGithub, { Options as RemarkGithubOptions } from "remark-github"
+import remarkDirective from "remark-directive"
+import remarkDirectiveRehype from "remark-directive-rehype"
 // import { PrismAsyncLight as SyntaxHighlighter } from "react-syntax-highlighter"
 import classNames from "classnames"
 // import { materialLight } from "react-syntax-highlighter/dist/esm/styles/prism"
@@ -33,6 +36,7 @@ const MessageComponent = memo(function MessageComponent({ prevMsg, nowMsg }: {
     ev.dataTransfer.setData("text/plain", `${req.usrname}: ${req.msg}`)
   }, [req.msg])
   const selfUsername = useStore(state => state.username)
+  const { t } = useTranslation()
   return (
     <li key={nowMsg.time} className={classNames("chat", req.usrname == selfUsername ? "chat-end" : "chat-start")}>
       <MessageAvatar name={req.usrname} />
@@ -51,7 +55,19 @@ const MessageComponent = memo(function MessageComponent({ prevMsg, nowMsg }: {
         "chat-bubble-warning",
         "chat-bubble-error"
       ][stringToNumber(req.usrname) % 6])}>
-        <ReactMarkdown children={req.msg} remarkPlugins={[remarkGfm, [remarkGithub, {
+        <ReactMarkdown children={req.msg} allowedElements={[
+          "a", "blockquote", "br",
+          "code", "del", "em",
+          "h1", "h2", "h3",
+          "h4", "h5", "h6",
+          "hr", "img", "input",
+          "li", "ol", "p",
+          "pre", "table", "tbody",
+          "td", "th", "thead",
+          "tr", "ul",
+          // extensions
+          "file"
+        ]} remarkPlugins={[remarkGfm, remarkDirective, remarkDirectiveRehype, [remarkGithub, {
           repository: "https://github.com/a/b",
           mentionStrong: false,
           buildUrl(values) {
@@ -68,24 +84,9 @@ const MessageComponent = memo(function MessageComponent({ prevMsg, nowMsg }: {
           a: ({node, href, children, ...props}) => (
             <MessageLink link={href!} children={children} />
           ),
-          // code({node, inline, className, children, ...props}) {
-          //   const match = /language-(\w+)/.exec(className || '')
-          //   console.log(!inline && match)
-          //   return !inline && match ? (
-          //     <SyntaxHighlighter
-          //       children={String(children).replace(/\n$/, '')}
-          //       language={match[1]}
-          //       wrapLongLines
-          //       style={materialLight}
-          //       showLineNumbers
-          //       {...props as any}
-          //     />
-          //   ) : (
-          //     <code className={className} {...props}>
-          //       {children}
-          //     </code>
-          //   )
-          // }
+          ["file" as any]: ({ id }: { id: string }) => (
+            <Link className="link" to={`/files/${encodeURIComponent(id)}`} replace>{t("Download File")}</Link>
+          )
         }} />
       </div>
     </li>
@@ -103,17 +104,18 @@ export function FileUploadDialog({ id }: {
   const fetcher = useFetcher()
   const session = useStore(state => state.session) ?? ""
   const checkboxRef = useRef<HTMLInputElement | null>(null)
+  const { t } = useTranslation()
   return createPortal((
     <>
       <input type="checkbox" id={id} className="modal-toggle" ref={checkboxRef} />
       <div className="modal">
         <div className="modal-box">
-          <h3 className="font-bold text-lg">Upload file</h3>
-          <p className="py-4">Upload a file{file ? (` (current file: ${file.name})`) : ""}.</p>
+          <h3 className="font-bold text-lg">{t("Upload file")}</h3>
+          <p className="py-4">{t("Upload a file")}{file ? (` (${t("current file: ")}${file.name})`) : ""}.</p>
           <input className="hidden" type="file" id={fileInputID} ref={ref} />
-          <label htmlFor={fileInputID} className="btn">Upload</label>
+          <label htmlFor={fileInputID} className="btn">{t("Upload")}</label>
           <div className="modal-action">
-            <label htmlFor={id} className="btn btn-ghost">Close</label>
+            <label htmlFor={id} className="btn btn-ghost">{t("Close")}</label>
             <button className="btn btn-primary" disabled={!files?.length} type="button" onClick={async () => {
               if (!file) return
               const { usrname: id, msg: url } = await makeRequest({
@@ -128,12 +130,12 @@ export function FileUploadDialog({ id }: {
               console.log({ ok })
               fetcher.submit({
                 session,
-                msg: `[${file.name} download](/files/${id})`
+                msg: `::file{#${id}}`
               }, {
                 method: "post"
               })
               checkboxRef.current!.checked = false
-            }}>Upload to server</button>
+            }}>{t("Upload to server")}</button>
           </div>
         </div>
       </div>
@@ -156,6 +158,7 @@ export default function Chat() {
   const session = useStore(state => state.session)
   const result = useChatActionData()
   const fileUploadDialogID = useId()
+  const { t } = useTranslation()
   useEffect(() => {
     if (ref.current == null) return
     ref.current.scrollTo(0, ref.current!.scrollHeight) 
@@ -169,9 +172,9 @@ export default function Chat() {
   useEffect(() => {
     if (result == undefined) return
     if (result.ok) {
-      successAlert("The operation was successfully completed. ")
+      successAlert(t("The operation was successfully completed. "))
     } else {
-      errorAlert("The operation is failed")
+      errorAlert(t("The operation is failed"))
     }
   }, [result])
   const messagesShow = messages.filter(a => a.req.session == session)
@@ -195,7 +198,7 @@ export default function Chat() {
         }}>
           <input
             type="text"
-            placeholder="Message"
+            placeholder={t("Message") ?? undefined}
             className="input input-lg w-full"
             name="msg"
             disabled={!ready || chat == null}

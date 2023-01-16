@@ -59,9 +59,9 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
     try:
         async for json_msg in websocket:
             json_result = json.loads(json_msg)
-            username: str = json_result["usrname"]
-            uid: int = json_result["uid"]
-            msg: str = json_result["msg"]
+            username: str = json_result.get("usrname")
+            uid: int = json_result.get("uid")
+            msg: str = json_result.get("msg")
             uuid: str = json_result.get("uuid", str(uuid4()))
             async def send(type: str, *, uid: int=0, username: str="", msg: str="") -> None:
                 await websocket.send(json.dumps({
@@ -122,7 +122,7 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                     try:
                         await client.send(msg, uid, cast(Any, json_result)["session"] if "session" in json_result else None)
                     except PermissionDeniedError:
-                        pass
+                        pass #FIXME: feedback to frontend
                 case "session_join":
                     await send("session_join", uid=await client.session_join(msg, uid))
                 case "chat_create":

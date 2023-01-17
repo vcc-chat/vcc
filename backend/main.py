@@ -126,7 +126,7 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                 case "session_join":
                     await send("session_join", uid=await client.session_join(msg, uid))
                 case "chat_create":
-                    await send("chat_create", uid=await client.chat_create(username, -1 if uid == 0 else uid))
+                    await send("chat_create", uid=await client.chat_create(username, -1 if uid == 0 or uid==None else uid))
                 case "chat_join":
                     # also return session name
                     join_successfully = await client.chat_join(uid)

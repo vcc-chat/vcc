@@ -18,7 +18,7 @@ from websockets.server import WebSocketServerProtocol, serve as websocket_serve
 from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
 from vcc import RpcExchanger, RpcExchangerClient, PermissionDeniedError
 
-confpath = os.getenv("WEBVCC_CONFPATH", "config.json")
+confpath = os.getenv("WEBVCC_CONFPATH", "config.json")#FIXME: I dont think a file just for key is a good idea
 
 if not os.path.exists(confpath):
     json.dump({"key":str(uuid4())},open(confpath,"w"))
@@ -30,6 +30,12 @@ async def recv_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
     try:
         async for result in client:
             if result[0] == "event":
+                json_msg=json_dumps({
+                    "type":"event",
+                    "uid" :result[3]
+                    "msg" :result[2] #FIXME: I dont know if it will break client side because this may be a dict
+                })
+                await websocket.send(json_msg)
                 continue
             _, username, msg, chat, session = result
             logging.debug(f"{username=} {msg=} {chat=}")
@@ -219,7 +225,7 @@ async def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
     logging.getLogger("websockets.server").setLevel(logging.INFO)
     async with RpcExchanger() as exchanger:
-        async with websocket_serve(lambda ws: loop(ws, exchanger), "127.0.0.1", 7000):
+        async with websocket_serve(lambda ws: loop(ws, exchanger), os.environ.get("WEBVCC_ADDR","localhost"), 7000):
             logging.info("started: ws://localhost:7000")
             await asyncio.Future()
 

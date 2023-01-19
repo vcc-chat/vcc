@@ -30,7 +30,7 @@ async def recv_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
     try:
         async for result in client:
             if result[0] == "event":
-                json_msg=json_dumps({
+                json_msg=json,dumps({
                     "type":"event",
                     "uid" :result[3],
                     "msg" :result[2], #FIXME: I dont know if it will break client side because this may be a dict

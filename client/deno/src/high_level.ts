@@ -50,6 +50,9 @@ export class Chat {
   async getUserPermission(user: User) {
     return await this.builder._conn.chat.getUserPermission(this.id, user.id)
   }
+  sendMessage(username: string, msg: string, session: string | null = null) {
+    this.builder._conn.sendMessage(username, msg, this.id, session)
+  }
 }
 
 export class ChatList {
@@ -68,14 +71,6 @@ export class ChatList {
     await this.builder._conn.chat.join(id)
     await this.builder.updateChats()
     return this.getChatByID(id)!
-  }
-  async create(name: string) {
-    const id = await this.builder._conn.chat.create(name)
-    const chat = this.getChatByID(id)
-    if (chat != undefined) return
-    const newChat = new Chat(id, name, this.builder)
-    this.chats.add(newChat)
-    return newChat
   }
 }
 
@@ -122,15 +117,20 @@ export async function createBuilder(config: {
   url?: string | URL,
   username: string,
   password: string,
+  authType?: "login" | "register",
   chatRefreshTime?: number
 }) {
-  const { url = undefined, username, password, chatRefreshTime = 10000 } = config
+  const { url = undefined, authType = "login", username, password, chatRefreshTime = 10000 } = config
   const builder = new (Builder as unknown as {
     new(): Builder
   })
   const conn = await createRawConnection(url)
-  await conn.login(username, password)
-  ;(builder as unknown as { _conn: RawConnection })._conn = conn
+  builder._conn = conn
+  if (authType == "login") {
+    await conn.login(username, password)
+  } else {
+    await conn.register(username, password)
+  }
   await builder.updateChats()
   ;(async () => {
     await sleep(chatRefreshTime)

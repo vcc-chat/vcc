@@ -1,1 +1,1 @@
-export const uuid = crypto.randomUUID
+export const uuid = crypto.randomUUID.bind(crypto)

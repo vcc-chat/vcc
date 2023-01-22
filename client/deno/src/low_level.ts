@@ -65,7 +65,8 @@ class WebSocketWrapper {
     if (response.ok) {
       return response.response
     } else {
-      throw new VCCError(response.error)
+      console.error({ type, requestData, response })
+      throw new VCCError((response as any).error)
     }
   }
 }
@@ -86,13 +87,6 @@ export class RawConnectionChatOperations {
   private rpc: Record<string, <T>(req: unknown) => Promise<T>>
   constructor(websocket: WebSocketWrapper) {
     this.rpc = createRPC(websocket, "chat_")
-  }
-
-  async create(name: string, parent_chat_id = -1) {
-    return await this.rpc.create<number>({
-      name,
-      parent_chat_id
-    })
   }
   
   async join(id: number) {
@@ -180,19 +174,19 @@ export class RawConnection {
     }
   }
 
-  sendMessage(msg: string, chat: number, session: string | null = null) {
-    this.websocket.sendNoResponse("message", { msg, chat, session })
+  sendMessage(username: string, msg: string, chat: number, session: string | null = null) {
+    this.websocket.sendNoResponse("message", { username, msg, chat, session })
   }
 
-  async login(username: string, password: string) {
+  async login(name: string, token: string) {
     await this.rpc.login({
-      username, password
+      name, token
     })
   }
 
-  async register(username: string, password: string) {
+  async register(name: string, token: string) {
     await this.rpc.register({
-      username, password
+      name, token
     })
   }
 }

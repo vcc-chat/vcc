@@ -1,4 +1,4 @@
-from vcc import RpcExchanger, RpcExchangerClient, ChatUserPermissionName, ChatPermissionName, NotAuthorizedError
+from vcc import RpcExchanger, RpcRobotExchangerClient, ChatUserPermissionName, ChatPermissionName, NotAuthorizedError
 from typeguard import typechecked
 from typing import Any
 from uuid import uuid4
@@ -21,39 +21,36 @@ with open("config.json") as f:
 
 @typechecked
 class ClientHandler:
-    def __init__(self, client: RpcExchangerClient) -> None:
+    def __init__(self, client: RpcRobotExchangerClient) -> None:
         self._client = client
 
     def generate_jwt(self) -> str:
-        if self._client.username is None or self._client.uid is None:
+        if self._client.name is None or self._client.id is None:
             raise ServerError("Generate jwt without logging in")
         return jwt.encode({
-            "username": self._client.username,
-            "uid": self._client.uid
+            "name": self._client.name,
+            "id": self._client.id
         }, key, "HS512")
 
-    async def login(self, username: str, password: str) -> dict[str, str]:
-        if self._client.uid is not None:
+    async def login(self, name: str, token: str) -> dict[str, str]:
+        if self._client.id is not None:
             return {
                 "token": self.generate_jwt()
             }
-        result = await self._client.login(username, password)
+        result = await self._client.login(name, token)
         if result is None:
             raise ServerError("Wrong username or password")
         return {
             "token": self.generate_jwt()
         }
 
-    async def register(self, username: str, password: str) -> None:
-        result = await self._client.register(username, password)
+    async def register(self, name: str, token: str) -> None:
+        result = await self._client.register(name, token)
         if not result:
             raise ServerError("Duplicated username")
 
     async def message(self, username: str, msg: str, chat: int, session: str | None = None) -> None:
-        await self._client._exchanger.send_msg(username, msg, chat, session)
-
-    async def chat_create(self, name: str, parent_chat_id: int = -1) -> int:
-        return await self._client.chat_create(name, parent_chat_id)
+        await self._client.send(username, msg, chat, session)
 
     async def chat_join(self, id: int) -> None:
         if not await self._client.chat_join(id):
@@ -94,7 +91,7 @@ class ClientHandler:
     async def chat_get_user_permission(self, chat_id: int, user_id: int) -> dict[ChatUserPermissionName , bool]:
         return await self._client.chat_get_user_permission(chat_id, user_id)
 
-async def recv_message_loop(client: RpcExchangerClient, websocket: websockets.server.WebSocketServerProtocol) -> None:
+async def recv_message_loop(client: RpcRobotExchangerClient, websocket: websockets.server.WebSocketServerProtocol) -> None:
     try:
         async for i in client:
             if i[0] != "message":
@@ -116,7 +113,7 @@ async def recv_message_loop(client: RpcExchangerClient, websocket: websockets.se
 
 async def handle_client(exchanger: RpcExchanger, websocket: websockets.server.WebSocketServerProtocol) -> None:
     logging.info(f"new connection: {websocket.remote_address}")
-    async with exchanger.create_client() as client:
+    async with exchanger.create_robot_client() as client:
         # Request: {"type": "message", "id": "3a9b50b1-0355-496d-96fd-52e908ab931e", "request": {"msg": "quack", "chat": 1, "session": null}}
         handler = ClientHandler(client)
         recv_message_task = asyncio.create_task(recv_message_loop(client, websocket))
@@ -139,6 +136,7 @@ async def handle_client(exchanger: RpcExchanger, websocket: websockets.server.We
                     raise ServerError("Invalid data type")
                 if request_type.startswith("_"):
                     raise ServerError("Types cannot start with _")
+                logging.debug(f"{request_type=} {request_body=} {request_id=}")
                 response = await getattr(handler, request_type)(**request_body)
                 # Response: {"type": "message", "ok": true, "id": "3a9b50b1-0355-496d-96fd-52e908ab931e", "response": null}
                 await websocket.send(json.dumps({
@@ -148,8 +146,10 @@ async def handle_client(exchanger: RpcExchanger, websocket: websockets.server.We
                     "response": response
                 }))
             except ServerError as e:
+                logging.debug(e, exc_info=True)
                 await make_error(request_type, request_id, e.args[0])
-            except TypeError:
+            except TypeError as e:
+                logging.debug(e, exc_info=True)
                 await make_error(request_type, request_id, "Invalid data type")
             except NotAuthorizedError:
                 await make_error(request_type, request_id, "You must login first")
@@ -182,7 +182,8 @@ async def main() -> None:
             await asyncio.Future()
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger("websockets.server").setLevel(logging.INFO)
     if sys.version_info >= (3, 11):
         with asyncio.Runner(loop_factory=uvloop.new_event_loop) as runner:
             runner.run(main())

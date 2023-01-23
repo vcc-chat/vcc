@@ -35,6 +35,7 @@ all_chat_permissions = ["public"]
 
 
 class ChatService:
+    self._oauth={}
     def __init__(self):
         self._redis: redis.Redis[bytes] = redis.Redis.from_url(os.environ.get("REDIS_URL","redis://localhost"))
 
@@ -71,7 +72,8 @@ class ChatService:
             return new_chat.id
         except:
             return None
-
+    async def register_oauth(name:str,addr:str):
+        self._oauth[name]=addr
     @db.atomic()
     async def get_name(self, id: int) -> str | None:
         chat = Chat.get_or_none(id=id)

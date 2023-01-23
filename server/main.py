@@ -17,6 +17,7 @@ class RpcProtocol(LineReceiver):
         self.sendLine(bytes(json.dumps(data), "UTF8"))
 
     def lineReceived(self, data):
+        print(data)
         try:
             data = json.loads(data)
         except json.JSONDecodeError:
@@ -49,7 +50,6 @@ class RpcProtocol(LineReceiver):
             self.factory.services[self.name] = data["services"]
             self.factory.providers[self.name] = self
         self.send({"res": "ok"})
-
     def make_request(self, service, data, jobid):
         data = {"type": "call", "service": service, "data": data, "jobid": jobid}
         self.send(data)
@@ -58,7 +58,8 @@ class RpcProtocol(LineReceiver):
         data = {"type": "resp", "data": data, "jobid": jobid}| ({"error":error} if error else {})
         print(data)
         self.send(data)
-
+    def connectionLost(self, reason):
+        print(5678)
 
 class BuiltinService:
     def __init__(self, factory, functions: dict, name: str = "rpc"):
@@ -131,6 +132,7 @@ class RpcServer(protocol.Factory):
         del self.promises[jobid]
 
     def buildProtocol(self, addr):
+        print(1234)
         return RpcProtocol(self)
 
 

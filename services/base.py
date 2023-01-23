@@ -6,10 +6,10 @@ import logging
 import threading
 import traceback
 
-from twisted.internet import task
-from twisted.internet.defer import Deferred
-from twisted.internet.protocol import ClientFactory
-from twisted.protocols.basic import LineReceiver
+# from twisted.internet import task ### No more twisted
+# from twisted.internet.defer import Deferred
+# from twisted.internet.protocol import ClientFactory
+# from twisted.protocols.basic import LineReceiver
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -56,14 +56,36 @@ class ServiceMeta(type):
         return type(clsname, bases, dct)
 
 
-class Service(LineReceiver):
+class lineReceiver(asyncio.Protocol):
+    line_buffer = b""
+
+    def connection_made(self, transport) -> None:
+        self.transport = transport
+        transport.write(b"1145141919810")
+
+    def data_received(self, data: bytes) -> None:
+        self.line_buffer += data
+        if data.endswith(b"\n"):  ####
+            print(self.line_buffer)
+            self.line_received(self.line_buffer.decode())
+        self.line_buffer = b""
+
+    def sendLine(self, data):
+        self.transport.write(data + b"\r\n")
+
+    def line_received(self, data):
+        pass
+
+
+class Service(lineReceiver):
     def __init__(self, factory):
         self.factory: RpcServiceFactory = factory
 
     def send(self, obj):
         self.sendLine(bytes(json.dumps(obj), "UTF8"))
 
-    def connectionMade(self):
+    def connection_made(self, transport):
+        self.transport = transport
         self.send(
             {
                 "type": "handshake",
@@ -73,10 +95,13 @@ class Service(LineReceiver):
             }
         )
 
+    def connection_lost(self, exc: Exception | None):
+        self.factory.on_con_lost.set_result(True)
+
     async def a_do_request(self, data):
         service = data["service"]
         func = self.factory.funcs[service]
-        param=data["data"]
+        param = data["data"]
         # FIXME:Dont do the fucking param check and the code will work
         # if len(param.keys())!=getattr(func,"__code__",func).co_argcount-1:
         #     self.send({"res": "error", "error": "wrong format","jobid": data["jobid"]})
@@ -85,15 +110,22 @@ class Service(LineReceiver):
             if service in self.factory.async_func:
                 resp = await func(**data["data"])
             else:
-                resp = await self.factory.eventloop.run_in_executor(
+                resp = await asyncio.get_event_loop().run_in_executor(
                     None, lambda: func(**data["data"])
                 )
             self.send({"type": "respond", "data": resp, "jobid": data["jobid"]})
         except Exception as e:
             traceback.print_exc()
-            self.send({"res": "error", "error": "server error","data":traceback.format_exc(),"jobid": data["jobid"]})
+            self.send(
+                {
+                    "res": "error",
+                    "error": "server error",
+                    "data": traceback.format_exc(),
+                    "jobid": data["jobid"],
+                }
+            )
 
-    def lineReceived(self, data):
+    def line_received(self, data):
         try:
             data = json.loads(data)
             log.debug(data)
@@ -103,33 +135,33 @@ class Service(LineReceiver):
         if "res" in data:
             return
         if data["type"] == "call":
-            asyncio.run_coroutine_threadsafe(
-                self.a_do_request(data), self.factory.eventloop
-            )
+            asyncio.create_task(self.a_do_request(data))
 
 
-class RpcServiceFactory(ClientFactory):
-    def __init__(self, name, async_mode=False):
+class RpcServiceFactory:
+    def __init__(self, name, async_mode=False, eventloop=None):
         self.name = name
-        self.eventloop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.eventloop)
         self.async_mode = async_mode
         self.services = {}
         self.funcs = {}
-        self.done = Deferred()
         # threading._start_new_thread(self.eventloop.run_until_complete, (self.loop(),))
-        threading._start_new_thread(self.eventloop.run_forever, ())
+        # if not eventloop:
+        #     self.eventloop = asyncio.new_event_loop()
+        #     threading._start_new_thread(self.eventloop.run_forever, ())
+        # else:
+        #     self.eventloop=eventloop
+        # asyncio.set_event_loop(self.eventloop)
 
-    def buildProtocol(self, addr):
+    def buildProtocol(self):
         return Service(self)
 
-    def clientConnectionFailed(self, connector, reason):
-        log.debug(reason)
-        self.done.errback(reason)
-
-    def clientConnectionLost(self, connector, reason):
-        log.debug(reason)
-        self.done.callback(None)
+    # def clientConnectionFailed(self, connector, reason):
+    #     log.debug(reason)
+    #     self.done.errback(reason)
+    #
+    # def clientConnectionLost(self, connector, reason):
+    #     log.debug(reason)
+    #     self.done.callback(None)
 
     def register(self, instance):
         self.instance = instance
@@ -171,16 +203,13 @@ class RpcServiceFactory(ClientFactory):
         else:
             return ("localhost", 2474)
 
-    async def loop(self):
-        while 1:
-            asyncio.Future
+    async def aconnect(self):
+        loop = asyncio.get_running_loop()
+        self.on_con_lost = loop.create_future()
+        transport, protocol = await loop.create_connection(
+            self.buildProtocol, *self.get_host()
+        )
+        await self.on_con_lost
 
-    def connect(self, host=None, port=None):
-        if host is None and port is None:
-            host, port = self.get_host()
-
-        def main(reactor):
-            reactor.connectTCP(host, port, self)
-            return self.done
-
-        task.react(main)
+    def connect(self, *args, **kwargs):
+        asyncio.run(self.aconnect(*args, **kwargs))

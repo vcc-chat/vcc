@@ -16,8 +16,9 @@ log.addHandler(logging.NullHandler())
 
 
 class ServiceExport:
-    def __init__(self, func=None, async_mode=False):
+    def __init__(self, func=None, async_mode=False,thread=True):
         self.async_mode = async_mode
+        self.thread=thread
         if func is None:
             self.func = None
             return
@@ -35,6 +36,7 @@ class ServiceExport:
             self.func.__name__,
             (),
             {
+                "thread": self.thread,
                 "__call__": functools.partial(self.func, instance),
                 "__annotations__": self.__annotations__,
                 "co_argcount": self.func.__code__.co_argcount,
@@ -110,9 +112,12 @@ class Service(lineReceiver):
             if service in self.factory.async_func:
                 resp = await func(**data["data"])
             else:
-                resp = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: func(**data["data"])
-                )
+                if getattr(func,"thread",True):
+                    resp = await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: func(**data["data"])
+                    )
+                else:
+                    resp= func(**data["data"])
             self.send({"type": "respond", "data": resp, "jobid": data["jobid"]})
         except Exception as e:
             traceback.print_exc()

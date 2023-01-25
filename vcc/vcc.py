@@ -241,12 +241,12 @@ class RpcExchangerClient:
             self._name = username
             await self._rpc.login.add_online(id=uid)
         return uid
-    async def request_oauth(self,platform:str)-> [str,str]:
+    async def request_oauth(self,platform:str)-> tuple[str,str]:
         provider_name="oauth_"+platform
         providers=await self._rpc.rpc.list_providers()
         if not provider_name in providers:
             raise ProviderNotFoundError()
-        return cast([str,str],await getattr(self._rpc,provider_name).request_oauth())
+        return cast(tuple[str,str],await getattr(self._rpc,provider_name).request_oauth())
     async def login_oauth(self,platform:str,requestid:str):
         """
         Do this in a task! this will takes a long time

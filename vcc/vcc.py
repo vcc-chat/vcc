@@ -257,6 +257,8 @@ class RpcExchangerClient:
             raise ProviderNotFoundError()
         userinfo=await getattr(self._rpc,provider_name).login_oauth(requestid=requestid)
         uid=await self._rpc.login.post_oauth(platform=platform,metadata=userinfo)
+        self._uid=uid
+        self._username=userinfo
         return uid
     async def add_online(self) -> None:
         self.check_authorized()

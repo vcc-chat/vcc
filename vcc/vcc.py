@@ -37,6 +37,8 @@ class NotAuthorizedError(RpcException):
 
 class PermissionDeniedError(RpcException):
     pass
+class ProviderNotFoundError(RpcException):
+    pass
 
 class RpcExchangerRpcHandler2:
     def __init__(self, exchanger: RpcExchanger,  provider: str) -> None:
@@ -239,11 +241,26 @@ class RpcExchangerClient:
             self._name = username
             await self._rpc.login.add_online(id=uid)
         return uid
-
+    async def request_oauth(self,platform:str)-> [str,str]:
+        provider_name="oauth_"+platform
+        providers=await self._rpc.rpc.list_providers()
+        if not provider_name in providers:
+            raise ProviderNotFoundError()
+        return cast([str,str],await getattr(self._rpc,provider_name).request_oauth())
+    async def login_oauth(self,platform:str,requestid:str):
+        """
+        Do this in a task! this will takes a long time
+        """
+        provider_name="oauth_"+platform
+        providers=await self._rpc.rpc.list_providers()
+        if not provider_name in providers:
+            raise ProviderNotFoundError()
+        userinfo=await getattr(self._rpc,provider_name).login_oauth(requestid=requestid)
+        uid=await self._rpc.login.post_oauth(platform=platform,metadata=userinfo)
+        return uid
     async def add_online(self) -> None:
         self.check_authorized()
         await self._rpc.login.add_online(id=self._id)
-
     async def is_online(self, user_ids: list[int]) -> list[bool]:
         self.check_authorized()
         return cast(list[bool], await self._rpc.login.is_online(ids=user_ids))

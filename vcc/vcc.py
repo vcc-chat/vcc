@@ -308,8 +308,6 @@ class RpcExchangerClient:
         raw_message: Any = None
 
         while True:
-            while not self._chat_list:
-                await asyncio.sleep(1)
             raw_message = await self._pubsub.get_message(ignore_subscribe_messages=True)
             if raw_message is None:
                 await asyncio.sleep(0.01)
@@ -478,9 +476,9 @@ class RpcExchangerClient:
         self.check_joined(chat_id)
         return cast(dict[int, dict[ChatUserPermissionName, bool]], await self._rpc.chat.get_all_user_permission(chat_id=chat_id))
 
-    async def file_new_object(self, name: str, bucket: str="file") -> tuple[str, str]:
+    async def file_new_object(self, name: str, id: str | None=None, bucket: str="file") -> tuple[str, str]:
         self.check_authorized()
-        return cast(tuple[str, str], await self._rpc.file.new_object(name=name, bucket=bucket))
+        return cast(tuple[str, str], await self._rpc.file.new_object(name=name, id=str(uuid.uuid4()) if id is None else id, bucket=bucket))
 
     async def file_new_object_with_content(self, name: str, content: str, bucket: str="file") -> str:
         self.check_authorized()
@@ -502,6 +500,7 @@ class RpcExchangerClient:
 
     async def __aenter__(self) -> RpcExchangerClient:
         self._pubsub = await cast(Any, self._pubsub_raw).__aenter__()
+        await self._pubsub.subscribe("temp")
         return self
 
     async def __aexit__(self, *args: Any) -> None:

@@ -96,7 +96,7 @@ class RpcExchanger:
         self._socket_address = (rpc_host, rpc_port)
         self._redis = redis.Redis.from_url(cast(Any, redis_url))
         self._pubsub_raw: PubSub = self._redis.pubsub()
-        self._responses: dict[str, Any] = {}
+        self._futures: dict[str, asyncio.Future[Any]] = {}
         self._recv_lock = asyncio.Lock()
         self.rpc = RpcExchangerRpcHandler(self)
         self.client_list: set[RpcExchangerClient | RpcRobotExchangerClient] = set()
@@ -108,6 +108,69 @@ class RpcExchanger:
         else:
             return ("localhost", 2474)
 
+    async def recv_task(self):
+        raw_message: Any = None
+
+        while True:
+            raw_message = await self.pubsub.get_message(ignore_subscribe_messages=True)
+            if raw_message is None:
+                await asyncio.sleep(0.01)
+                continue
+            log.debug(f"{raw_message['data']=} {raw_message['channel']=}")
+            try:
+                json_content_untyped: Any = json.loads(raw_message["data"].decode())
+                if raw_message["channel"] == b"messages":
+                    json_message: RedisMessage = json_content_untyped
+                    session: str | None = None
+                    username = json_message["username"]
+                    msg = json_message["msg"]
+                    chat = int(json_message["chat"])
+                    if "session" in json_message:
+                        session = json_message["session"]
+                    for client in self.client_list:
+                        if chat in client._chat_list and (session is None or isinstance(client, RpcRobotExchangerClient) or (chat, session) in client._session_list):
+                            client._recv_future.set_result(("message", username, msg, chat, session))
+                    if "session" in json_message:
+                        session = json_message["session"]
+                    log.debug(f"{username=} {msg=} {chat=} {session=}")
+                elif raw_message["channel"] == b"events":
+                    json_content: RedisEvent = json_content_untyped
+                    type = json_content["type"]
+                    data = json_content["data"]
+                    chat = int(json_content["chat"])
+                    for client in self.client_list:
+                        if chat in client._chat_list:
+                            client._recv_future.set_result(("event", type, data, chat))
+                    return "event", type, data, chat
+            except asyncio.CancelledError:
+                return
+            except Exception as e:
+                log.debug(e, exc_info=True)
+                raw_message = None
+                await asyncio.sleep(0.01)
+
+    async def rpc_task(self):
+        loop = asyncio.get_event_loop()
+        while True:
+            json_res = json.loads(await self.sock_recvline())
+            if "jobid" not in json_res:
+                logging.debug(f"{json_res=}")
+                raise RpcException("packets so fast")
+            future = self._futures[json_res["jobid"]]
+            if "error" in json_res:
+                match json_res["error"]:
+                    case "no such service":
+                        future.set_exception(RpcException("no such service"))
+                    case "invalid request data type":
+                        future.set_exception(TypeError("invalid request data type"))
+                    case "wrong format":
+                        future.set_exception(TypeError("wrong format"))
+                    case _:
+                        future.set_exception(UnknownError)
+            else:
+                future.set_result(json_res["data"])
+            del self._futures[json_res["jobid"]]
+
     async def __aenter__(self) -> RpcExchanger:
         loop = asyncio.get_event_loop()
         sock = self._sock
@@ -118,48 +181,9 @@ class RpcExchanger:
         self.pubsub: PubSub = await self._pubsub_raw.__aenter__()
         await self.pubsub.subscribe("messages")
         await self.pubsub.subscribe("events")
-        async def recv_task():
-            raw_message: Any = None
-
-            while True:
-                raw_message = await self.pubsub.get_message(ignore_subscribe_messages=True)
-                if raw_message is None:
-                    await asyncio.sleep(0.01)
-                    continue
-                log.debug(f"{raw_message['data']=} {raw_message['channel']=}")
-                try:
-                    json_content_untyped: Any = json.loads(raw_message["data"].decode())
-                    if raw_message["channel"] == b"messages":
-                        json_message: RedisMessage = json_content_untyped
-                        session: str | None = None
-                        username = json_message["username"]
-                        msg = json_message["msg"]
-                        chat = int(json_message["chat"])
-                        if "session" in json_message:
-                            session = json_message["session"]
-                        for client in self.client_list:
-                            if chat in client._chat_list and (session is None or isinstance(client, RpcRobotExchangerClient) or (chat, session) in client._session_list):
-                                client._recv_future.set_result(("message", username, msg, chat, session))
-                        if "session" in json_message:
-                            session = json_message["session"]
-                        log.debug(f"{username=} {msg=} {chat=} {session=}")
-                    elif raw_message["channel"] == b"events":
-                        json_content: RedisEvent = json_content_untyped
-                        type = json_content["type"]
-                        data = json_content["data"]
-                        chat = int(json_content["chat"])
-                        for client in self.client_list:
-                            if chat in client._chat_list:
-                                client._recv_future.set_result(("event", type, data, chat))
-                        return "event", type, data, chat
-                except asyncio.CancelledError:
-                    return
-                except Exception as e:
-                    log.debug(e, exc_info=True)
-                    raw_message = None
-                    await asyncio.sleep(0.01)
             
-        self._recv_task = asyncio.create_task(recv_task())
+        self._recv_task = asyncio.create_task(self.recv_task())
+        self._rpc_task = asyncio.create_task(self.rpc_task())
         return self
 
     async def __aexit__(self, *args: Any) -> None:
@@ -168,6 +192,7 @@ class RpcExchanger:
         self._sock.shutdown(socket.SHUT_RDWR)
         self._sock.close()
         self._recv_task.cancel()
+        self._rpc_task.cancel()
 
     async def send_msg(self, username: str, msg: str, chat: int, session: str | None=None) -> None:
         log.debug(f"messages")
@@ -201,30 +226,9 @@ class RpcExchanger:
             "jobid": new_uuid
         }).encode() + b"\r\n")
         logging.debug(f"{service=}{data=}")
-        while True:
-            if new_uuid in self._responses:
-                json_res = self._responses[new_uuid]
-                del self._responses[new_uuid]
-                break
-            json_res = json.loads(await self.sock_recvline())
-            if "jobid" not in json_res:
-                logging.debug(f"{json_res=}")
-                raise RpcException("packets so fast")
-            if json_res["jobid"] == new_uuid:
-                break
-            else:
-                self._responses[json_res["jobid"]] = json_res
-        if "error" in json_res:
-            match json_res["error"]:
-                case "no such service":
-                    raise RpcException(f"no such service {service}")
-                case "invalid request data type":
-                    raise TypeError("invalid request data type")
-                case "wrong format":
-                    raise TypeError("wrong format")
-                case _:
-                    raise UnknownError()
-        return json_res["data"]
+        future = asyncio.Future[Any]()
+        self._futures[new_uuid] = future
+        return await future
 
     def get_redis_instance(self) -> redis.Redis[bytes]:
         return self._redis

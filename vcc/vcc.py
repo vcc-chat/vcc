@@ -95,7 +95,7 @@ class RpcExchanger:
 
         self._socket_address = (rpc_host, rpc_port)
         self._redis = redis.Redis.from_url(cast(Any, redis_url))
-        self._pubsub_raw: PubSub = self._redis.pubsub()
+        self._pubsub_raw: PubSub = self._redis.pubsub(ignore_subscribe_messages=True)
         self._futures: dict[str, asyncio.Future[Any]] = {}
         self._recv_lock = asyncio.Lock()
         self.rpc = RpcExchangerRpcHandler(self)
@@ -111,8 +111,7 @@ class RpcExchanger:
     async def recv_task(self):
         raw_message: Any = None
 
-        while True:
-            raw_message = await self.pubsub.get_message(ignore_subscribe_messages=True)
+        async for raw_message in self.pubsub.listen():
             if raw_message is None:
                 await asyncio.sleep(0.01)
                 continue
@@ -187,6 +186,8 @@ class RpcExchanger:
         return self
 
     async def __aexit__(self, *args: Any) -> None:
+        await self.pubsub.unsubscribe("messages")
+        await self.pubsub.unsubscribe("events")
         await self._pubsub_raw.__aexit__(*args)
         await self._redis.close()
         self._sock.shutdown(socket.SHUT_RDWR)

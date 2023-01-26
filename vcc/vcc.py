@@ -82,7 +82,6 @@ class RpcExchanger:
     """Low-level api which is hard to use"""
     _sock: socket.socket
     _redis: redis.Redis[bytes]
-
     
     def __init__(self, *, rpc_host: str | None=None, rpc_port: int | None=None, redis_url: str | None=None) -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -100,6 +99,7 @@ class RpcExchanger:
         self._responses: dict[str, Any] = {}
         self._recv_lock = asyncio.Lock()
         self.rpc = RpcExchangerRpcHandler(self)
+        self.client_list: set[RpcExchangerClient | RpcRobotExchangerClient] = set()
 
     def get_host(self) -> tuple[str, int]:
         if "RPCHOST" in os.environ:
@@ -118,6 +118,48 @@ class RpcExchanger:
         self.pubsub: PubSub = await self._pubsub_raw.__aenter__()
         await self.pubsub.subscribe("messages")
         await self.pubsub.subscribe("events")
+        async def recv_task():
+            raw_message: Any = None
+
+            while True:
+                raw_message = await self.pubsub.get_message(ignore_subscribe_messages=True)
+                if raw_message is None:
+                    await asyncio.sleep(0.01)
+                    continue
+                log.debug(f"{raw_message['data']=} {raw_message['channel']=}")
+                try:
+                    json_content_untyped: Any = json.loads(raw_message["data"].decode())
+                    if raw_message["channel"] == b"messages":
+                        json_message: RedisMessage = json_content_untyped
+                        session: str | None = None
+                        username = json_message["username"]
+                        msg = json_message["msg"]
+                        chat = int(json_message["chat"])
+                        if "session" in json_message:
+                            session = json_message["session"]
+                        for client in self.client_list:
+                            if chat in client._chat_list and (session is None or isinstance(client, RpcRobotExchangerClient) or (chat, session) in client._session_list):
+                                client._recv_future.set_result(("message", username, msg, chat, session))
+                        if "session" in json_message:
+                            session = json_message["session"]
+                        log.debug(f"{username=} {msg=} {chat=} {session=}")
+                    elif raw_message["channel"] == b"events":
+                        json_content: RedisEvent = json_content_untyped
+                        type = json_content["type"]
+                        data = json_content["data"]
+                        chat = int(json_content["chat"])
+                        for client in self.client_list:
+                            if chat in client._chat_list:
+                                client._recv_future.set_result(("event", type, data, chat))
+                        return "event", type, data, chat
+                except asyncio.CancelledError:
+                    return
+                except Exception as e:
+                    log.debug(e, exc_info=True)
+                    raw_message = None
+                    await asyncio.sleep(0.01)
+            
+        self._recv_task = asyncio.create_task(recv_task())
         return self
 
     async def __aexit__(self, *args: Any) -> None:
@@ -125,6 +167,7 @@ class RpcExchanger:
         await self._redis.close()
         self._sock.shutdown(socket.SHUT_RDWR)
         self._sock.close()
+        self._recv_task.cancel()
 
     async def send_msg(self, username: str, msg: str, chat: int, session: str | None=None) -> None:
         log.debug(f"messages")
@@ -201,6 +244,7 @@ class RpcExchangerClient:
     _name: str | None
     _pubsub: PubSub
     _rpc: RpcExchangerRpcHandler
+    _recv_future: asyncio.Future[tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]]
 
     _msg_callback: MessageCallback | None
     _event_callbacks: dict[Event, EventCallback]
@@ -224,6 +268,8 @@ class RpcExchangerClient:
         self._msg_callback = None
         self._event_callbacks = {}
         self._pubsub = self._exchanger.pubsub
+        self._exchanger.client_list.add(self)
+        self._recv_future = asyncio.Future()
 
     async def login(self, username: str, password: str) -> int | None:
         if self._id is not None and self._name is not None:
@@ -298,51 +344,21 @@ class RpcExchangerClient:
         await self._exchanger.send_msg(username, msg, chat, session)  
     
     async def recv(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
-        raw_message: Any = None
-
-        while True:
-            raw_message = await self._pubsub.get_message(ignore_subscribe_messages=True)
-            if raw_message is None:
-                await asyncio.sleep(0.01)
-                continue
-            log.debug(f"{raw_message['data']=} {raw_message['channel']=}")
-            try:
-                json_content_untyped: Any = json.loads(raw_message["data"].decode())
-                if raw_message["channel"] == b"messages":
-                    json_message: RedisMessage = json_content_untyped
-                    session: str | None = None
-                    username = json_message["username"]
-                    msg = json_message["msg"]
-                    chat = int(json_message["chat"])
-                    if chat not in self._chat_list:
-                        continue
-                    if "session" in json_message:
-                        session = json_message["session"]
-                        if (chat, session) not in self._session_list:
-                            continue
-                    log.debug(f"{username=} {msg=} {chat=} {session=}")
-                    return "message", username, msg, chat, session
-                elif raw_message["channel"] == b"events":
-                    json_content: RedisEvent = json_content_untyped
-                    type = json_content["type"]
-                    data = json_content["data"]
-                    chat = int(json_content["chat"])
-                    if chat not in self._chat_list:
-                        continue
-                    match type:
-                        case "join" if data["user_id"] == self._id:
-                            self._chat_list.add(chat)
-                        case "quit" if data["user_id"] == self._id:
-                            self._chat_list.discard(chat)
-                        case "kick" if data["kicked_user_id"] == self._id:
-                            self._chat_list.discard(chat)
-                        case "invite" if data["invited_user_id"] == self._id:
-                            self._chat_list.add(chat)
-                    return "event", type, data, chat
-            except Exception as e:
-                log.debug(e, exc_info=True)
-                raw_message = None
-                await asyncio.sleep(0.01)
+        content = await self._recv_future
+        if content[0] == "event":
+            data = content[2]
+            chat = content[3]
+            match content[1]:
+                case "join" if data["user_id"] == self._id:
+                    self._chat_list.add(chat)
+                case "quit" if data["user_id"] == self._id:
+                    self._chat_list.discard(chat)
+                case "kick" if data["kicked_user_id"] == self._id:
+                    self._chat_list.discard(chat)
+                case "invite" if data["invited_user_id"] == self._id:
+                    self._chat_list.add(chat)
+        self._recv_future = asyncio.Future()
+        return content
 
     async def session_join(self, name: str, chat_id: int) -> bool:
         self.check_authorized()
@@ -480,6 +496,7 @@ class RpcExchangerClient:
         return self
 
     async def __aexit__(self, *args: Any) -> None:
+        self._exchanger.client_list.discard(self)
         if self._id is not None:
             await self._rpc.login.add_offline(id=self._id)
         return None
@@ -529,6 +546,7 @@ class RpcRobotExchangerClient:
     _name: str | None
     _pubsub: PubSub
     _rpc: RpcExchangerRpcHandler
+    _recv_future: asyncio.Future[tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]]
 
     @property
     def id(self) -> int | None:
@@ -546,6 +564,8 @@ class RpcRobotExchangerClient:
         self._rpc = self._exchanger.rpc
         self._chat_list_lock = asyncio.Lock()
         self._pubsub = self._exchanger.pubsub
+        self._exchanger.client_list.add(self)
+        self._recv_future = asyncio.Future()
 
     async def login(self, name: str, token: str) -> int | None:
         if self._id is not None and self._name is not None:
@@ -675,4 +695,5 @@ class RpcRobotExchangerClient:
         return self
 
     async def __aexit__(self, *args: Any) -> None:
+        self._exchanger.client_list.discard(self)
         return None

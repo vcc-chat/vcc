@@ -99,7 +99,7 @@ class RpcExchanger:
         self._futures: dict[str, asyncio.Future[Any]] = {}
         self._recv_lock = asyncio.Lock()
         self.rpc = RpcExchangerRpcHandler(self)
-        self.client_list: set[RpcExchangerClient | RpcRobotExchangerClient] = set()
+        self.client_list: set[RpcExchangerBaseClient] = set()
 
     def get_host(self) -> tuple[str, int]:
         if "RPCHOST" in os.environ:
@@ -186,14 +186,14 @@ class RpcExchanger:
         return self
 
     async def __aexit__(self, *args: Any) -> None:
+        self._recv_task.cancel()
+        self._rpc_task.cancel()
         await self.pubsub.unsubscribe("messages")
         await self.pubsub.unsubscribe("events")
         await self._pubsub_raw.__aexit__(*args)
         await self._redis.close()
         self._sock.shutdown(socket.SHUT_RDWR)
         self._sock.close()
-        self._recv_task.cancel()
-        self._rpc_task.cancel()
 
     async def send_msg(self, username: str, msg: str, chat: int, session: str | None=None) -> None:
         log.debug(f"messages")
@@ -239,9 +239,8 @@ class RpcExchanger:
 
     def create_robot_client(self) -> RpcRobotExchangerClient:
         return RpcRobotExchangerClient(self)
-    
 
-class RpcExchangerClient:
+class RpcExchangerBaseClient:
     _exchanger: RpcExchanger
     _chat_list: set[int]
     _session_list: set[tuple[int, str]]
@@ -275,7 +274,148 @@ class RpcExchangerClient:
         self._pubsub = self._exchanger.pubsub
         self._exchanger.client_list.add(self)
         self._recv_future = asyncio.Future()
+    async def is_online(self, user_ids: list[int]) -> list[bool]:
+        self.check_authorized()
+        return cast(list[bool], await self._rpc.login.is_online(ids=user_ids))
+    def check_authorized(self) -> None:
+        if self._id is None or self._name is None:
+            raise NotAuthorizedError()
 
+    def check_joined(self, chat: int) -> None:
+        if chat not in self._chat_list:
+            raise ChatNotJoinedError()
+
+    def check_not_joined(self, chat: int) -> None:
+        if chat in self._chat_list:
+            raise ChatAlreadyJoinedError()
+
+    async def send_with_another_username(self, username: str, msg: str, chat: int, session: str | None) -> None:
+        self.check_authorized()
+        self.check_joined(chat)
+        if session is not None and (chat, session) not in self._session_list:
+            raise ChatNotJoinedError()
+        if not await self._rpc.chat.check_send_with_another_username(chat_id=chat, user_id=self._id):
+            raise PermissionDeniedError()
+        await self._exchanger.send_msg(username, msg, chat, session)  
+    
+    async def recv(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
+        content = await self._recv_future
+        if content[0] == "event":
+            data = content[2]
+            chat = content[3]
+            match content[1]:
+                case "join" if data["user_id"] == self._id:
+                    self._chat_list.add(chat)
+                case "quit" if data["user_id"] == self._id:
+                    self._chat_list.discard(chat)
+                case "kick" if data["kicked_user_id"] == self._id:
+                    self._chat_list.discard(chat)
+                case "invite" if data["invited_user_id"] == self._id:
+                    self._chat_list.add(chat)
+        self._recv_future = asyncio.Future()
+        return content
+
+    async def chat_get_name(self, id: int) -> str:
+        """Get name of chat by id"""
+        self.check_authorized()
+        return cast(str, await self._rpc.chat.get_name(id=id))
+
+    async def chat_get_users(self, id: int) -> list[tuple[int, str]]:
+        """Get id of all users in the chat"""
+        self.check_authorized()
+        self.check_joined(id)
+        return cast(list[tuple[int, str]], [tuple(i) for i in await self._rpc.chat.get_users(id=id)])
+
+
+    async def chat_list_sub_chats(self, id: int) -> list[tuple[int, str]]:
+        """List all sub-chats of a chat"""
+        self.check_authorized()
+        self.check_joined(id)
+        return cast(list[tuple[int, str]], await self._rpc.chat.list_sub_chats(id=id))
+
+
+    async def chat_get_user_permission(self, chat_id: int, user_id: int) -> dict[ChatUserPermissionName, bool]:
+        self.check_authorized()
+        self.check_joined(chat_id)
+        return cast(dict[ChatUserPermissionName, bool], await self._rpc.chat.get_user_permission(chat_id=chat_id, user_id=user_id))
+
+    async def chat_get_permission(self, chat_id: int) -> dict[ChatPermissionName, bool]:
+        self.check_authorized()
+        self.check_joined(chat_id)
+        return cast(dict[ChatPermissionName, bool], await self._rpc.chat.get_permission(chat_id=chat_id))
+
+    async def chat_get_all_permission(self, chat_id: int) -> dict[int, dict[ChatUserPermissionName, bool]]:
+        self.check_authorized()
+        self.check_joined(chat_id)
+        return cast(dict[int, dict[ChatUserPermissionName, bool]], await self._rpc.chat.get_all_user_permission(chat_id=chat_id))
+
+    async def file_new_object(self, name: str, id: str | None=None, bucket: str="file") -> tuple[str, str]:
+        self.check_authorized()
+        return cast(tuple[str, str], await self._rpc.file.new_object(name=name, id=str(uuid.uuid4()) if id is None else id, bucket=bucket))
+
+    async def file_new_object_with_content(self, name: str, content: str, bucket: str="file") -> str:
+        self.check_authorized()
+        return cast(str, await self._rpc.file.new_object_with_content(name=name, content=content, bucket=bucket))
+
+    async def file_get_object(self, id: str, bucket: str="file") -> tuple[str, str]:
+        self.check_authorized()
+        return cast(tuple[str, str], await self._rpc.file.get_object(id=id, bucket=bucket))
+
+    async def file_get_object_content(self, id: str, bucket: str="file") -> tuple[str, str]:
+        self.check_authorized()
+        return cast(tuple[str, str], await self._rpc.file.get_object_content(id=id, bucket=bucket))
+
+    def __aiter__(self) -> RpcExchangerBaseClient:
+        return self
+
+    async def __anext__(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
+        return await self.recv()
+
+    async def __aenter__(self) -> RpcExchangerBaseClient:
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        self._exchanger.client_list.discard(self)
+        return None
+
+    @overload
+    def on(self, type: Literal["message"]) -> Callable[[MessageCallback], MessageCallback]: ...
+
+    @overload
+    def on(self, type: Literal["event"], event_type: Event) -> Callable[[EventCallback], EventCallback]: ...
+
+    @no_type_check_decorator
+    def on(self, type: Any, event_type: Any = None) -> Any:
+        if type == "message" and event_type is None:
+            def message_callback_handler(callback: MessageCallback) -> MessageCallback:
+                self._msg_callback = callback
+                return callback
+            return message_callback_handler
+        elif type == "event" and event_type is not None:
+            def event_callback_handler(callback: EventCallback) -> EventCallback:
+                self._event_callbacks[cast(Any, event_type)] = callback
+                return callback
+            return event_callback_handler
+        else:
+            raise TypeError("Wrong usage")
+
+    async def run_forever(self) -> None:
+        async for result in self:
+            if result[0] == "message":
+                _, username, msg, chat, session = result
+                if self._msg_callback is not None:
+                    returned = self._msg_callback(username, msg, chat, session)
+                    if isinstance(returned, Awaitable):
+                        await returned
+            else:
+                _, type, data, chat = result
+                if type in self._event_callbacks:
+                    returned = self._event_callbacks[type](type, data, chat)
+                    if isinstance(returned, Awaitable):
+                        await returned
+    
+
+class RpcExchangerClient(RpcExchangerBaseClient):
     async def login(self, username: str, password: str) -> int | None:
         if self._id is not None and self._name is not None:
             return self._id
@@ -307,28 +447,12 @@ class RpcExchangerClient:
     async def add_online(self) -> None:
         self.check_authorized()
         await self._rpc.login.add_online(id=self._id)
-    async def is_online(self, user_ids: list[int]) -> list[bool]:
-        self.check_authorized()
-        return cast(list[bool], await self._rpc.login.is_online(ids=user_ids))
-
     async def register(self, username: str, password: str, *, auto_login: bool=False) -> bool:
         # Note: this only register, won't login
         success = await self._rpc.login.register(username=username, password=password)
         if success and auto_login:
             await self.login(username, password)
         return cast(bool, success)
-
-    def check_authorized(self) -> None:
-        if self._id is None or self._name is None:
-            raise NotAuthorizedError()
-
-    def check_joined(self, chat: int) -> None:
-        if chat not in self._chat_list:
-            raise ChatNotJoinedError()
-
-    def check_not_joined(self, chat: int) -> None:
-        if chat in self._chat_list:
-            raise ChatAlreadyJoinedError()
 
     async def send(self, msg: str, chat: int, session: str | None) -> None:
         self.check_authorized()
@@ -347,23 +471,6 @@ class RpcExchangerClient:
         if not await self._rpc.chat.check_send_with_another_username(chat_id=chat, user_id=self._id):
             raise PermissionDeniedError()
         await self._exchanger.send_msg(username, msg, chat, session)  
-    
-    async def recv(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
-        content = await self._recv_future
-        if content[0] == "event":
-            data = content[2]
-            chat = content[3]
-            match content[1]:
-                case "join" if data["user_id"] == self._id:
-                    self._chat_list.add(chat)
-                case "quit" if data["user_id"] == self._id:
-                    self._chat_list.discard(chat)
-                case "kick" if data["kicked_user_id"] == self._id:
-                    self._chat_list.discard(chat)
-                case "invite" if data["invited_user_id"] == self._id:
-                    self._chat_list.add(chat)
-        self._recv_future = asyncio.Future()
-        return content
 
     async def session_join(self, name: str, chat_id: int) -> bool:
         self.check_authorized()
@@ -379,16 +486,6 @@ class RpcExchangerClient:
         if parent_chat_id != -1:
             self.check_joined(parent_chat_id)
         return cast(int, await self._rpc.chat.create_with_user(name=name, user_id=self._id, parent_chat_id=parent_chat_id))
-
-    async def chat_get_name(self, id: int) -> str:
-        """Get name of chat by id"""
-        self.check_authorized()
-        return cast(str, await self._rpc.chat.get_name(id=id))
-
-    async def chat_get_users(self, id: int) -> list[tuple[int, str]]:
-        """Get id of all users in the chat"""
-        self.check_authorized()
-        return cast(list[tuple[int, str]], [tuple(i) for i in await self._rpc.chat.get_users(id=id)])
 
     async def chat_join(self, id: int) -> bool:
         """Join a chat by its id"""
@@ -409,11 +506,6 @@ class RpcExchangerClient:
         async with self._chat_list_lock:
             self._chat_list.discard(id)
         return True
-
-    async def chat_list_somebody_joined(self) -> list[tuple[int, str, int | None]]:
-        """Deprecated alias of chat_list"""
-        warnings.warn(DeprecationWarning("This method is deprecated, use chat_list instead"))
-        return await self.chat_list()
 
     async def chat_list(self) -> list[tuple[int, str, int | None]]:
         """List all chat you joined"""
@@ -455,25 +547,10 @@ class RpcExchangerClient:
         self.check_joined(chat_id)
         return cast(bool, await self._rpc.chat.modify_user_permission(chat_id=chat_id, user_id=self._id, modified_user_id=modified_user_id, name=name, value=value))
 
-    async def chat_get_user_permission(self, chat_id: int, user_id: int) -> dict[ChatUserPermissionName, bool]:
-        self.check_authorized()
-        self.check_joined(chat_id)
-        return cast(dict[ChatUserPermissionName, bool], await self._rpc.chat.get_user_permission(chat_id=chat_id, user_id=user_id))
-
     async def chat_modify_permission(self, chat_id: int, name: ChatPermissionName, value: bool) -> bool:
         self.check_authorized()
         self.check_joined(chat_id)
         return cast(bool, await self._rpc.chat.modify_permission(chat_id=chat_id, user_id=self._id, name=name, value=value))
-
-    async def chat_get_permission(self, chat_id: int) -> dict[ChatPermissionName, bool]:
-        self.check_authorized()
-        self.check_joined(chat_id)
-        return cast(dict[ChatPermissionName, bool], await self._rpc.chat.get_permission(chat_id=chat_id))
-
-    async def chat_get_all_permission(self, chat_id: int) -> dict[int, dict[ChatUserPermissionName, bool]]:
-        self.check_authorized()
-        self.check_joined(chat_id)
-        return cast(dict[int, dict[ChatUserPermissionName, bool]], await self._rpc.chat.get_all_user_permission(chat_id=chat_id))
 
     async def file_new_object(self, name: str, id: str | None=None, bucket: str="file") -> tuple[str, str]:
         self.check_authorized()
@@ -491,87 +568,15 @@ class RpcExchangerClient:
         self.check_authorized()
         return cast(tuple[str, str], await self._rpc.file.get_object_content(id=id, bucket=bucket))
 
-    def __aiter__(self) -> RpcExchangerClient:
-        return self
-
-    async def __anext__(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
-        return await self.recv()
-
-    async def __aenter__(self) -> RpcExchangerClient:
-        return self
-
     async def __aexit__(self, *args: Any) -> None:
         self._exchanger.client_list.discard(self)
         if self._id is not None:
             await self._rpc.login.add_offline(id=self._id)
         return None
 
-    @overload
-    def on(self, type: Literal["message"]) -> Callable[[MessageCallback], MessageCallback]: ...
-
-    @overload
-    def on(self, type: Literal["event"], event_type: Event) -> Callable[[EventCallback], EventCallback]: ...
-
-    @no_type_check_decorator
-    def on(self, type: Any, event_type: Any = None) -> Any:
-        if type == "message" and event_type is None:
-            def message_callback_handler(callback: MessageCallback) -> MessageCallback:
-                self._msg_callback = callback
-                return callback
-            return message_callback_handler
-        elif type == "event" and event_type is not None:
-            def event_callback_handler(callback: EventCallback) -> EventCallback:
-                self._event_callbacks[cast(Any, event_type)] = callback
-                return callback
-            return event_callback_handler
-        else:
-            raise TypeError("Wrong usage")
-
-    async def run_forever(self) -> None:
-        async for result in self:
-            if result[0] == "message":
-                _, username, msg, chat, session = result
-                if self._msg_callback is not None:
-                    returned = self._msg_callback(username, msg, chat, session)
-                    if isinstance(returned, Awaitable):
-                        await returned
-            else:
-                _, type, data, chat = result
-                if type in self._event_callbacks:
-                    returned = self._event_callbacks[type](type, data, chat)
-                    if isinstance(returned, Awaitable):
-                        await returned
 
 
-
-class RpcRobotExchangerClient:
-    _exchanger: RpcExchanger
-    _chat_list: set[int]
-    _id: int | None
-    _name: str | None
-    _pubsub: PubSub
-    _rpc: RpcExchangerRpcHandler
-    _recv_future: asyncio.Future[tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]]
-
-    @property
-    def id(self) -> int | None:
-        return self._id
-
-    @property
-    def name(self) -> str | None:
-        return self._name
-
-    def __init__(self, exchanger: RpcExchanger) -> None:
-        self._exchanger = exchanger
-        self._chat_list = set()
-        self._id = None
-        self._name = None
-        self._rpc = self._exchanger.rpc
-        self._chat_list_lock = asyncio.Lock()
-        self._pubsub = self._exchanger.pubsub
-        self._exchanger.client_list.add(self)
-        self._recv_future = asyncio.Future()
-
+class RpcRobotExchangerClient(RpcExchangerBaseClient):
     async def login(self, name: str, token: str) -> int | None:
         if self._id is not None and self._name is not None:
             return self._id
@@ -580,9 +585,6 @@ class RpcRobotExchangerClient:
             self._id = uid
             self._name = name
         return uid
-
-    async def is_online(self, user_ids: list[int]) -> list[bool]:
-        return await RpcExchangerClient.is_online(cast(Any, self), user_ids)
 
     async def register(self, name: str, token: str) -> int | None:
         # Note: this only register, won't login
@@ -594,15 +596,6 @@ class RpcRobotExchangerClient:
             self._name = name
         return uid
 
-    def check_authorized(self) -> None:
-        RpcExchangerClient.check_authorized(cast(Any, self))
-
-    def check_joined(self, chat: int) -> None:
-        RpcExchangerClient.check_joined(cast(Any, self), chat)
-
-    def check_not_joined(self, chat: int) -> None:
-        RpcExchangerClient.check_not_joined(cast(Any, self), chat)
-
     async def send(self, username: str, msg: str, chat: int, session: str | None) -> None:
         self.check_authorized()
         self.check_joined(chat)
@@ -610,17 +603,6 @@ class RpcRobotExchangerClient:
             raise PermissionDeniedError()
         await self._exchanger.send_msg(f"{username}[{cast(str, self.name)}]", msg, chat, session)
     
-    async def recv(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
-        return await RpcExchangerClient.recv(cast(Any, self))
-
-    async def chat_get_name(self, id: int) -> str:
-        """Get name of chat by id"""
-        return await RpcExchangerClient.chat_get_name(cast(Any, self), id)
-
-    async def chat_get_users(self, id: int) -> list[tuple[int, str]]:
-        """Get id of all users in the chat"""
-        return await RpcExchangerClient.chat_get_users(cast(Any, self), id)
-
     async def chat_join(self, id: int) -> bool:
         """Join a chat by its id"""
         self.check_authorized()
@@ -676,29 +658,7 @@ class RpcRobotExchangerClient:
         self.check_joined(chat_id)
         return cast(bool, await self._rpc.bot.modify_user_permission(chat_id=chat_id, bot_id=self._id, modified_user_id=modified_user_id, name=name, value=value))
 
-    async def chat_get_user_permission(self, chat_id: int, user_id: int) -> dict[ChatUserPermissionName, bool]:
-        return await RpcExchangerClient.chat_get_user_permission(cast(Any, None), chat_id, user_id)
-
     async def chat_modify_permission(self, chat_id: int, name: ChatPermissionName, value: bool) -> bool:
         self.check_authorized()
         self.check_joined(chat_id)
         return cast(bool, await self._rpc.bot.modify_permission(chat_id=chat_id, bot_id=self._id, name=name, value=value))
-
-    async def chat_get_permission(self, chat_id: int) -> dict[ChatPermissionName, bool]:
-        return await RpcExchangerClient.chat_get_permission(cast(Any, None), chat_id)
-
-    async def chat_get_all_permission(self, chat_id: int) -> dict[int, dict[ChatUserPermissionName, bool]]:
-        return await RpcExchangerClient.chat_get_all_permission(cast(Any, None), chat_id)
-
-    def __aiter__(self) -> RpcRobotExchangerClient:
-        return self
-
-    async def __anext__(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
-        return await self.recv()
-
-    async def __aenter__(self) -> RpcRobotExchangerClient:
-        return self
-
-    async def __aexit__(self, *args: Any) -> None:
-        self._exchanger.client_list.discard(self)
-        return None

@@ -49,7 +49,7 @@ class oauthGithub(metaclass=base.ServiceMeta):
     def request_oauth(self):
         requestid=str(uuid.uuid4())
         self.table[requestid]=asyncio.get_event_loop().create_future()
-        asyncio.get_event_loop().call_later(60,self.clean_future,requestid)
+        asyncio.get_event_loop().call_later(60*5,self.clean_future,requestid)
         url=GH_URL_TEMPLATE.format(**{"clientid":GH_CLIENTID,"clientsec":GH_CLIENTSEC,"callbackurl":GH_CALLBACKURL,"requestid":requestid})
         return url,requestid
     @export(async_mode=True)

@@ -16,7 +16,9 @@ class User(Model):
     # Permissions
     login = BooleanField(default=True)
     oauth = CharField(null=True)
-    oauth_data = CharField(null=True)# Used by oauth providers
+    oauth_data = CharField(null=True)  # Used by oauth providers
+
+
 class Chat(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=20)

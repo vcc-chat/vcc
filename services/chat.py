@@ -35,17 +35,19 @@ all_chat_permissions = ["public"]
 
 
 class ChatService:
-    self._oauth={}
+
     def __init__(self):
         self._redis: redis.Redis[bytes] = redis.Redis.from_url(os.environ.get("REDIS_URL","redis://localhost"))
 
     async def _send_message(self, chat: int, msg: str) -> None:
         await self._redis.publish(
-            "messages", json.dumps({"username": SYSTEM_USER_NAME, "msg": msg, "chat": chat})
+            f"messages:{chat}", json.dumps({"username": SYSTEM_USER_NAME, "msg": msg})
         )
 
     async def _send_event(self, chat: int, type: EventType, data: Any) -> None:
-        await self._redis.publish("events", json.dumps({"type": type, "data": data, "chat": chat}))
+        await self._redis.publish(
+            f"events:{chat}", json.dumps({"type": type, "data": data})
+        )
 
     @db.atomic()
     async def create_with_user(

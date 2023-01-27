@@ -41,18 +41,26 @@ class Login:
         if hashed_password != user.password:
             return None
         return user.id
+
     @db.atomic()
-    def register(self, username, password,oauth=None,oauth_data=None):
+    def register(self, username, password, oauth=None, oauth_data=None):
         if username == "system":
             return False
         hashed_password = hmac.new(
             (salt := random_string(10)).encode(), password.encode(), "sha512"
         ).hexdigest()
         try:
-            User(name=username, password=hashed_password, salt=salt,oauth=oauth,oauth_data=oauth_data).save()
+            User(
+                name=username,
+                password=hashed_password,
+                salt=salt,
+                oauth=oauth,
+                oauth_data=oauth_data,
+            ).save()
             return True
         except:
             return False
+
     # @db.atomic() ### TODO
     # def do_raw_query(self,cond:dict):
     #     for i in cond:
@@ -63,12 +71,19 @@ class Login:
     #         e
 
     @db.atomic()
-    def post_oauth(self,platform:str,metadata:str):
-        if (user:=User.get_or_none(User.oauth==platform,User.oauth_data==metadata))==None:
-            username="oauth_"+platform+str(uuid.uuid4())
-            self.register(username,str(uuid.uuid4()),oauth=platform,oauth_data=metadata)
-            user=User.get_or_none(User.name==username)
+    def post_oauth(self, platform: str, metadata: str):
+        if (
+            user := User.get_or_none(
+                User.oauth == platform, User.oauth_data == metadata
+            )
+        ) == None:
+            username = "oauth_" + platform + str(uuid.uuid4())
+            self.register(
+                username, str(uuid.uuid4()), oauth=platform, oauth_data=metadata
+            )
+            user = User.get_or_none(User.name == username)
         return user.id
+
     @db.atomic()
     def get_name(self, id: int) -> str | None:
         user = User.get_or_none(id=id)

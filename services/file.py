@@ -13,9 +13,9 @@ class File:
     def __init__(self):
 
         self.minio = minio.Minio(
-            os.environ.get("MINIO_URL","localhost:9000"),
-            os.environ.get("MINIO_ACCESS","minioadmin"),
-            os.environ.get("MINIO_SECRET","minioadmin"),
+            os.environ.get("MINIO_URL", "localhost:9000"),
+            os.environ.get("MINIO_ACCESS", "minioadmin"),
+            os.environ.get("MINIO_SECRET", "minioadmin"),
             secure=False,
         )
 
@@ -23,9 +23,9 @@ class File:
         if not self.minio.bucket_exists(bucket):
             self.minio.make_bucket(bucket)
 
-    def new_object(self, name,id=None,bucket="file"):
+    def new_object(self, name, id=None, bucket="file"):
         self._create_bucket(bucket)
-        if id==None:
+        if id == None:
             id = str(uuid.uuid4())
         url = url = self.minio.get_presigned_url(
             "PUT", bucket, id, extra_query_params={"X-Amz-Meta-realname": name}
@@ -45,6 +45,7 @@ class File:
             metadata={"X-Amz-Meta-realname": name},
         )
         return id
+
     # When I am writing this,I thinks I dont need this now
     # def compose_object(self,sources,name,id=None,bucket="file"):
     #     if id==None:

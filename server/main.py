@@ -7,26 +7,23 @@ from itertools import zip_longest
 from twisted.internet import protocol, reactor, endpoints
 from twisted.protocols.basic import LineReceiver
 
-
 class RpcProtocol(LineReceiver):
     def __init__(self, factory):
         self.factory: RpcServer = factory
         self.name = None
-
     def send(self, data):
         self.sendLine(bytes(json.dumps(data), "UTF8"))
 
     def lineReceived(self, data):
-        print(data)
         try:
             data = json.loads(data)
         except json.JSONDecodeError:
             self.send({"res": "error", "error": "not json"})
             return
         if "res" in data:
-            match data['res']:
-                case "error" if self.role=="service":
-                    self.factory.make_respond(data["jobid"], data["error"],error=True)
+            match data["res"]:
+                case "error" if self.role == "service":
+                    self.factory.make_respond(data["jobid"], data["error"], error=True)
             return
         match data["type"]:
             case "handshake":
@@ -50,16 +47,21 @@ class RpcProtocol(LineReceiver):
             self.factory.services[self.name] = data["services"]
             self.factory.providers[self.name] = self
         self.send({"res": "ok"})
+
     def make_request(self, service, data, jobid):
         data = {"type": "call", "service": service, "data": data, "jobid": jobid}
         self.send(data)
 
-    def make_respond(self, jobid, data,error):
-        data = {"type": "resp", "data": data, "jobid": jobid}| ({"error":error} if error else {})
+    def make_respond(self, jobid, data, error):
+        data = {"type": "resp", "data": data, "jobid": jobid} | (
+            {"error": error} if error else {}
+        )
         print(data)
         self.send(data)
+
     def connectionLost(self, reason):
         print(5678)
+
 
 class BuiltinService:
     def __init__(self, factory, functions: dict, name: str = "rpc"):
@@ -93,13 +95,13 @@ class RpcServer(protocol.Factory):
             },
         )
 
-    def make_request(self, client: RpcProtocol, service: str, data: dict, jobid: str):
+    def make_request(self, client: RpcProtocol, service, data: dict, jobid: str):
         service = service.split("/")
         if (
             service[0] not in self.services
             or service[1] not in self.services[service[0]]
         ):
-            self.send({"res": "error", "error": "no such service", "jobid": jobid})
+            client.send({"res": "error", "error": "no such service", "jobid": jobid})
         try:
             if self.services[service[0]][service[1]]:
                 valid: bool = reduce(
@@ -127,8 +129,8 @@ class RpcServer(protocol.Factory):
         else:
             self.providers[service[0]].make_request(service[1], data, jobid)
 
-    def make_respond(self, jobid, data,error=False):
-        self.promises[jobid].make_respond(jobid, data,error)
+    def make_respond(self, jobid, data, error=False):
+        self.promises[jobid].make_respond(jobid, data, error)
         del self.promises[jobid]
 
     def buildProtocol(self, addr):

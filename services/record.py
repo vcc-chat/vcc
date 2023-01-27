@@ -2,6 +2,7 @@ import functools
 import asyncio
 import os
 import time
+from typing import cast
 
 import base
 from base import ServiceExport as export
@@ -29,9 +30,7 @@ class Record(metaclass=base.ServiceMeta):
             if i["type"] == "pmessage":
                 channel = i["channel"].decode().split(":")[1]
                 await self._redis.lpush("record:" + channel, i["data"].decode())
-                await self._redis.set("recordl:" + channel,
-                    (int((await self._redis.get("recordl:" + channel) or 0)) + len(i["data"]))
-                )
+                await self._redis.lpush("recordl:" + channel, len(i["data"]))
 
     @timer(2)
     async def flush_worker(self):
@@ -45,48 +44,60 @@ class Record(metaclass=base.ServiceMeta):
                 break
 
     async def do_flush(self, key):
-        length = await self._redis.llen(key)
+        length = await self._redis.llen(key)  # Freeze thr length
+        content_length = []
         key = key.decode()
-        filename = key.replace(":", "")+"-"+str(int(time.time()))
+        for i in range(length):
+            a=key.replace("d", "dl")    
+            content_length.append(
+                int(
+                    await self._redis.rpop(a)
+                )
+            )  # record:x -> recordl:x
+        filename = key.replace(":", "") + "-" + str(int(time.time()))
         file = await self._vcc.rpc.file.new_object(
             name=filename, id=filename, bucket="record"
         )
+        header: str = ",".join(list(map( lambda x: str(x),content_length)))+"\n"
 
         async def data_generator():
+            yield header.encode("utf8")
             for i in range(length):
-                data=(await self._redis.rpop(key))+b"\n"
+                data = (await self._redis.rpop(key)) + b"\n"
                 yield data
 
         async with aiohttp.ClientSession() as session:
             res = await session.put(
                 url=file[0],
                 data=data_generator(),
-                headers={"Content-Length": (await self._redis.get(key.replace("d", "dl"))).decode()},# record:x -> recordl:x
+                headers={"Content-Length": str(sum(content_length) + len(header))},
             )
-
-            await self._redis.set(key.replace("d", "dl"),0)
 
     async def _ainit(self):
         await self._vcc.__aenter__()
         await self._pubsub.psubscribe("messages:*")
         asyncio.get_event_loop().create_task(self.record_worker())
         return await self.flush_worker()
+
     @export(async_mode=True)
     async def hello(self):
         print("hello")
         return "hello world"
+
     def __init__(self):
         self._vcc = vcc.RpcExchanger()
         self._redis = redis.Redis.from_url(
             os.environ.get("REDIS_URL", "redis://localhost")
         )
         self._pubsub = self._redis.pubsub()
-        asyncio.get_event_loop().create_task(self._ainit())
+        #asyncio.get_event_loop().create_task(self._ainit())
 
 
 if __name__ == "__main__":
-    server = base.RpcServiceFactory("record", async_mode=True)
-    server.register(Record())
-    asyncio.set_event_loop(server.eventloop)
-
-    server.connect()
+    asyncio.set_event_loop(loop := asyncio.new_event_loop())
+    server = base.RpcServiceFactory("record")
+    service = Record()
+    server.register(service)
+    loop.create_task(server.aconnect())
+    loop.create_task(service._ainit())
+    loop.run_forever()

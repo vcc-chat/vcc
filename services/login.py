@@ -6,7 +6,7 @@ import string
 import json
 import uuid
 
-from typing import Any
+from typing import Any, Callable, cast
 from aiohttp.http_websocket import PACK_LEN1
 from peewee import *
 
@@ -16,6 +16,7 @@ import models
 db = models.get_database()
 
 User = models.bind_model(models.User, db)
+UserMetadata = models.bind_model(models.UserMetadata, db)
 
 
 def random_string(length: int) -> str:
@@ -85,6 +86,26 @@ class Login:
         return user.id
 
     @db.atomic()
+    def query_metadata(self, uid: int, key: str):
+        return UserMetadata.get_or_none(
+            UserMetadata.id == uid, UserMetadata.key == key
+        ).value
+
+    @db.atomic()
+    def modify_metadata(self, uid, key, value):
+        metadata = UserMetadata.get_or_none(
+            UserMetadata.id == uid, UserMetadata.key == key
+        ) or UserMetadata(id=uid, key=key, value="")
+        if type(value) == str:
+            print(value)
+            metadata.value = value
+        elif hasattr(value, "__call__"):
+            print(1)
+            cast(Callable, value)
+            metadata.value = str(value(metadata.value))
+        metadata.save()
+
+    @db.atomic()
     def get_name(self, id: int) -> str | None:
         user = User.get_or_none(id=id)
         if user is None:
@@ -93,11 +114,10 @@ class Login:
 
     @db.atomic()
     def add_online(self, id: int) -> bool:
-        user = User.get_or_none(id=id)
+        user = User.get_or_none(id=id)  # A stupid query just for check if user exists
         if user is None:
             return False
-        user.online_count += 1
-        user.save()
+        self.modify_metadata(id, "online_count", lambda x: int(x) + 1 if x != "" else 1)
         return True
 
     @db.atomic()
@@ -105,22 +125,30 @@ class Login:
         user = User.get_or_none(id=id)
         if user is None:
             return False
-        if user.online_count <= 0:
-            return False
-        user.online_count -= 1
-        user.save()
+        self.modify_metadata(
+            id,
+            "online_count",
+            lambda x: (1 if int(x) < 0 else int(x)) - 1 if x != "" else 0,
+        )
         return True
 
     @db.atomic()
     def is_online(self, ids: Any) -> list[bool]:
         try:
-            return [bool(User.get_by_id(id).online_count) for id in ids]
+            return [
+                not UserMetadata.get_or_none(
+                    UserMetadata.id == id,
+                    UserMetadata.key == "online_count",
+                    UserMetadata.value == "0",
+                )
+                for id in ids
+            ]
         except:
             return []
 
 
 if __name__ == "__main__":
-    db.create_tables([User])
+    db.create_tables([User,UserMetadata])
     server = base.RpcServiceFactory("login")
     server.register(Login())
     server.connect()

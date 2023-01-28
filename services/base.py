@@ -23,7 +23,8 @@ class ServiceExport:
             self.func = None
             return
         self.func = func
-
+        self.__name__ = self.func.__name__
+        self.__annotations__ = self.func.__annotations__
     def __call__(self, *args, **kwargs):
         if self.func is None:
             self.func = args[0]

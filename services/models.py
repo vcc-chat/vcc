@@ -1,4 +1,5 @@
-from peewee import *
+from peewee import Model,BigAutoField,CharField,IntegerField,ForeignKeyField,BooleanField,BitField,SqliteDatabase
+
 import os
 
 
@@ -12,12 +13,14 @@ class User(Model):
     name = CharField(max_length=16, unique=True)
     password = CharField(max_length=16)
     salt = CharField()
-    online_count = IntegerField(default=0)
     # Permissions
     login = BooleanField(default=True)
     oauth = CharField(null=True)
     oauth_data = CharField(null=True)  # Used by oauth providers
-
+class UserMetadata(Model):
+    id=IntegerField(primary_key=True)
+    key=CharField()
+    value=CharField()
 
 class Chat(Model):
     id = BigAutoField(primary_key=True)
@@ -50,6 +53,12 @@ class ChatUser(Model):
     create_session = permissions.flag(64)
     # Being banned, any other permission will be ignored
     banned = permissions.flag(256)
+
+
+class ChatRecord(Model):
+    id = IntegerField(primary_key=True)
+    lastrecord=IntegerField(default=-1)
+    interval=IntegerField(default=5)
 
 
 class Bot(Model):

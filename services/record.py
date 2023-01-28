@@ -9,7 +9,8 @@ from base import ServiceExport as export
 import vcc
 import redis.asyncio as redis
 import aiohttp
-
+import models
+import peewee
 
 def timer(interval, func=None):
     if func == None:
@@ -32,7 +33,7 @@ class Record(metaclass=base.ServiceMeta):
                 await self._redis.lpush("record:" + channel, i["data"].decode())
                 await self._redis.lpush("recordl:" + channel, len(i["data"]))
 
-    @timer(2)
+    @timer(1)
     async def flush_worker(self):
         curser = 0
         while 1:
@@ -80,9 +81,8 @@ class Record(metaclass=base.ServiceMeta):
         return await self.flush_worker()
 
     @export(async_mode=True)
-    async def hello(self):
-        print("hello")
-        return "hello world"
+    async def query_record(self,time):
+        return "nope"
 
     def __init__(self):
         self._vcc = vcc.RpcExchanger()

@@ -11,4 +11,5 @@ models.bind_model(models.ChatUser, db)
 router = Router(db)
 
 router.create(auto=models)
-router.run()
+
+router.run("auto")

@@ -71,7 +71,7 @@ class lineReceiver(asyncio.Protocol):
         if data.endswith(b"\n"):  ####
             print(self.line_buffer)
             self.line_received(self.line_buffer.decode())
-        self.line_buffer = b""
+            self.line_buffer = b""
 
     def sendLine(self, data):
         self.transport.write(data + b"\r\n")

@@ -113,7 +113,7 @@ class Service(lineReceiver):
             if service in self.factory.async_func:
                 resp = await func(**data["data"])
             else:
-                if getattr(func, "thread", True):
+                if getattr(func, "thread", False):
                     resp = await asyncio.get_event_loop().run_in_executor(
                         None, lambda: func(**data["data"])
                     )

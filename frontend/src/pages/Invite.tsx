@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react"
-import { useNavigate, useSearchParams, useLoaderData } from "react-router-dom"
+import { useNavigate, useLoaderData } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 
 
-import { RequestType, Request } from "../config"
 import { useChatList, useNetwork } from "../tools"
 import useStore from "../store"
 import classNames from "classnames"
@@ -42,7 +40,7 @@ export default function Invite(props: {}) {
                 <p className="py-6">{t("Would you like to join chat ")}{chat}?</p>
                 <button className="btn btn-primary" onClick={async () => {
                   const { uid } = await makeRequest({
-                    type: RequestType.CTL_INVIT,
+                    type: "chat_invite",
                     msg: token
                   })
                   console.log(uid)

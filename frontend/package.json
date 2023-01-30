@@ -17,6 +17,7 @@
     "classnames": "^2.3.2",
     "daisyui": "^2.46.1",
     "date-fns": "^2.29.3",
+    "dompurify": "^2.4.3",
     "i18next": "^22.4.9",
     "i18next-browser-languagedetector": "^7.0.1",
     "i18next-http-backend": "^2.1.1",
@@ -39,6 +40,7 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.8",
+    "@types/dompurify": "^2.4.0",
     "@types/react": "^18.0.26",
     "@types/react-dom": "^18.0.0",
     "@types/react-modal": "^3.13.1",

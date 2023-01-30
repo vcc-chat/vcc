@@ -14,18 +14,16 @@ import formatDistance from "date-fns/formatDistance"
 import FileUploadIcon from "@material-design-icons/svg/outlined/file_upload.svg"
 import SendIcon from "@material-design-icons/svg/filled/send.svg"
 
-import { RequestType, Request, RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
+import { Request, RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
 import { MessageAvatar, MessageLink } from "../Messages"
 import useStore from "../store"
 import { stringToNumber, useChatList, useNetwork } from "../tools"
-import { useChatActionData, wait } from "../loaders"
+import { useChatActionData } from "../loaders"
 
 
-const MessageComponent = memo(function MessageComponent({ prevMsg, nowMsg }: {
-  prevMsg: RequestWithTime | null,
+const MessageComponent = memo(function MessageComponent({ nowMsg }: {
   nowMsg: RequestWithTime
 }) {
-  const prevReq = prevMsg?.req
   const req = nowMsg.req
   const date = new Date(nowMsg.time)
   const dragStartHandler = useCallback((ev: DragEvent<HTMLDivElement>) => {
@@ -119,7 +117,7 @@ export function FileUploadDialog({ id }: {
             <button className="btn btn-primary" disabled={!files?.length} type="button" onClick={async () => {
               if (!file) return
               const { usrname: id, msg: url } = await makeRequest({
-                type: RequestType.CTL_UPLOA,
+                type: "file_upload",
                 msg: file.name
               })
               console.log({ id, url })
@@ -184,12 +182,8 @@ export default function Chat() {
       <div className="flex flex-col overflow-hidden p-2 h-full flex-1">
         <ul ref={ref} className="flex flex-col m-0 p-0 overflow-auto no-scrollbar flex-1 space-y-1">
           {messagesShow
-            .reduce<[RequestWithTime | null, RequestWithTime][]>((a, b) => (
-              [...a, [a.flat().at(-1)!, b]]
-            ), [[null, null]] as unknown as [RequestWithTime | null, RequestWithTime][])
-            .slice(1)
-            .map(([prevMsg, nowMsg]) => (
-              <MessageComponent prevMsg={prevMsg} nowMsg={nowMsg} key={nowMsg.time} />
+            .map((nowMsg) => (
+              <MessageComponent nowMsg={nowMsg} key={nowMsg.time} />
             ))
           }
         </ul>

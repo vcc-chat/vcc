@@ -2,7 +2,6 @@ import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { useChatList, useNetwork } from "../tools"
-import { RequestType } from "../config"
 import useStore from "../store"
 
 export default function CreateChat() {
@@ -58,7 +57,7 @@ export default function CreateChat() {
                 if (chatName === "") return
                 if (isParentChat) {
                   const { uid } = await makeRequest({
-                    type: RequestType.CTL_NEWSE,
+                    type: "chat_create",
                     usrname: chatName,
                     uid: parentChat
                   })
@@ -71,7 +70,7 @@ export default function CreateChat() {
                   }
                 } else {
                   const { uid } = await makeRequest({
-                    type: RequestType.CTL_JSESS,
+                    type: "session_join",
                     uid: parentChat,
                     msg: chatName
                   })

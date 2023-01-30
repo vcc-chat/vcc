@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect } from "react"
 import { useNavigate, Form } from "react-router-dom"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
 
-import { RequestType, Request } from "../config"
 import { useNetwork } from "../tools"
 import { useRegisterActionData } from "../loaders"
 import { LoginType } from "../state/login"

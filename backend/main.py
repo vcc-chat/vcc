@@ -144,9 +144,9 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                     await send("chat_quit", uid=int(await client.chat_quit(uid)))
                 case "chat_get_name":
                     await send("chat_get_name", username=await client.chat_get_name(uid))
-                case "chat_list_somebody_joined":
+                case "chat_list":
                     value = await client.chat_list()
-                    await send("chat_list_somebody_joined", msg=cast(Any, value))
+                    await send("chat_list", msg=cast(Any, value))
                 case "chat_get_users":
                     await send("chat_get_users", msg=cast(Any, await client.chat_get_users(uid)))
                 case "chat_rename":

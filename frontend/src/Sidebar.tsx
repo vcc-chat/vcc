@@ -14,10 +14,11 @@ import MoreHorizIcon from "@material-design-icons/svg/outlined/more_horiz.svg"
 import PeopleIcon from "@material-design-icons/svg/outlined/people.svg"
 import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
 
-import { RequestType, MESSAGE_MIME_TYPE, Request } from "./config"
-import { ToolbarDialog, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
+import { MESSAGE_MIME_TYPE, Request } from "./config"
+import { JoinDialog, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
 import { stringToColor, useChatList, useNetwork } from "./tools"
 import useStore from "./store"
+import { useTranslation } from "react-i18next"
 
 export function NavBar({ toggle, toggleRightSidebar }: {
   toggle: () => void
@@ -27,6 +28,7 @@ export function NavBar({ toggle, toggleRightSidebar }: {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const session = useStore(state => state.session)
   const menuOpen = !!anchorEl
+  const { t } = useTranslation()
   return (
     <div className="navbar bg-base-100">
       <div className="flex-none">
@@ -46,7 +48,7 @@ export function NavBar({ toggle, toggleRightSidebar }: {
             <li><a onClick={async () => {
               useStore.setState({ token: null })
               location.href = "/login"
-            }}>Logout</a></li>
+            }}>{t("Logout")}</a></li>
           </ul>
         </div>
       </div>
@@ -193,6 +195,7 @@ export function Sidebar({ open, setOpen }: {
   const navigate = useNavigate()
   const { successAlert, errorAlert } = useNetwork()
   const { refresh: refreshChats, parentChats } = useChatList()
+  const { t } = useTranslation()
 
   const changeValue = useStore(state => state.changeChat)
   const changeName = useStore(state => state.changeChatName)
@@ -201,10 +204,10 @@ export function Sidebar({ open, setOpen }: {
     if (req.uid) {
       changeName(req.usrname)
       changeValue(chat)
-      successAlert("You have joined the chat successfully. ")
+      successAlert(t("You have joined the chat successfully. "))
       refreshChats()
     } else {
-      errorAlert("No such chat. ")
+      errorAlert(t("No such chat. "))
     }
   }, [successAlert, errorAlert, refreshChats])
 
@@ -225,12 +228,7 @@ export function Sidebar({ open, setOpen }: {
   
   return (
     <>
-      <ToolbarDialog
-        afterJoin={afterJoinHandler} 
-        typeNumber={RequestType.CTL_JOINS}
-        typeString="join"
-        id={joinChatDialogID}
-      />
+      <JoinDialog id={joinChatDialogID} />
       <div 
         aria-hidden={!open} 
         className={classNames("duration-300 overflow-x-hidden w-full transition-all no-scrollbar", {
@@ -239,13 +237,13 @@ export function Sidebar({ open, setOpen }: {
         })}
       >
       <ul className="flex flex-col">
-        <div className="opacity-80 text-sm m-4">Actions</div>
+        <div className="opacity-80 text-sm m-4">{t("Actions")}</div>
         <li className="mx-2 py-2 px-4 flex btn btn-ghost font-normal normal-case">
           <button className="flex flex-1" onClick={listCreateItemButtonClickHandler}>
             <div className="my-auto opacity-60">
               <AddCircleIcon />
             </div>
-            <div className="ml-8 text-base">Create Chat</div>
+            <div className="ml-8 text-base">{t("Create Chat")}</div>
           </button> 
         </li>
         <label htmlFor={joinChatDialogID} className="mx-2 py-2 px-4 flex btn btn-ghost font-normal normal-case">
@@ -253,7 +251,7 @@ export function Sidebar({ open, setOpen }: {
             <div className="my-auto opacity-60">
               <GroupAddIcon />
             </div>
-            <div className="ml-8 text-base">Join Chat</div>
+            <div className="ml-8 text-base">{t("Join Chat")}</div>
           </div> 
         </label>
       </ul>
@@ -279,9 +277,10 @@ function UserItem({ name, id, online, setHandleUsername, setHandleUserID, first,
   const characters = name.split(" ")
   const letter1 = (characters[0]?.[0] ?? "").toUpperCase()
   const letter2 = (characters[1]?.[0] ?? "").toUpperCase()
+  const { t } = useTranslation()
   // const Badge = online ? OnlineBadge : OfflineBadge
   const [show, setShow] = useState(false)
-  const centerIconButtonClickHandler = useCallback((ev: MouseEvent<HTMLButtonElement>) => {
+  const centerIconButtonClickHandler = useCallback((ev: unknown) => {
     setShow(!show)
     setHandleUsername(name)
     setHandleUserID(id)
@@ -301,12 +300,12 @@ function UserItem({ name, id, online, setHandleUsername, setHandleUserID, first,
         </div>
         <div className="flex flex-col flex-1">
           <div>{name}</div>
-          <span className="opacity-50 text-sm mt-1">{online ? "Online" : "Offline"}</span>
+          <span className="opacity-50 text-sm mt-1">{t(online ? "Online" : "Offline")}</span>
         </div>
         <div className="dropdown dropdown-end">
-          <button onClick={centerIconButtonClickHandler} className="btn btn-ghost btn-square my-auto">
+          <label tabIndex={0} onClick={centerIconButtonClickHandler} className="btn btn-ghost btn-square my-auto">
             <MoreHorizIcon />
-          </button>
+          </label>
           {menu}
         </div>
       </li>
@@ -322,6 +321,7 @@ export function UsersSidebar({ open, setOpen }: {
   const { makeRequest, successAlert, errorAlert } = useNetwork()
   const { refresh: refreshChats, values: chatValues, loading: chatValuesLoading } = useChatList()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   useEffect(() => {
     if (!chatValuesLoading && chat != null && !chatValues.includes(chat)) {
       navigate("/chats/empty")
@@ -334,7 +334,7 @@ export function UsersSidebar({ open, setOpen }: {
       if (chat == null) return []
       console.log({ chat })
       const { msg } = await makeRequest({
-        type: RequestType.CTL_USERS,
+        type: "chat_get_users",
         uid: chat!
       })
       return msg as unknown as [number, string][]
@@ -346,7 +346,7 @@ export function UsersSidebar({ open, setOpen }: {
     queryFn: async () => {
       if (chat == null) return
       const { msg } = await makeRequest({
-        type: RequestType.CTL_GPERM,
+        type: "chat_get_all_permission",
         uid: chat!,
         usrname: "",
         msg: ""
@@ -360,7 +360,7 @@ export function UsersSidebar({ open, setOpen }: {
     queryFn: async () => {
       if (chat == null || usersData == null || !usersData.length) return []
       const { msg } = await makeRequest({
-        type: RequestType.CTL_ISONL,
+        type: "is_online",
         msg: usersData!.map(a => a[0]) as any
       })
       return msg as unknown as boolean[]
@@ -386,26 +386,26 @@ export function UsersSidebar({ open, setOpen }: {
     if (handleUsername == username) {
       const { uid } = await makeRequest({
         uid: chat,
-        type: RequestType.CTL_QUITS
+        type: "chat_quit"
       })
       if (uid) {
-        successAlert("You have quit the chat successfully. ")
+        successAlert(t("You have quit the chat successfully. "))
         refreshChats()
       } else {
-        errorAlert("Unexpected error: You haven't quit the chat successfully. ")
+        errorAlert(t("Unexpected error: You haven't quit the chat successfully. "))
       }
     } else {
       const { uid } = await makeRequest({
-        type: RequestType.CTL_KICK,
+        type: "chat_kick",
         uid: chat,
         msg: handleUserID as any
       })
       if (uid) {
-        successAlert("User has been kicked.")
+        successAlert(t("User has been kicked."))
         refreshChats()
         queryClient.invalidateQueries({ queryKey: ["user-list", chat] })
       } else {
-        errorAlert("Permission denied.")
+        errorAlert(t("Permission denied."))
       }
     }
   }, [chat, handleUserID])
@@ -413,7 +413,7 @@ export function UsersSidebar({ open, setOpen }: {
   const handleBanButtonClick = useCallback(async () => {
     const ban = !permissionRawData?.[handleUserID]?.banned
     const { uid } = await window.makeRequest({
-      type: RequestType.CTL_MPERM,
+      type: "chat_modify_user_permission",
       msg: {
         "chat_id": chat,
         "modified_user_id": handleUserID,
@@ -422,21 +422,21 @@ export function UsersSidebar({ open, setOpen }: {
       } as any
     })
     if (uid) {
-      successAlert(ban ? "User has been successfully banned." : "User has been successfully unbanned.")
+      successAlert(t(ban ? "User has been successfully banned." : "User has been successfully unbanned."))
       refreshChats()
       queryClient.invalidateQueries({ queryKey: ["user-list", chat] })
     } else {
-      errorAlert("Permission denied.")
+      errorAlert(t("Permission denied."))
     }
   }, [handleUserID])
 
   const modifyPermissionDialogID = useId()
 
   const menu = (
-    <ul className="menu mt-4 bg-base-100 flex-1 ml-auto dropdown-content" tabIndex={0}>
-      <li><a onClick={handleKickButtonClick}>{handleUsername == username ? "Quit" : "Kick"}</a></li>
-      <li><a onClick={handleBanButtonClick}>{permissionRawData?.[handleUserID]?.banned ? "Unban" : "Ban"}</a></li>
-      <li><label htmlFor={modifyPermissionDialogID}>Modify Permission</label></li>
+    <ul className="menu mt-4 bg-base-100 flex-1 ml-auto dropdown-content whitespace-nowrap" tabIndex={0}>
+      <li><a onClick={handleKickButtonClick}>{t(handleUsername == username ? "Quit" : "Kick")}</a></li>
+      <li><a onClick={handleBanButtonClick}>{t(permissionRawData?.[handleUserID]?.banned ? "Unban" : "Ban")}</a></li>
+      <li><label htmlFor={modifyPermissionDialogID}>{t("Modify Permission")}</label></li>
     </ul>
   )
 

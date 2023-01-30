@@ -1,7 +1,6 @@
 import { useState, memo, useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-
-import { RequestType } from "../config"
+import { useTranslation } from "react-i18next"
 
 import useStore from "../store"
 import { useChatList, useNetwork } from "../tools"
@@ -16,6 +15,7 @@ export default memo(function SettingsActions(props: {}) {
   const { public_: publicRaw } = useSettingsActionsLoaderData()
   const [publicValue, setPublic] = useState(false)
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (chatName == null) return
@@ -28,14 +28,14 @@ export default memo(function SettingsActions(props: {}) {
 
   async function rename() {
     const { uid } = await makeRequest({
-      type: RequestType.CTL_RNAME,
+      type: "chat_rename",
       uid: chat!,
       msg: renameValue
     })
     if (uid) {
-      successAlert("Chat has renamed.")
+      successAlert(t("Chat has renamed."))
     } else {
-      errorAlert("Permission denied.")
+      errorAlert(t("Permission denied."))
     }
     refreshChats()
   }
@@ -47,15 +47,15 @@ export default memo(function SettingsActions(props: {}) {
 
   async function modifyPublic() {
     const { uid } = await makeRequest({
-      type: RequestType.CTL_MCPER,
+      type: "chat_modify_permission",
       uid: chat!,
       usrname: "public",
       msg: publicValue as any
     })
     if (uid) {
-      successAlert(`The chat has been ${publicValue ? "public" : "private"}.`)
+      successAlert(t(`The chat has been ${publicValue ? "public" : "private"}.`))
     } else {
-      errorAlert("Permission denied.")
+      errorAlert(t("Permission denied."))
     }
     queryClient.invalidateQueries(["chat-public", chat])
   }
@@ -63,14 +63,14 @@ export default memo(function SettingsActions(props: {}) {
   return (
     <div className="flex form-control space-y-4">
       <label className="label">
-        <span className="label-text">Chat name</span>
+        <span className="label-text">{t("Chat name")}</span>
       </label>
-      <input type="text" placeholder="Rename" className="input mr-auto" value={renameValue} onChange={ev => {
+      <input type="text" placeholder={t("Rename") ?? ""} className="input mr-auto" value={renameValue} onChange={ev => {
         setRenameValue(ev.target.value)
       }} />
       {/* <FormControlLabel className="ml-4" label="Public" control={<Switch checked={publicValue} onChange={ev => setPublic(ev.target.checked)} />} /> */}
       <label className="label cursor-pointer mr-auto">
-        <span className="label-text mr-4">Public</span> 
+        <span className="label-text mr-4">{t("Public")}</span> 
         <input type="checkbox" className="toggle" checked={publicValue} onChange={ev => setPublic(ev.target.checked)} />
       </label>
       <button className="btn mr-auto" disabled={publicRaw == publicValue && renameValue == chatName} onClick={() => {
@@ -80,7 +80,7 @@ export default memo(function SettingsActions(props: {}) {
         if (publicRaw != publicValue) {
           modifyPublic()
         }
-      }}>Apply</button>
+      }}>{t("Apply")}</button>
     </div>
   )
 })

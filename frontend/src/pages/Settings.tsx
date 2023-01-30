@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { useMatches, useNavigate, useParams, Outlet } from "react-router-dom"
+import { useMatches, useNavigate, Outlet } from "react-router-dom"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
 

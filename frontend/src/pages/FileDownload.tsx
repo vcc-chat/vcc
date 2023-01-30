@@ -1,6 +1,5 @@
 import { useEffect } from "react"
 import { useNetwork } from "../tools"
-import { RequestType } from "../config"
 import { useNavigate, useParams } from "react-router-dom"
 
 export default function FileDownload() {
@@ -10,7 +9,7 @@ export default function FileDownload() {
   useEffect(() => {
     (async () => {
       const { usrname: name, msg: url } = await makeRequest({
-        type: RequestType.CTL_DOWNL,
+        type: "file_download",
         msg: id
       })
       const content = await (await fetch(url)).blob()

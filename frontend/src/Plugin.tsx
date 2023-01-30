@@ -9,41 +9,57 @@ async function getMetaInfo(urlString: string) {
   if (!response.ok) {
     throw new Error("Invalid url")
   }
-  const { entry, name } = (await response.json()) as {
+  const data = (await response.json()) as {
     entry: string
-    name: string
+    name: string,
+    type: "entry"
+  } | {
+    script: string
+    name: string,
+    type: "script"
   }
-  const entryContent = await fetch(entry)
+  if (data.type == "script") {
+    return { content: data.script, name: data.name }
+  }
+  const entryContent = await fetch(data.entry)
   if (!response.ok) {
     throw new Error("Invalid url")
   }
-  return { content: await entryContent.text(), name }
+  return { content: await entryContent.text(), name: data.name }
 }
 
 const nonce = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16)
+const csp = `default-src 'none'; worker-src blob:; script-src 'nonce-${nonce}';`
 
 const workerInitCode = `(${function () {
   const receiveHooks: ((message: Request) => (Request | null))[] = []
   const sendHooks: ((message: Request) => (Request | null))[] = []
   const commandHooks: Record<string, ((args: string[]) => Request | null)> = {}
-  const commandRegex = /^command-(.*)$/
+  const appHooks: Record<string, (() => {
+    html: string
+  })> = {}
   self.addEventListener("message", function (ev: MessageEvent<{
     type: "message"
-    msg: Request
+    msg: Request | null
     id: string
   } | {
     type: "send-message"
-    msg: Request
+    msg: Request | null
     id: string
   } | {
-    type: "command-${string}"
+    type: "command"
+    command: string
     arguments: string[]
+    id: string
+  } | {
+    type: "app"
+    name: string
     id: string
   }>) {
     const data = ev.data
     const { id } = data
     if (data.type == "message") {
-      let msg = data.msg as Request | null
+      let { msg } = data
       for (const receiveHook of receiveHooks) {
         if (msg == null) break
         msg = receiveHook(msg)
@@ -55,7 +71,7 @@ const workerInitCode = `(${function () {
       return
     }
     if (data.type == "send-message") {
-      let msg = data.msg as Request | null
+      let { msg } = data
       for (const sendHook of sendHooks) {
         if (msg == null) break
         msg = sendHook(msg)
@@ -66,9 +82,8 @@ const workerInitCode = `(${function () {
       })
       return
     }
-    if (data.type.startsWith("command-")) {
-      const command = /^command-(.*)$/.exec(data.type)![1]
-      const args = data.arguments
+    if (data.type == "command") {
+      const { command, arguments: args } = data
       let msg: Request | null = null
       if (command in commandHooks) {
         msg = commandHooks[command](args)
@@ -79,18 +94,35 @@ const workerInitCode = `(${function () {
       })
       return
     }
+    if (data.type == "app") {
+      const { name } = data
+      if (name in appHooks) {
+        self.postMessage({
+          msg: appHooks[name](),
+          id
+        })
+      } else {
+        self.postMessage({
+          msg: null,
+          id
+        })
+      }
+    }
   })
 
   self.URL.createObjectURL = () => { throw new Error("createObjectURL is not allowed") }
 
-  function on(event: "receive" | "send" | `command-${string}`, func: (...args: any) => Request | null) {
+  function on(event: "receive" | "send" | `command:${string}` | `app:${string}`, func: (...args: any) => Request | null) {
     if (event == "receive") {
       receiveHooks.push(func)
     } else if (event == "send") {
       sendHooks.push(func)
     } else if (event.startsWith("command")) {
-      const command = /^command-(.*)$/.exec(event)![1]
+      const command = /^command:(.*)$/.exec(event)![1]
       commandHooks[command] = func
+    } else if (event.startsWith("app")) {
+      const command = /^app:(.*)$/.exec(event)![1]
+      appHooks[command] = func as any
     } else {
       throw new Error("Invalid event")
     }
@@ -121,6 +153,8 @@ const workerInitCode = `(${function () {
     }
     freeze(obj)
   }
+
+  const proxyFunction = () => {}
   
   function readOnly(obj: any): any {
     if ((typeof obj != "object" && typeof obj != "function") || obj == null) return obj
@@ -128,17 +162,17 @@ const workerInitCode = `(${function () {
     if (cachedResult != undefined) return cachedResult
     if (readOnlySet.has(obj)) return obj
 
-    const proxy = new ProxyClone(function () {}, {
+    const proxy = new ProxyClone(proxyFunction, {
       apply(_, thisArg, argumentsList) {
         const result: any = reflectApply(obj, thisArg, argumentsList)
-        if (typeof result == "object" || typeof result == "function") {
+        if ((typeof result == "object" || typeof result == "function") && result != null) {
           toReadOnly(result.__proto__)
         }
         return result
       },
       construct(_, argumentsList, newTarget) {
         const result: any = Reflect.construct(obj, argumentsList, newTarget)
-        if (typeof result == "object" || typeof result == "function") {
+        if ((typeof result == "object" || typeof result == "function") && result != null) {
           toReadOnly(result.__proto__)
         }
         return result
@@ -149,7 +183,11 @@ const workerInitCode = `(${function () {
         return readOnly(obj[key])
       },
       getOwnPropertyDescriptor(_, key) {
-        return readOnly(Reflect.getOwnPropertyDescriptor(obj, key))
+        const descriptor = Reflect.getOwnPropertyDescriptor(obj, key)
+        if (!descriptor) return
+        // Something strange but works
+        descriptor.configurable = true
+        return descriptor
       },
       getPrototypeOf(_) {
         return readOnly(Reflect.getPrototypeOf(obj))
@@ -172,7 +210,7 @@ const workerInitCode = `(${function () {
   ;(self as any).toReadOnly = toReadOnly
 
   ;(self as any).createGlobal = function () {
-    const proxy: any = new Proxy({
+    const proxy = new Proxy({
       on: readOnly(on)
     } as any, {
       get(target, key) {
@@ -186,11 +224,18 @@ const workerInitCode = `(${function () {
       }
     })
     return proxy
-  }
+  } as unknown as {
+    on: typeof on
+  } & typeof self
 
   for (let i of [Number, String, Function, Object, RegExp, Promise, Array, Symbol, BigInt]) {
     toReadOnly(i as any)
     toReadOnly((i as any).prototype)
+  }
+  for (const i of Object.getOwnPropertyNames(self)) {
+    if (typeof self[i as any] == "function" && Object.getOwnPropertyNames(self[i as any]).length === 2) {
+      self[i as any] = (self[i as any] as any).bind(self)
+    }
   }
 }})();`
 
@@ -205,14 +250,13 @@ function createIframeSrc(originalScripts: string[]) {
     try {
       new Function(originalScript)
       scripts += `
-        ;(function () {
-          var global = self.createGlobal()
-          ;(function () {
-            with (global) {
-              ${originalScript}
-            }
-          }).call(global)
-        })();
+        with (createGlobal()) {
+          (function () {
+            "use strict";
+            const { Number, String, Function, Object, RegExp, Promise, Array, Symbol, Set, Map, Date, self } = this;
+            ${originalScript}
+          }).call(self)
+        }
       `
     } catch (e) {
       // Plugin won't be load if there's syntax error
@@ -223,7 +267,7 @@ function createIframeSrc(originalScripts: string[]) {
     <!DOCTYPE html>
     <html>
       <head>
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; worker-src blob:; script-src 'nonce-${nonce}';">
+        <meta http-equiv="Content-Security-Policy" content="${csp}">
         <script nonce="${nonce}">
           (function () {
             var script = ${JSON.stringify(scripts)}
@@ -247,22 +291,15 @@ function createIframeSrc(originalScripts: string[]) {
   `)
 }
 
-const PluginContext = createContext<{
-  receiveHook: null | ((message: Request) => Promise<Request>),
-  sendHook: null | ((message: Request) => Promise<Request>)
-}>({
-  receiveHook: null,
-  sendHook: null
-})
-
 export function PluginProvider({ children }: {
   children: ReactNode
 }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
-  const callbacksRef = useRef<Record<string, ((ev: MessageEvent<{ msg: Request }>) => void)>>({})
+  const callbacksRef = useRef<Record<string, ((ev: MessageEvent<{ id: string, msg: any }>) => void)>>({})
 
-  const [receiveHook, setReceiveHook] = useState<null | ((message: Request) => Promise<Request>)>(null)
-  const [sendHook, setSendHook] = useState<null | ((message: Request) => Promise<Request>)>(null)
+  const setReceiveHook = useStore(state => state.setReceiveHook)
+  const setSendHook = useStore(state => state.setSendHook)
+  const setAppHook = useStore(state => state.setAppHook)
 
   const urls = useStore(state => state.pluginLinks)
 
@@ -283,6 +320,7 @@ export function PluginProvider({ children }: {
   useEffect(() => {
     const callbacks = callbacksRef.current
     function callback(ev: MessageEvent<{ id: string, msg: Request }>) {
+      if (ev.source !== iframeRef.current?.contentWindow) return
       if (ev.data.msg == undefined) return
       if (callbacks[ev.data.id] == undefined) return
       callbacks[ev.data.id](ev)
@@ -296,8 +334,23 @@ export function PluginProvider({ children }: {
         pluginLinks: code
       })
     }
-
-    ;(window as any).sendHook = null
+    ;(window as any).testPluginScript = function (scripts: string[]) {
+      (window as any).testPlugin(
+        scripts.map(
+          script => (
+            "data:application/json;base64," + btoa(
+              JSON.stringify(
+                {
+                  name: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16),
+                  type: "script",
+                  script: script
+                }
+              )
+            )
+          )
+        )
+      )
+    }
 
     return () => {
       window.removeEventListener("message", callback)
@@ -305,7 +358,7 @@ export function PluginProvider({ children }: {
   }, [])
 
   const onLoadHandler = useCallback(() => {
-    setReceiveHook(() => async (req: Request) => {
+    setReceiveHook(async (req: Request) => {
       const id = generateUUID()
       iframeRef.current!.contentWindow!.postMessage({
         type: "message",
@@ -323,7 +376,7 @@ export function PluginProvider({ children }: {
         callbacksRef.current[id] = callback
       })
     })
-    async function sendHook(req: Request) {
+    setSendHook(async (req: Request) => {
       const id = generateUUID()
       iframeRef.current!.contentWindow!.postMessage({
         type: "send-message",
@@ -338,9 +391,29 @@ export function PluginProvider({ children }: {
         }
         callbacksRef.current[id] = callback
       })
-    }
-    setSendHook(() => sendHook)
-    ;(window as any).sendHook = sendHook
+    })
+    setAppHook(async (name: string) => {
+      const id = generateUUID()
+      iframeRef.current!.contentWindow!.postMessage({
+        type: "app",
+        name,
+        id
+      }, "*")
+
+      return await new Promise<{
+        html: string
+      } | null>(res => {
+        function callback(ev: MessageEvent<{
+          msg: {
+            html: string
+          } | null
+        }>) {
+          res(ev.data.msg)
+        }
+        callbacksRef.current[id] = callback
+      })
+    })
+    
   }, [])
 
   return (
@@ -348,18 +421,10 @@ export function PluginProvider({ children }: {
       <iframe sandbox="allow-scripts" ref={iframeRef} src={createIframeSrc(complete ? codeQueries.map(
         query => (query.isSuccess ? query.data.content : "")
       ) : [])} className="hidden" onLoad={onLoadHandler} {...{
-        credentialless: "credentialless"
+        credentialless: "credentialless",
+        csp
       }} />
-      <PluginContext.Provider value={{
-        receiveHook,
-        sendHook
-      }}>
-        {children}
-      </PluginContext.Provider>
+      {children}
     </>
   )
-}
-
-export function usePlugin() {
-  return useContext(PluginContext)
 }

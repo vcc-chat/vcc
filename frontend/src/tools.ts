@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react"
+import { createContext, useContext, useEffect } from "react"
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query"
 import { persistQueryClient } from "@tanstack/react-query-persist-client"
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
@@ -128,7 +128,7 @@ export function useChatList() {
     cacheTime: Infinity,
     queryFn: async () => {
       const { msg: msgUntyped } = await window.makeRequest({
-        type: RequestType.CTL_LJOIN
+        type: "chat_list"
       })
       const data = msgUntyped as unknown as [number, string, number | null][]
       const values = data.map(value => value[0])
@@ -176,4 +176,10 @@ export function useChatList() {
       })
     }
   }
+}
+
+export function useTitle(title: string) {
+  useEffect(() => {
+    document.title = title
+  }, [title])
 }

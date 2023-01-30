@@ -4,6 +4,15 @@ import legacy from "@vitejs/plugin-legacy"
 import { VitePWA } from "vite-plugin-pwa"
 import importToCDN, { autoComplete } from "vite-plugin-cdn-import"
 import svgr from "vite-plugin-svgr"
+import banner from "vite-plugin-banner"
+
+const comment = `
+/**
+ * The frontend part of web-vcc
+ * @copyright The vcc group
+ * @license AGPL-3.0-or-later
+ */
+`.slice(1, -1)
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -62,7 +71,8 @@ export default defineConfig({
     }),
     svgr({
       exportAsDefault: true
-    })
+    }),
+    banner(comment)
   ],
   resolve: {
     preserveSymlinks: true

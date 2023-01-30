@@ -14,8 +14,8 @@ import { NetworkContext, responseToChatList, useChatList } from "./tools"
 import { LoginType } from "./state/login"
 import useStore from "./store"
 import * as loaders from "./loaders"
-import { usePlugin } from "./Plugin"
 import classNames from "classnames"
+import { useTranslation } from "react-i18next"
 
 const Invite = lazy(() => import("./pages/Invite"))
 const Login = lazy(() => import("./pages/Login"))
@@ -28,20 +28,20 @@ const SettingsInfo = lazy(() => import("./pages/SettingsInfo"))
 const ErrorElement = lazy(() => import("./pages/ErrorElement"))
 const CreateChat = lazy(() => import("./pages/CreateChat"))
 const FileDownload = lazy(() => import("./pages/FileDownload"))
+const App = lazy(() => import("./pages/App"))
 
 function Loading() {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setShow(true)
+    }, 500)
+    return () => {
+      clearTimeout(timeout)
+    }
+  }, [])
   return (
-    <>
-      <div className="radial-progress m-auto animate-spin" style={{"--value": 60, "--size": "3rem"} as any} />
-    </>
-  )
-}
-
-function addSuspense(children: ReactNode) {
-  return (
-    <Suspense fallback={<Loading />}>
-      {children}
-    </Suspense>
+    <div className={`radial-progress m-auto animate-spin ${show ? "" : "hidden"}`} style={{"--value": 60, "--size": "3rem"} as any} />
   )
 }
 
@@ -49,7 +49,7 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
   const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket<Request>(`wss://${location.hostname}/ws/`)
   const queryClient = useQueryClient()
   const loginStatus = useStore(state => state.type)
-  const { receiveHook } = usePlugin()
+  const receiveHook = useStore(state => state.receiveHook)
   const { names: chatNames, values: chatValues } = useChatList()
   const addMessage = useStore(state => state.addMessage)
   const changeAllChats = useStore(state => state.changeAllChat)
@@ -69,7 +69,6 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
     setAlertContent(content)
     setTimeout(() => {
       setErrorAlertOpen(false)
-
     }, 5000)
   }
   // string is uuid
@@ -100,7 +99,7 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
       func(message)
     }
     switch (message.type) {
-      case RequestType.MSG_SEND:
+      case "message":
         if (loginStatus != LoginType.LOGIN_SUCCESS) break
         (async () => {
           if (message.msg == "") return
@@ -123,7 +122,7 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
           }
         })()
         break
-      case RequestType.CTL_LJOIN:
+      case "chat_list":
         queryClient.setQueryData(["chat-list"], () => {
           const { values, names, parentChats } = responseToChatList(message.msg as any)
           changeAllChats(values, names)
@@ -181,34 +180,38 @@ window.makeRequest = makeRequest
 
 const router = createBrowserRouter(
   createRoutesFromElements(
-    <Route errorElement={addSuspense(<ErrorElement content="500 Internal Server Error" />)}>
+    <Route errorElement={<ErrorElement content="500 Internal Server Error" />}>
       <Route path="/" loader={loaders.homeLoader} />
-      <Route path="/chats/invite/" element={addSuspense(<Invite />)} loader={loaders.inviteLoader} />
-      <Route path="/chats/create/" element={addSuspense(<CreateChat />)} loader={loaders.createChatLoader} />
-      <Route path="/chats/:id/" element={addSuspense(<ChatRoot />)}>
-        <Route index element={addSuspense(<Chat />)} action={loaders.chatAction} loader={loaders.chatLoader} />
+      <Route path="/chats/invite/" element={<Invite />} loader={loaders.inviteLoader} />
+      <Route path="/chats/create/" element={<CreateChat />} loader={loaders.createChatLoader} />
+      <Route path="/chats/:id/" element={<ChatRoot />}>
+        <Route index element={<Chat />} action={loaders.chatAction} loader={loaders.chatLoader} />
         <Route path="settings/" element={<Settings />}>
           <Route index loader={loaders.settingsIndexLoader} />
           <Route path="null" element={<></>} loader={loaders.settingsLoader} />
-          <Route path="info" element={addSuspense(<SettingsInfo />)} loader={loaders.settingsInfoLoader} />
-          <Route path="actions" element={addSuspense(<SettingsActions />)} loader={loaders.settingsActionsLoader} />
+          <Route path="info" element={<SettingsInfo />} loader={loaders.settingsInfoLoader} />
+          <Route path="actions" element={<SettingsActions />} loader={loaders.settingsActionsLoader} />
         </Route>
       </Route>
-      <Route path="/files/:id" element={addSuspense(<FileDownload />)} loader={loaders.fileDownloadLoader} />
-      <Route path="/login" element={addSuspense(<Login />)} loader={loaders.loginLoader} action={loaders.loginAction} />
-      <Route path="/register" element={addSuspense(<Register />)} loader={loaders.registerLoader} action={loaders.registerAction} />
-      <Route path="*" element={addSuspense(<ErrorElement content="404 Not Found" />)} />
+      <Route path="/files/:id" element={<FileDownload />} loader={loaders.fileDownloadLoader} />
+      <Route path="/apps/:name" element={<App />} loader={loaders.appLoader} />
+      <Route path="/login" element={<Login />} loader={loaders.loginLoader} action={loaders.loginAction} />
+      <Route path="/register" element={<Register />} loader={loaders.registerLoader} action={loaders.registerAction} />
+      <Route path="*" element={<ErrorElement content="404 Not Found" />} />
     </Route>
   )
 )
 
 function SubRouter() {
   return (
-    <RouterProvider router={router} />
+    <Suspense fallback={<Loading />}>
+      <RouterProvider router={router} />
+    </Suspense>
   )
 }
 
-function App() {
+
+export default function () {
   const [successAlertOpen, setSuccessAlertOpen] = useState(false)
   const [errorAlertOpen, setErrorAlertOpen] = useState(false)
   const { 
@@ -219,6 +222,7 @@ function App() {
     successAlert,
     errorAlert
   } = useMessageWebSocket(setSuccessAlertOpen, setErrorAlertOpen)
+  const { t } = useTranslation()
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <NetworkContext.Provider value={{
@@ -231,13 +235,13 @@ function App() {
         <div className={classNames("alert alert-success shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", successAlertOpen || "hidden")}>
           <div>
             <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6 fill-none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>Success: {alertContent}</span>
+            <span>{t("Success")}: {alertContent}</span>
           </div>
         </div>
         <div className={classNames("alert alert-error shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", errorAlertOpen || "hidden")}>
           <div>
             <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6 fill-none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>Error! {alertContent}</span>
+            <span>{t("Error")}! {alertContent}</span>
           </div>
         </div>
         <SubRouter />
@@ -245,5 +249,3 @@ function App() {
     </div>
   )
 }
-
-export default App

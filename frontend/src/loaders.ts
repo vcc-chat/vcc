@@ -8,7 +8,6 @@ import {
 } from "react-router-dom"
 import localforage from "localforage"
 
-import { RequestType } from "./config"
 import store from "./store"
 import { LoginType } from "./state/login"
 import { queryClient } from "./tools"
@@ -17,7 +16,7 @@ import { PermissionKey, allPermissions } from "./Settings"
 import shellQuote from "shell-quote"
 
 export function wait() {
-  return new Promise<void>(res=>setTimeout(res, 0))
+  return new Promise<void>(res => setTimeout(res, 0))
 }
 
 async function authLoader(jumpToLogin: boolean = true) {
@@ -34,7 +33,7 @@ async function authLoader(jumpToLogin: boolean = true) {
   const token = store.getState().token
   if (typeof token == "string") {
     const req = await window.makeRequest({
-      type: RequestType.CTL_TOKEN,
+      type: "token_login",
       uid: 0,
       usrname: "",
       msg: token
@@ -78,7 +77,7 @@ export async function inviteLoader({ request }: LoaderFunctionArgs) {
     return redirect("/")
   }
   const chat = (await window.makeRequest({
-    type: RequestType.CTL_CINVI,
+    type: "chat_invite",
     uid: 0,
     usrname: "",
     msg: token
@@ -179,7 +178,7 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
       queryKey: ["user-list", chat],
       queryFn: async () => {
         const { msg } = await window.makeRequest({
-          type: RequestType.CTL_USERS,
+          type: "chat_get_users",
           uid: chat
         })
         return msg as unknown as [number, string][]
@@ -191,15 +190,16 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
   if (parsedResult.type == "message" || parsedResult.type == "error") {
     const rawRequest = {
       uid: chat,
-      type: RequestType.MSG_SEND,
+      type: "message" as const,
       usrname: store.getState().username,
       msg: msg,
       session: (session || null) as unknown as string
     }
-    if ((window as any).sendHook) {
-      const newRequest = await (window as any).sendHook(rawRequest)
+    const sendHook = store.getState().sendHook
+    if (sendHook) {
+      const newRequest = await sendHook(rawRequest)
       if (newRequest != null) {
-        await window.sendJsonMessage(await (window as any).sendHook(rawRequest))
+        await window.sendJsonMessage(newRequest)
       }
     } else {
       await window.sendJsonMessage(rawRequest)
@@ -209,7 +209,7 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
     const uid = await getUserID(parsedResult.user)
     if (uid == undefined) return { ok: false }
     const { uid: success } = await window.makeRequest({
-      type: RequestType.CTL_KICK,
+      type: "chat_kick",
       uid: chat,
       msg: uid as any
     })
@@ -221,7 +221,7 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
     const uid = await getUserID(parsedResult.user)
     if (uid == undefined) return { ok: false }
     const { uid: success } = await window.makeRequest({
-      type: RequestType.CTL_MPERM,
+      type: "chat_modify_user_permission",
       msg: {
         "chat_id": chat,
         "modified_user_id": uid,
@@ -265,7 +265,7 @@ export async function settingsInfoLoader({ params }: LoaderFunctionArgs) {
     queryKey: ["get-invite-link", chat],
     queryFn: async () => {
       const { msg } = await window.makeRequest({
-        type: RequestType.CTL_GINVI,
+        type: "chat_generate_invite",
         uid: chat,
         usrname: "",
         msg: ""
@@ -290,7 +290,7 @@ export async function settingsActionsLoader({ params }: LoaderFunctionArgs) {
     queryKey: ["chat-public", chat],
     queryFn: async () => {
       const { msg } = await window.makeRequest({
-        type: RequestType.CTL_GCPER,
+        type: "chat_get_permission",
         uid: chat,
         usrname: "",
         msg: ""
@@ -331,7 +331,7 @@ export async function loginAction({ request }: ActionFunctionArgs) {
   }
   const { uid, msg } = await window.makeRequest({
     uid: 0,
-    type: RequestType.CTL_LOGIN,
+    type: "login",
     usrname: username,
     msg: password
   })
@@ -369,7 +369,7 @@ export async function registerAction({ request }: ActionFunctionArgs) {
   }
   const { uid } = await window.makeRequest({
     uid: 0,
-    type: RequestType.CTL_REGIS,
+    type: "register",
     usrname: username,
     msg: password
   })
@@ -389,5 +389,9 @@ export function createChatLoader() {
 }
 
 export function fileDownloadLoader() {
+  return authLoader()
+}
+
+export function appLoader() {
   return authLoader()
 }

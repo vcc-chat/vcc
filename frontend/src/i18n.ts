@@ -13,7 +13,12 @@ i18n
     debug: import.meta.env.DEV,
     interpolation: {
       escapeValue: false
-    }
+    },
+    supportedLngs: [
+      "zh-CN",
+      "zh-TW",
+      "en"
+    ]
   })
 
 export default i18n

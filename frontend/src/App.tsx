@@ -56,25 +56,25 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
 
   const [alertContent, setAlertContent] = useState("")
 
-  function successAlert(content: string) {
+  const successAlert = useCallback((content: string) => {
     setSuccessAlertOpen(true)
     setAlertContent(content)
     setTimeout(() => {
       setSuccessAlertOpen(false)
     }, 5000)
-  }
+  }, [setSuccessAlertOpen, setAlertContent])
 
-  function errorAlert(content: string) {
+  const errorAlert = useCallback((content: string) => {
     setErrorAlertOpen(true)
     setAlertContent(content)
     setTimeout(() => {
       setErrorAlertOpen(false)
     }, 5000)
-  }
+  }, [setErrorAlertOpen, setAlertContent])
   // string is uuid
   const [handleFunctionList, setHandleFunctionList] = useState<Record<string, (value: Request) => void>>({})
 
-  async function makeRequest(request: Request) {
+  const makeRequest = useCallback(async (request: Request) => {
     sendJsonMessage(request)
     const result = await new Promise<Request>(res => {
       setHandleFunctionList(list => ({
@@ -83,13 +83,13 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
       }))
     })
     return result
-  }
+  }, [sendJsonMessage, setHandleFunctionList])
 
   useEffect(() => {
     // legacy but required for loaders
     window._makeRequest = makeRequest
     window._sendJsonMessage = sendJsonMessage
-  }, [])
+  }, [makeRequest, sendJsonMessage])
 
   useEffect(() => {
     const message = lastJsonMessage
@@ -97,6 +97,7 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
     const func = handleFunctionList[message.uuid!]
     if (func != undefined) {
       func(message)
+      return
     }
     switch (message.type) {
       case "message":
@@ -128,6 +129,9 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
           changeAllChats(values, names)
           return { values, names, parentChats }
         })
+        break
+      default:
+        console.error("Uncaught message: ", { message })
     }
   }, [lastMessage])
 
@@ -215,7 +219,6 @@ export default function () {
   const [successAlertOpen, setSuccessAlertOpen] = useState(false)
   const [errorAlertOpen, setErrorAlertOpen] = useState(false)
   const { 
-    sendJsonMessage, 
     makeRequest, 
     ready, 
     alertContent,

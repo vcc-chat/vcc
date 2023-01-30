@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo } from "react"
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query"
 import { persistQueryClient } from "@tanstack/react-query-persist-client"
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
@@ -116,7 +116,7 @@ export function responseToChatList(data: [number, string, number | null][]) {
       .reduce((a, b) => [
         ...a, ...(b[0] == -1 ? b[1].map(a => [a, []] as [number, number[]]) : [b])
       ], [] as [number, number[]][])
-  )
+  ) as Record<number, number[]>
   return { values, names, parentChats }
 }
 
@@ -126,31 +126,17 @@ export function useChatList() {
   const { isLoading, data, isFetching } = useQuery({
     queryKey: ["chat-list"],
     cacheTime: Infinity,
+    placeholderData: useMemo(() => ({
+      values: [] as number[],
+      names: [],
+      parentChats: {}
+    }), []),
     queryFn: async () => {
       const { msg: msgUntyped } = await window.makeRequest({
         type: "chat_list"
       })
       const data = msgUntyped as unknown as [number, string, number | null][]
-      const values = data.map(value => value[0])
-      const names = data.map(value => value[1])
-      const parentChats = Object.fromEntries(
-        data
-          .map<[number, number]>(([a, b, c]) => [c ?? -1, a])
-          .sort(([a, b], [c, d]) => +(a > c))
-          .reduce((a, [b, d]) => (
-            a.length ? (
-              c => c[0] == b ? (
-                a.slice(0, -1).concat([[b, c[1].concat(d)]])
-              ) : a.concat([[b, [d]]])
-            )(a.at(-1)!) : [[b, [d]]]
-          ) as [number, number[]][], [] as [number, number[]][])
-          .map<[number, number[]]>(([a, b], i, arr) => (
-            a == -1 ? [a, b.filter(a => !arr.map(([a, b]) => a).includes(a))] : [a, b]
-          ))
-          .reduce((a, b) => [
-            ...a, ...(b[0] == -1 ? b[1].map(a => [a, []] as [number, number[]]) : [b])
-          ], [] as [number, number[]][])
-      )
+      const { values, names, parentChats } = responseToChatList(data)
       changeAll(values, names)
       return {
         values,
@@ -161,21 +147,15 @@ export function useChatList() {
     enabled
   })
   const queryClient = useQueryClient()
-  const values = data?.values ??  []
-  const names = data?.names ??  []
-  const parentChats = data?.parentChats ?? {}
-  return {
-    loading: isLoading,
-    fetching: isFetching,
-    values: values as number[],
-    names: names as string[],
-    parentChats,
-    refresh() {
+  return Object.assign({
+    isLoading,
+    isFetching,
+    refresh: useCallback(() => {
       queryClient.invalidateQueries({
         queryKey: ["chat-list"]
       })
-    }
-  }
+    }, [queryClient])
+  }, data!)
 }
 
 export function useTitle(title: string) {

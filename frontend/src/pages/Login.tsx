@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useNavigate, Form } from "react-router-dom"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
@@ -14,7 +14,7 @@ export default function Login(props: {}) {
   const changeUsername = useStore(state => state.changeUsername)
   const navigate = useNavigate()
   const loginActionData = useLoginActionData()
-  const { errorAlert } = useNetwork()
+  const { makeRequest, errorAlert } = useNetwork()
   const success = useStore(state => state.success)
   const failed = useStore(state => state.failed)
   const startGet = useStore(state => state.startGet)
@@ -38,6 +38,24 @@ export default function Login(props: {}) {
       navigate("/")
     }
   }, [loginStatus])
+
+  const githubOauthHandler = useCallback(async () => {
+    const { usrname: requestID, msg: url } = await makeRequest({
+      type: "request_oauth",
+      msg: "github"
+    })
+    window.open(url, "_blank", "popup,noopener,noreferrer")
+    const { uid, usrname: username, msg: token } = await makeRequest({
+      type: "login_oauth",
+      usrname: "github",
+      msg: requestID
+    })
+    setToken(token)
+    changeUsername(username)
+    success()
+    navigate("/")
+  }, [makeRequest])
+
   return (
     <>
       <div className={classNames("hero min-h-screen bg-base-200", {
@@ -73,14 +91,17 @@ export default function Login(props: {}) {
                 </label>
                 <input type="password" placeholder={t("Password") ?? undefined} className="input input-bordered" name="password" />
               </div>
-              <div className="form-control mt-6">
-                <div className="flex w-full">
-                  <button className="btn" onClick={() => {
+              <div className="form-control mt-6 flex space-y-2">
+                <div className="flex w-full btn-group">
+                  <button className="btn btn-ghost" onClick={() => {
                     navigate("/register")
                     console.log(1)
-                  }} type="button">{t("Go to register")}</button>
-                  <button className="ml-2 flex-1 btn btn-primary" type="submit">{t("Login")}</button>
+                  }} type="button">{t("Register")}</button>
+                  <button className="flex-1 btn btn-primary" type="submit">{t("Login")}</button>
                 </div>
+                <button className="btn" onClick={githubOauthHandler} type="button">
+                  {t("Continue with Github")}
+                </button>
               </div>
             </div>
           </div>

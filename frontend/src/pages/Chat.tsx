@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, DragEvent, memo, useId, DetailedHTMLProps } from "react"
+import { useEffect, useState, useRef, useCallback, DragEvent, memo, useId, DetailedHTMLProps, useLayoutEffect } from "react"
 import { createPortal } from "react-dom"
 import { useParams, useFetcher, Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
@@ -10,22 +10,24 @@ import remarkDirectiveRehype from "remark-directive-rehype"
 // import { PrismAsyncLight as SyntaxHighlighter } from "react-syntax-highlighter"
 import classNames from "classnames"
 // import { materialLight } from "react-syntax-highlighter/dist/esm/styles/prism"
-import formatDistance from "date-fns/formatDistance"
+import { formatDistanceToNow } from "date-fns"
+import { zhCN, zhTW, enUS as en } from "date-fns/locale"
 import FileUploadIcon from "@material-design-icons/svg/outlined/file_upload.svg"
 import SendIcon from "@material-design-icons/svg/filled/send.svg"
 
-import { Request, RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
+import { type RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
 import { MessageAvatar, MessageLink } from "../Messages"
 import useStore from "../store"
 import { stringToNumber, useChatList, useNetwork } from "../tools"
 import { useChatActionData } from "../loaders"
-
 
 const MessageComponent = memo(function MessageComponent({ nowMsg }: {
   nowMsg: RequestWithTime
 }) {
   const req = nowMsg.req
   const date = new Date(nowMsg.time)
+  const markdownToHTML = useStore(state => state.markdownToHTML, () => true)
+  const addMarkdownToHTML = useStore(state => state.addMarkdownToHTML)
   const dragStartHandler = useCallback((ev: DragEvent<HTMLDivElement>) => {
     ev.dataTransfer.dropEffect = "copy"
     ev.dataTransfer.setData(MESSAGE_MIME_TYPE, JSON.stringify({
@@ -34,14 +36,34 @@ const MessageComponent = memo(function MessageComponent({ nowMsg }: {
     ev.dataTransfer.setData("text/plain", `${req.usrname}: ${req.msg}`)
   }, [req.msg])
   const selfUsername = useStore(state => state.username)
-  const { t } = useTranslation()
+  const savedHTML = markdownToHTML[req.msg]
+  const markdownChildren = savedHTML === undefined ? req.msg : ""
+  const html = savedHTML === undefined ? null : savedHTML
+  const { t, i18n } = useTranslation()
+  const savePlugin: any = useCallback(() => {
+    return (transformer: any) => {
+      if (html) {
+        Object.assign(transformer, html)
+      } else {
+        setTimeout(() => {
+          addMarkdownToHTML(req.msg, transformer)
+        }, 0)
+      }
+    }
+  }, [html, req.msg, addMarkdownToHTML])
   return (
     <li key={nowMsg.time} className={classNames("chat", req.usrname == selfUsername ? "chat-end" : "chat-start")}>
       <MessageAvatar name={req.usrname} />
       <div className={classNames("chat-header flex space-x-2", req.usrname == selfUsername ? "flex-row-reverse" : "flex-row")}>
         {req.usrname}
         <div className="text-xs opacity-50 mx-2 my-auto" draggable onDragStart={dragStartHandler}>
-          {formatDistance(date, new Date)}
+          {formatDistanceToNow(date, {
+            locale: i18n.language == "zh-TW" ? zhTW : (
+              i18n.language == "zh-CN" ? zhCN : (
+                en
+              )
+            )
+          })}
         </div>
       </div>
       <div className={classNames("prose prose-headings:text-inherit chat-bubble", [
@@ -53,39 +75,47 @@ const MessageComponent = memo(function MessageComponent({ nowMsg }: {
         "chat-bubble-warning",
         "chat-bubble-error"
       ][stringToNumber(req.usrname) % 6])}>
-        <ReactMarkdown children={req.msg} allowedElements={[
-          "a", "blockquote", "br",
-          "code", "del", "em",
-          "h1", "h2", "h3",
-          "h4", "h5", "h6",
-          "hr", "img", "input",
-          "li", "ol", "p",
-          "pre", "table", "tbody",
-          "td", "th", "thead",
-          "tr", "ul",
-          // extensions
-          "file"
-        ]} remarkPlugins={[remarkGfm, remarkDirective, remarkDirectiveRehype, [remarkGithub, {
-          repository: "https://github.com/a/b",
-          mentionStrong: false,
-          buildUrl(values) {
-            if (values.type == "commit" || values.type == "compare") return false
-            if (values.type == "issue") {
-              if (values.user != "a" || values.project != "b") return false
-              return "/chats/" + values.no
+        {(!!markdownChildren || !!html) && <ReactMarkdown
+          children={markdownChildren}
+          allowedElements={[
+            "a", "blockquote", "br",
+            "code", "del", "em",
+            "h1", "h2", "h3",
+            "h4", "h5", "h6",
+            "hr", "img", "input",
+            "li", "ol", "p",
+            "pre", "table", "tbody",
+            "td", "th", "thead",
+            "tr", "ul",
+            // extensions
+            "file"
+          ]}
+          remarkPlugins={html ? [] : [remarkGfm, remarkDirective, remarkDirectiveRehype, [remarkGithub, {
+            repository: "https://github.com/a/b",
+            mentionStrong: false,
+            buildUrl(values) {
+              if (values.type == "commit" || values.type == "compare") return false
+              if (values.type == "issue") {
+                if (values.user != "a" || values.project != "b") return false
+                return "/chats/" + values.no
+              }
+              if (values.type == "mention") {
+                return "/users/" + encodeURIComponent(values.user)
+              }
             }
-            if (values.type == "mention") {
-              return "/users/" + encodeURIComponent(values.user)
-            }
-          }
-        } as RemarkGithubOptions]]} components={{
-          a: ({node, href, children, ...props}) => (
-            <MessageLink link={href!} children={children} />
-          ),
-          ["file" as any]: ({ id }: { id: string }) => (
-            <Link className="link" to={`/files/${encodeURIComponent(id)}`} replace>{t("Download File")}</Link>
-          )
-        }} />
+          } as RemarkGithubOptions]]}
+          rehypePlugins={[
+            savePlugin
+          ]}
+          components={{
+            a: ({node, href, children, ...props}) => (
+              <MessageLink link={href!} children={children} />
+            ),
+            ["file" as any]: ({ id }: { id: string }) => (
+              <Link className="link" to={`/files/${encodeURIComponent(id)}`} replace>{t("Download File")}</Link>
+            )
+          }}
+        />}
       </div>
     </li>
   )
@@ -141,16 +171,15 @@ export function FileUploadDialog({ id }: {
   ), document.body)
 }
 
-export default function Chat() {
+export default memo(function Chat() {
   const [msgBody, setMsgBody] = useState("")
   const params = useParams()
-  const username = useStore(state => state.username)
   const { values: chats } = useChatList()
   const chatRaw = Number(params.id)
   const chat = Number.isNaN(chatRaw) || !chats.includes(chatRaw) ? null : chatRaw
   const messageHistory = useStore(state => state.messages)
   const messages = chat == null || messageHistory[chat] == null ? [] : messageHistory[chat]
-  const { makeRequest, ready, successAlert, errorAlert } = useNetwork()
+  const { ready, successAlert, errorAlert } = useNetwork()
   const ref = useRef<HTMLUListElement>(null)
   const fetcher = useFetcher()
   const session = useStore(state => state.session)
@@ -231,4 +260,4 @@ export default function Chat() {
       </div>
     </>
   )
-}
+})

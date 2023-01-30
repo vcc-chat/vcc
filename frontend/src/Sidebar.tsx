@@ -193,23 +193,8 @@ export function Sidebar({ open, setOpen }: {
   setOpen: (value: boolean) => void
 }) {
   const navigate = useNavigate()
-  const { successAlert, errorAlert } = useNetwork()
-  const { refresh: refreshChats, parentChats } = useChatList()
+  const { parentChats } = useChatList()
   const { t } = useTranslation()
-
-  const changeValue = useStore(state => state.changeChat)
-  const changeName = useStore(state => state.changeChatName)
-
-  const afterJoinHandler = useCallback((chat: number, req: Request) => {
-    if (req.uid) {
-      changeName(req.usrname)
-      changeValue(chat)
-      successAlert(t("You have joined the chat successfully. "))
-      refreshChats()
-    } else {
-      errorAlert(t("No such chat. "))
-    }
-  }, [successAlert, errorAlert, refreshChats])
 
   const listCreateItemButtonClickHandler = useCallback(() => {
     navigate("/chats/create")
@@ -257,7 +242,7 @@ export function Sidebar({ open, setOpen }: {
       </ul>
       <div className="divider my-0" />
         <ul className="flex flex-col">
-          <div className="opacity-80 text-sm m-4">Chat</div>
+          <div className="opacity-80 text-sm m-4">{t("Chat")}</div>
           {sidebarItems}
         </ul>
       </div>
@@ -319,7 +304,7 @@ export function UsersSidebar({ open, setOpen }: {
 }) {
   const chat = useStore(state => state.chat)
   const { makeRequest, successAlert, errorAlert } = useNetwork()
-  const { refresh: refreshChats, values: chatValues, loading: chatValuesLoading } = useChatList()
+  const { refresh: refreshChats, values: chatValues, isLoading: chatValuesLoading } = useChatList()
   const navigate = useNavigate()
   const { t } = useTranslation()
   useEffect(() => {
@@ -442,7 +427,7 @@ export function UsersSidebar({ open, setOpen }: {
 
   return (
     <div className={classNames("w-full overflow-x-hidden flex transition-all duration-300 no-scrollbar bg-base-100", {
-      "sm:max-w-xs max-w-full sm:w-xs w-full overflow-y-auto": open,
+      "sm:max-w-[18rem] max-w-full sm:w-[18rem] w-full overflow-y-auto": open,
       "max-w-0 overflow-y-hidden": !open
     })}>
       <ModifyPermissionDialog open={dialogOpen} setOpen={setDialogOpen} uid={handleUserID} username={handleUsername} modifyPermissionDialogID={modifyPermissionDialogID} />

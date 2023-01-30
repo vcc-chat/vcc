@@ -120,6 +120,31 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                             uid=cast(Any, None),
                             username=""
                         )
+                case "request_oauth":
+                    url, request_id = await client.request_oauth(msg)
+                    await send("request_oauth", username=request_id, msg=url)
+                case "login_oauth":
+                    login_result = await client.login_oauth(username, msg)
+                    if login_result is not None:
+                        # await client.chat_list()
+                        token = jwt.encode({
+                            "username": username,
+                            "uid": login_result,
+                            "exp": datetime.now(tz=timezone.utc) + timedelta(days=14)
+                        }, key, "HS512")
+                    else:
+                        token = ""
+                    await send(
+                        "login_oauth",
+                        uid=cast(Any, None if login_result is None else int(login_result)),
+                        username=cast(str, client.name),
+                        msg=token
+                    )
+                    if login_result is not None:
+                        value = await client.chat_list()
+                        logging.debug(f"{value=}")
+                        await send("chat_list_somebody_joined", msg=cast(Any, value))
+                    
                 case "is_online":
                     await send("is_online", msg=cast(Any, await client.is_online(cast(Any, msg))))
                 case "register":

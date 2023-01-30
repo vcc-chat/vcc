@@ -65,11 +65,11 @@ export default function Register(props: {}) {
                 <input type="password" placeholder={t("Password") ?? undefined} className="input input-bordered" name="password" />
               </div>
               <div className="form-control mt-6">
-                <div className="flex w-full">
-                  <button className="btn" onClick={loginCallback} type="button">
-                    {t("Go to login")}
+                <div className="flex w-full btn-group">
+                  <button className="btn btn-ghost" onClick={loginCallback} type="button">
+                    {t("Login")}
                   </button>
-                  <button className="ml-2 flex-1 btn btn-primary" type="submit">{t("Register")}</button>
+                  <button className="flex-1 btn btn-primary" type="submit">{t("Register")}</button>
                 </div>
               </div>
             </div>

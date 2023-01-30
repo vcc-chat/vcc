@@ -25,7 +25,8 @@ const useStore = create<
         partialize: state => ({
           messages: state.messages,
           token: state.token,
-          pluginLinks: state.pluginLinks
+          pluginLinks: state.pluginLinks,
+          markdownToHTML: state.markdownToHTML
         })
       }
     )

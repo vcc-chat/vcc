@@ -8,7 +8,8 @@ export type RequestType =
   | "chat_modify_user_permission" | "chat_generate_invite" 
   | "chat_check_invite" | "chat_invite" | "chat_get_permission" 
   | "chat_modify_permission" | "session_join" | "is_online" 
-  | "file_upload" | "file_download"
+  | "file_upload" | "file_download" | "request_oauth"
+  | "login_oauth"
 
 export type Request = {
   type: RequestType

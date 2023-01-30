@@ -25,19 +25,25 @@ html {
   letter-spacing: 0.01rem;
   background-color: var(--gray-50);
   color: var(--gray-900);
-}
-body {
-  position: fixed;
   height: 100%;
   width: 100%;
   display: flex;
-  flex-direction: column;
+}
+body {
+  margin: 0;
+  height: 100vh;
+  flex: 1
+}
+@supports (-webkit-touch-callout: none) {
+  body {
+    height: -webkit-fill-available;
+  }
 }
 *, *::before, *::after {
   box-sizing: border-box;
 }
 #root {
-  flex: 1;
+  height: 100%;
   display: flex;
 }
 .no-scrollbar::-webkit-scrollbar {

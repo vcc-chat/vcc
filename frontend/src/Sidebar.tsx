@@ -353,8 +353,9 @@ export function UsersSidebar({ open, setOpen }: {
     enabled: chat != null && usersData != null && !!usersData?.length
   })
   const users: [string, number, boolean][] = useMemo(() => {
+    if (!usersData) return []
     if (onlineData === undefined) {
-     return usersData?.map?.(([id, name]) => [name, id, false]) ?? []
+      return usersData?.map?.(([id, name]) => [name, id, false]) ?? []
     } else {
       return usersData?.map?.(([id, name], index) => [name, id, onlineData[index]]) ?? []
     }
@@ -397,7 +398,7 @@ export function UsersSidebar({ open, setOpen }: {
 
   const handleBanButtonClick = useCallback(async () => {
     const ban = !permissionRawData?.[handleUserID]?.banned
-    const { uid } = await window.makeRequest({
+    const { uid } = await makeRequest({
       type: "chat_modify_user_permission",
       msg: {
         "chat_id": chat,

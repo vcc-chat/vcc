@@ -44,7 +44,7 @@ export default function Login(props: {}) {
       type: "request_oauth",
       msg: "github"
     })
-    window.open(url, "_blank", "popup,noopener,noreferrer")
+    window.open(url, "_blank", "noopener,noreferrer")
     const { uid, usrname: username, msg: token } = await makeRequest({
       type: "login_oauth",
       usrname: "github",

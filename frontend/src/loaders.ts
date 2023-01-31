@@ -20,6 +20,7 @@ export function wait() {
 }
 
 async function authLoader(jumpToLogin: boolean = true) {
+  const { makeRequest } = store.getState()
   const loginStatus = store.getState().type
   if (loginStatus == LoginType.LOGIN_SUCCESS) {
     return new Response()
@@ -32,7 +33,7 @@ async function authLoader(jumpToLogin: boolean = true) {
   }
   const token = store.getState().token
   if (typeof token == "string") {
-    const req = await window.makeRequest({
+    const req = await makeRequest({
       type: "token_login",
       uid: 0,
       usrname: "",
@@ -68,6 +69,7 @@ function badRequest() {
 }
 
 export async function inviteLoader({ request }: LoaderFunctionArgs) {
+  const { makeRequest } = store.getState()
   const authResult = await authLoader()
   if (authResult.status != 200) return authResult
 
@@ -76,7 +78,7 @@ export async function inviteLoader({ request }: LoaderFunctionArgs) {
   if (token == null) {
     return redirect("/")
   }
-  const chat = (await window.makeRequest({
+  const chat = (await makeRequest({
     type: "chat_invite",
     uid: 0,
     usrname: "",
@@ -161,6 +163,7 @@ function parseCommand(msg: string) {
 }
 
 export async function chatAction({ params, request }: ActionFunctionArgs) {
+  const { makeRequest, sendJsonMessage } = store.getState()
   const { id: chatString } = params
   const { msg, session } = Object.fromEntries(await request.formData())
   console.log({ chatString, msg, session })
@@ -177,7 +180,7 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
     const data = await queryClient.fetchQuery({
       queryKey: ["user-list", chat],
       queryFn: async () => {
-        const { msg } = await window.makeRequest({
+        const { msg } = await makeRequest({
           type: "chat_get_users",
           uid: chat
         })
@@ -199,16 +202,16 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
     if (sendHook) {
       const newRequest = await sendHook(rawRequest)
       if (newRequest != null) {
-        await window.sendJsonMessage(newRequest)
+        await sendJsonMessage(newRequest)
       }
     } else {
-      await window.sendJsonMessage(rawRequest)
+      await sendJsonMessage(rawRequest)
     }
     return { ok: true }
   } else if (parsedResult.type == "kick") {
     const uid = await getUserID(parsedResult.user)
     if (uid == undefined) return { ok: false }
-    const { uid: success } = await window.makeRequest({
+    const { uid: success } = await makeRequest({
       type: "chat_kick",
       uid: chat,
       msg: uid as any
@@ -220,7 +223,7 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
   } else if (parsedResult.type == "perm-set") {
     const uid = await getUserID(parsedResult.user)
     if (uid == undefined) return { ok: false }
-    const { uid: success } = await window.makeRequest({
+    const { uid: success } = await makeRequest({
       type: "chat_modify_user_permission",
       msg: {
         "chat_id": chat,
@@ -252,6 +255,7 @@ export async function settingsLoader() {
 }
 
 export async function settingsInfoLoader({ params }: LoaderFunctionArgs) {
+  const { makeRequest } = store.getState()
   const authResult = await authLoader()
   if (authResult.status != 200) return authResult
 
@@ -264,7 +268,7 @@ export async function settingsInfoLoader({ params }: LoaderFunctionArgs) {
   const inviteLink = await queryClient.fetchQuery({
     queryKey: ["get-invite-link", chat],
     queryFn: async () => {
-      const { msg } = await window.makeRequest({
+      const { msg } = await makeRequest({
         type: "chat_generate_invite",
         uid: chat,
         usrname: "",
@@ -277,6 +281,7 @@ export async function settingsInfoLoader({ params }: LoaderFunctionArgs) {
 }
 
 export async function settingsActionsLoader({ params }: LoaderFunctionArgs) {
+  const { makeRequest } = store.getState()
   const authResult = await authLoader()
   if (authResult.status != 200) return authResult
 
@@ -289,7 +294,7 @@ export async function settingsActionsLoader({ params }: LoaderFunctionArgs) {
   const a = await queryClient.fetchQuery({
     queryKey: ["chat-public", chat],
     queryFn: async () => {
-      const { msg } = await window.makeRequest({
+      const { msg } = await makeRequest({
         type: "chat_get_permission",
         uid: chat,
         usrname: "",
@@ -325,11 +330,12 @@ export async function loginLoader() {
 }
 
 export async function loginAction({ request }: ActionFunctionArgs) {
+  const { makeRequest } = store.getState()
   const { username, password } = Object.fromEntries(await request.formData())
   if (typeof username != "string" || typeof password != "string") {
     throw badRequest()
   }
-  const { uid, msg } = await window.makeRequest({
+  const { uid, msg } = await makeRequest({
     uid: 0,
     type: "login",
     usrname: username,
@@ -363,11 +369,12 @@ export async function registerLoader() {
 }
 
 export async function registerAction({ request }: ActionFunctionArgs) {
+  const { makeRequest } = store.getState()
   const { username, password } = Object.fromEntries(await request.formData())
   if (typeof username != "string" || typeof password != "string") {
     throw badRequest()
   }
-  const { uid } = await window.makeRequest({
+  const { uid } = await makeRequest({
     uid: 0,
     type: "register",
     usrname: username,
@@ -394,4 +401,14 @@ export function fileDownloadLoader() {
 
 export function appLoader() {
   return authLoader()
+}
+
+export function chooseBackendLoader({ request: { url } }: LoaderFunctionArgs) {
+  const path = new URL(url).pathname
+  const { backendAddress } = store.getState()
+  if (!backendAddress && path != "/choose-backend") {
+    return redirect("/choose-backend")
+  }
+  // console.log(request)
+  return new Response()
 }

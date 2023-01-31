@@ -179,13 +179,14 @@ export default memo(function Chat() {
   const chat = Number.isNaN(chatRaw) || !chats.includes(chatRaw) ? null : chatRaw
   const messageHistory = useStore(state => state.messages)
   const messages = chat == null || messageHistory[chat] == null ? [] : messageHistory[chat]
-  const { ready, successAlert, errorAlert } = useNetwork()
+  const { successAlert, errorAlert } = useNetwork()
   const ref = useRef<HTMLUListElement>(null)
   const fetcher = useFetcher()
   const session = useStore(state => state.session)
   const result = useChatActionData()
   const fileUploadDialogID = useId()
   const { t } = useTranslation()
+  const ready = useStore(state => state.ready)
   useEffect(() => {
     if (ref.current == null) return
     ref.current.scrollTo(0, ref.current!.scrollHeight) 

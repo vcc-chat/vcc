@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, useRouteError, isRouteErrorResponse } from "react-router-dom"
 
@@ -6,6 +7,9 @@ export default function NotFound({ content }: {
 }) {
   const error = useRouteError()
   const { t } = useTranslation()
+  useEffect(() => {
+    console.error(error)
+  })
   return (
     <div className="hero min-h-screen bg-base-200">
       <div className="hero-content text-center">

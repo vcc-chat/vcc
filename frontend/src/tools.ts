@@ -31,36 +31,15 @@ broadcastQueryClient({
   broadcastChannel: "web-vcc"
 })
 
-export const NetworkContext = createContext<{
-  ready: boolean,
-  makeRequest: ((arg0: Request) => Promise<Request>) | null,
-  successAlert: ((msg: string) => void) | null,
-  errorAlert: ((msg: string) => void) | null
-}>({
-  ready: false, 
-  makeRequest: null,
-  successAlert: null,
-  errorAlert: null
-})
+const makeRequestSelector = (state: ReturnType<typeof useStore.getState>) => state.makeRequest
+const successAlertSelector = (state: ReturnType<typeof useStore.getState>) => state.successAlert
+const errorAlertSelector = (state: ReturnType<typeof useStore.getState>) => state.errorAlert
 
 export function useNetwork() {
-  const { ready, makeRequest: makeRequestRaw, successAlert, errorAlert } = useContext(NetworkContext)!
-  function makeRequest(request: {
-    type: RequestType,
-    uid?: number,
-    usrname?: string,
-    msg?: string
-  }) {
-    return makeRequestRaw!({
-      type: request.type,
-      uid: request.uid ?? 0,
-      usrname: request.usrname ?? "",
-      msg: request.msg ?? "",
-      uuid: URL.createObjectURL(new Blob).slice(-36)
-    })
-  }
+  const makeRequest = useStore(makeRequestSelector)
+  const successAlert = useStore(successAlertSelector)
+  const errorAlert = useStore(errorAlertSelector)
   return {
-    ready,
     makeRequest,
     successAlert: successAlert!,
     errorAlert: errorAlert!
@@ -123,6 +102,7 @@ export function responseToChatList(data: [number, string, number | null][]) {
 export function useChatList() {
   const enabled = useStore(state => state.type) == LoginType.LOGIN_SUCCESS
   const changeAll = useStore(state => state.changeAllChat)
+  const makeRequest = useStore(state => state.makeRequest)
   const { isLoading, data, isFetching } = useQuery({
     queryKey: ["chat-list"],
     cacheTime: Infinity,
@@ -132,7 +112,7 @@ export function useChatList() {
       parentChats: {}
     }), []),
     queryFn: async () => {
-      const { msg: msgUntyped } = await window.makeRequest({
+      const { msg: msgUntyped } = await makeRequest({
         type: "chat_list"
       })
       const data = msgUntyped as unknown as [number, string, number | null][]

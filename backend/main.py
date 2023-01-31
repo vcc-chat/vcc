@@ -128,7 +128,7 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                     if login_result is not None:
                         # await client.chat_list()
                         token = jwt.encode({
-                            "username": username,
+                            "username": client.name,
                             "uid": login_result,
                             "exp": datetime.now(tz=timezone.utc) + timedelta(days=14)
                         }, key, "HS512")

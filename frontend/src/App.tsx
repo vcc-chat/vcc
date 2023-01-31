@@ -8,9 +8,9 @@ import {
 } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 
-import { WEBSOCKET_PORT, RequestType, Request } from "./config"
+import type { Request } from "./config"
 import { Notification, notify } from "./Notification"
-import { NetworkContext, responseToChatList, useChatList } from "./tools"
+import { responseToChatList, useChatList } from "./tools"
 import { LoginType } from "./state/login"
 import useStore from "./store"
 import * as loaders from "./loaders"
@@ -29,13 +29,14 @@ const ErrorElement = lazy(() => import("./pages/ErrorElement"))
 const CreateChat = lazy(() => import("./pages/CreateChat"))
 const FileDownload = lazy(() => import("./pages/FileDownload"))
 const App = lazy(() => import("./pages/App"))
+const ChooseBackend = lazy(() => import("./pages/ChooseBackend"))
 
 function Loading() {
   const [show, setShow] = useState(false)
   useEffect(() => {
     const timeout = setTimeout(() => {
       setShow(true)
-    }, 500)
+    }, 200)
     return () => {
       clearTimeout(timeout)
     }
@@ -45,51 +46,28 @@ function Loading() {
   )
 }
 
-function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setErrorAlertOpen: (open: boolean) => void) {
-  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket<Request>(`wss://${location.hostname}/ws/`)
+function useMessageWebSocket() {
+  const backendAddress = useStore(state => state.backendAddress!)
+  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket<Request>(backendAddress)
   const queryClient = useQueryClient()
-  const loginStatus = useStore(state => state.type)
+  const loginSuccess = useStore(state => state.type != LoginType.LOGIN_SUCCESS)
   const receiveHook = useStore(state => state.receiveHook)
   const { names: chatNames, values: chatValues } = useChatList()
   const addMessage = useStore(state => state.addMessage)
   const changeAllChats = useStore(state => state.changeAllChat)
-
-  const [alertContent, setAlertContent] = useState("")
-
-  const successAlert = useCallback((content: string) => {
-    setSuccessAlertOpen(true)
-    setAlertContent(content)
-    setTimeout(() => {
-      setSuccessAlertOpen(false)
-    }, 5000)
-  }, [setSuccessAlertOpen, setAlertContent])
-
-  const errorAlert = useCallback((content: string) => {
-    setErrorAlertOpen(true)
-    setAlertContent(content)
-    setTimeout(() => {
-      setErrorAlertOpen(false)
-    }, 5000)
-  }, [setErrorAlertOpen, setAlertContent])
-  // string is uuid
-  const [handleFunctionList, setHandleFunctionList] = useState<Record<string, (value: Request) => void>>({})
-
-  const makeRequest = useCallback(async (request: Request) => {
-    sendJsonMessage(request)
-    const result = await new Promise<Request>(res => {
-      setHandleFunctionList(list => ({
-        ...list,
-        [request.uuid!]: res
-      }))
-    })
-    return result
-  }, [sendJsonMessage, setHandleFunctionList])
+  const setSendJsonMessageRaw = useStore(state => state.setSendJsonMessageRaw)
+  const setReady = useStore(state => state.setReady)
+  const errorAlert = useStore(state => state.successAlert)
 
   useEffect(() => {
-    // legacy but required for loaders
-    window._makeRequest = makeRequest
-    window._sendJsonMessage = sendJsonMessage
-  }, [makeRequest, sendJsonMessage])
+    setSendJsonMessageRaw(sendJsonMessage)
+  }, [sendJsonMessage])
+
+  useEffect(() => {
+    setReady(readyState === ReadyState.OPEN)
+  }, [readyState])
+
+  const handleFunctionList = useStore(state => state.handleFunctionList)
 
   useEffect(() => {
     const message = lastJsonMessage
@@ -101,7 +79,7 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
     }
     switch (message.type) {
       case "message":
-        if (loginStatus != LoginType.LOGIN_SUCCESS) break
+        if (loginSuccess) break
         (async () => {
           if (message.msg == "") return
           const newMessage = {
@@ -133,59 +111,57 @@ function useMessageWebSocket(setSuccessAlertOpen: (open: boolean) => void, setEr
       default:
         console.error("Uncaught message: ", { message })
     }
-  }, [lastMessage])
+  }, [lastMessage, handleFunctionList])
 
   useEffect(() => {
     if (readyState !== ReadyState.CLOSED) return
     const timeout = setTimeout(() => {
-      errorAlert("An unexpected error occurred. ")
+      errorAlert!("An unexpected error occurred. ")
     }, 2000)
     return () => clearTimeout(timeout)
   }, [readyState])
+}
+
+function useAlert(setSuccessAlertOpen: (open: boolean) => void, setErrorAlertOpen: (open: boolean) => void) {
+  const setSuccessAlert = useStore(state => state.setSuccessAlert)
+  const setErrorAlert = useStore(state => state.setErrorAlert)
+
+  const [alertContent, setAlertContent] = useState("")
+
+  const successAlert = useCallback((content: string) => {
+    setSuccessAlertOpen(true)
+    setAlertContent(content)
+    setTimeout(() => {
+      setSuccessAlertOpen(false)
+    }, 5000)
+  }, [setSuccessAlertOpen, setAlertContent])
+
+  useEffect(() => {
+    setSuccessAlert(successAlert)
+  }, [successAlert])
+
+  const errorAlert = useCallback((content: string) => {
+    setErrorAlertOpen(true)
+    setAlertContent(content)
+    setTimeout(() => {
+      setErrorAlertOpen(false)
+    }, 5000)
+  }, [setErrorAlertOpen, setAlertContent])
+
+  useEffect(() => {
+    setErrorAlert(errorAlert)
+  }, [errorAlert])
   
   return {
-    sendJsonMessage(req: Request) {
-      sendJsonMessage(req as any)
-    },
-    makeRequest,
-    ready: readyState === ReadyState.OPEN,
-    alertContent,
-    successAlert,
-    errorAlert
+    alertContent
   }
 }
-async function makeRequest(request: {
-  type: RequestType,
-  uid?: number,
-  usrname?: string,
-  msg?: string
-}) {
-  while (window._makeRequest === undefined) {
-    await loaders.wait()
-  }
-  return window._makeRequest({
-    type: request.type,
-    uid: request.uid ?? 0,
-    usrname: request.usrname ?? "",
-    msg: request.msg ?? "",
-    uuid: URL.createObjectURL(new Blob).slice(-36)
-  })
-}
-
-async function sendJsonMessage(req: Request) {
-  while (window._sendJsonMessage === undefined) {
-    await loaders.wait()
-  }
-  window._sendJsonMessage(req)
-}
-
-window.sendJsonMessage = sendJsonMessage
-window.makeRequest = makeRequest
 
 const router = createBrowserRouter(
   createRoutesFromElements(
-    <Route errorElement={<ErrorElement content="500 Internal Server Error" />}>
+    <Route errorElement={<ErrorElement content="500 Internal Server Error" />} loader={loaders.chooseBackendLoader}>
       <Route path="/" loader={loaders.homeLoader} />
+      <Route path="/choose-backend" element={<ChooseBackend />} />
       <Route path="/chats/invite/" element={<Invite />} loader={loaders.inviteLoader} />
       <Route path="/chats/create/" element={<CreateChat />} loader={loaders.createChatLoader} />
       <Route path="/chats/:id/" element={<ChatRoot />}>
@@ -214,41 +190,44 @@ function SubRouter() {
   )
 }
 
-
-export default function () {
+function Alert() {
   const [successAlertOpen, setSuccessAlertOpen] = useState(false)
   const [errorAlertOpen, setErrorAlertOpen] = useState(false)
-  const { 
-    makeRequest, 
-    ready, 
-    alertContent,
-    successAlert,
-    errorAlert
-  } = useMessageWebSocket(setSuccessAlertOpen, setErrorAlertOpen)
   const { t } = useTranslation()
+  const { 
+    alertContent
+  } = useAlert(setSuccessAlertOpen, setErrorAlertOpen)
+  return (
+    <>
+      <div className={classNames("alert alert-success shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", successAlertOpen || "hidden")}>
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6 fill-none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span>{t("Success")}: {alertContent}</span>
+        </div>
+      </div>
+      <div className={classNames("alert alert-error shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", errorAlertOpen || "hidden")}>
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6 fill-none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span>{t("Error")}! {alertContent}</span>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function WebSocket() {
+  useMessageWebSocket()
+  return null
+}
+
+export default function () {
+  const backendAddress = useStore(state => state.backendAddress)
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <NetworkContext.Provider value={{
-        ready,
-        makeRequest,
-        successAlert,
-        errorAlert
-      }}>
-        <Notification />
-        <div className={classNames("alert alert-success shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", successAlertOpen || "hidden")}>
-          <div>
-            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6 fill-none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>{t("Success")}: {alertContent}</span>
-          </div>
-        </div>
-        <div className={classNames("alert alert-error shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", errorAlertOpen || "hidden")}>
-          <div>
-            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6 fill-none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>{t("Error")}! {alertContent}</span>
-          </div>
-        </div>
-        <SubRouter />
-      </NetworkContext.Provider>
+      {!!backendAddress && <WebSocket />}
+      <Notification />
+      <Alert />
+      <SubRouter />
     </div>
   )
 }

@@ -8,7 +8,8 @@ import classNames from "classnames"
 
 
 export default function Invite(props: {}) {
-  const { makeRequest, ready, successAlert, errorAlert } = useNetwork()
+  const { makeRequest, successAlert, errorAlert } = useNetwork()
+  const ready = useStore(state => state.ready)
   const { chat, token } = useLoaderData() as { chat: number, token: string }
   const { refresh: refreshChats, values: chats } = useChatList()
   const navigate = useNavigate()

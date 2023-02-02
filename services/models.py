@@ -11,6 +11,7 @@ def bind_model(model, db):
 class User(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=16, unique=True)
+    nickname=CharField(max_length=20,null=True)
     password = CharField(max_length=16)
     salt = CharField()
     # Permissions
@@ -35,6 +36,7 @@ class ChatUser(Model):
     id = BigAutoField(primary_key=True)
     user = ForeignKeyField(User, backref="chat_users")
     chat = ForeignKeyField(Chat, backref="chat_users")
+    nickname=CharField(max_length=20,null=True)
     # Permissions
     permissions = BitField(default=16 | 64)
     # Kick other users in the chat

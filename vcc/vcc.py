@@ -140,7 +140,6 @@ class RpcExchanger:
                     for client in self.client_list:
                         if chat in client._chat_list:
                             client._recv_future.set_result(("event", type, data, chat))
-                    return "event", type, data, chat
             except asyncio.CancelledError:
                 return
             except Exception as e:
@@ -149,7 +148,6 @@ class RpcExchanger:
                 await asyncio.sleep(0.01)
 
     async def rpc_task(self):
-        loop = asyncio.get_event_loop()
         while True:
             json_res = json.loads(await self.sock_recvline())
             if "jobid" not in json_res:
@@ -371,7 +369,7 @@ class RpcExchangerBaseClient:
     async def __anext__(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
         return await self.recv()
 
-    async def __aenter__(self) -> RpcExchangerBaseClient:
+    async def __aenter__(self):
         return self
 
     async def __aexit__(self, *args: Any) -> None:
@@ -441,8 +439,9 @@ class RpcExchangerClient(RpcExchangerBaseClient):
             raise ProviderNotFoundError()
         userinfo=await getattr(self._rpc,provider_name).login_oauth(requestid=requestid)
         uid=await self._rpc.login.post_oauth(platform=platform,metadata=userinfo)
-        self._uid=uid
-        self._username=userinfo
+        logging.debug(f"{uid=} {userinfo=}")
+        self._id=uid
+        self._name=await self._rpc.login.get_name(id=uid)
         return uid
     async def add_online(self) -> None:
         self.check_authorized()

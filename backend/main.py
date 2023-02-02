@@ -250,8 +250,8 @@ async def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
     logging.getLogger("websockets.server").setLevel(logging.INFO)
     async with RpcExchanger() as exchanger:
-        async with websocket_serve(lambda ws: loop(ws, exchanger), os.environ.get("WEBVCC_ADDR","localhost"), 7000):
-            logging.info("started: ws://localhost:7000")
+        async with websocket_serve(lambda ws: loop(ws, exchanger), os.environ.get("WEBVCC_ADDR","localhost"), 2479):
+            logging.info("started: ws://localhost:2479")
             await asyncio.Future()
 
 asyncio.run(main())

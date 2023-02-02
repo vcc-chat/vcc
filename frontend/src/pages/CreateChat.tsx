@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { useChatList, useNetwork } from "../tools"
+import { useChatList, useNetwork, useTitle } from "../tools"
 import useStore from "../store"
 
 export default function CreateChat() {
@@ -17,6 +17,8 @@ export default function CreateChat() {
   const isParentChat = useMemo(() => (
     Object.keys(parentChats).includes(String(parentChat)) || parentChat == -1
   ), [parentChats, parentChat])
+
+  useTitle(isParentChat ? "Create Chat" : "Create Session")
   return (
     <div className="hero min-h-screen bg-base-200">
       <div className="hero-content flex-col lg:flex-row-reverse">

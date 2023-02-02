@@ -284,7 +284,7 @@ function UserItem({ name, id, online, setHandleUsername, setHandleUserID, first,
           </div>
         </div>
         <div className="flex flex-col flex-1">
-          <div>{name}</div>
+          <div className="break-normal [overflow-wrap:anywhere]">{name}</div>
           <span className="opacity-50 text-sm mt-1">{t(online ? "Online" : "Offline")}</span>
         </div>
         <div className="dropdown dropdown-end">
@@ -317,7 +317,6 @@ export function UsersSidebar({ open, setOpen }: {
     queryKey: ["user-list", chat],
     queryFn: async () => {
       if (chat == null) return []
-      console.log({ chat })
       const { msg } = await makeRequest({
         type: "chat_get_users",
         uid: chat!
@@ -426,17 +425,24 @@ export function UsersSidebar({ open, setOpen }: {
     </ul>
   )
 
+  const sortedUsers = useMemo(() => (
+    users
+      .sort()
+      .sort((a,b) => -a[2] || +b[2])
+      .sort((a,b) => -(a[0] == username) || +(b[0] == username))
+  ), [users, username])
+
   return (
     <div className={classNames("w-full overflow-x-hidden flex transition-all duration-300 no-scrollbar bg-base-100", {
       "sm:max-w-[18rem] max-w-full sm:w-[18rem] w-full overflow-y-auto": open,
       "max-w-0 overflow-y-hidden": !open
     })}>
       <ModifyPermissionDialog open={dialogOpen} setOpen={setDialogOpen} uid={handleUserID} username={handleUsername} modifyPermissionDialogID={modifyPermissionDialogID} />
-      <ul className="flex-1 flex flex-col py-2">
+      <ul className="flex-1 flex flex-col py-2 max-w-full">
         <button className="btn btn-ghost btn-circle sm:hidden" onClick={() => setOpen(false)}>
           <CloseIcon />
         </button>
-        {users.map((user, index) => {
+        {sortedUsers.map((user, index) => {
           const [name, id, online] = user
           return (
             <UserItem

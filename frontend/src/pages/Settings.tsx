@@ -2,6 +2,8 @@ import { memo } from "react"
 import { useMatches, useNavigate, Outlet } from "react-router-dom"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
+import { useTitle } from "../tools"
+import useStore from "../store"
 
 
 export default memo(function Settings(props: {}) {
@@ -14,7 +16,10 @@ export default memo(function Settings(props: {}) {
       relative: "path"
     })
   }
+  const chatName = useStore(state => state.chatName)
   const { t } = useTranslation()
+
+  useTitle(`"${chatName}" Settings`)
 
   return (
     <div className="p-8 flex flex-col">

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next"
 
 import { LoginType } from "../state/login"
 import useStore from "../store"
+import { useTitle } from "../tools"
 
 function urlCorrect(urlString: string) {
   try {
@@ -28,6 +29,9 @@ export default function ChooseBackend() {
       navigate("/")
     }
   }, [backendAddress])
+
+  useTitle("Choose Server")
+  
   return (
     <>
       <div className="hero min-h-screen bg-base-200">

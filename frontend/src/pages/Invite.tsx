@@ -2,7 +2,7 @@ import { useNavigate, useLoaderData } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 
 
-import { useChatList, useNetwork } from "../tools"
+import { useChatList, useNetwork, useTitle } from "../tools"
 import useStore from "../store"
 import classNames from "classnames"
 
@@ -15,6 +15,7 @@ export default function Invite(props: {}) {
   const navigate = useNavigate()
   const changeValue = useStore(state => state.changeChat)
   const { t } = useTranslation()
+  useTitle(`Join Chat ${chat}`)
   return (
     <>
       {ready && (

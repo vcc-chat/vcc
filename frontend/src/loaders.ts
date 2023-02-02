@@ -6,7 +6,6 @@ import {
   ActionFunctionArgs,
   useLoaderData
 } from "react-router-dom"
-import localforage from "localforage"
 
 import store from "./store"
 import { LoginType } from "./state/login"

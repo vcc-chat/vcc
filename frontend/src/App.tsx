@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense, ReactNode, memo, useCallback } from "react"
+import { useEffect, useState, lazy, Suspense, ReactNode, memo, useCallback, useRef } from "react"
 import useWebSocket, { ReadyState } from "react-use-websocket"
 import {
   Route,
@@ -31,20 +31,11 @@ const FileDownload = lazy(() => import("./pages/FileDownload"))
 const App = lazy(() => import("./pages/App"))
 const ChooseBackend = lazy(() => import("./pages/ChooseBackend"))
 
-function Loading() {
-  const [show, setShow] = useState(false)
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setShow(true)
-    }, 200)
-    return () => {
-      clearTimeout(timeout)
-    }
-  }, [])
+const Loading = memo(() => {
   return (
-    <div className={`radial-progress m-auto animate-spin ${show ? "" : "hidden"}`} style={{"--value": 60, "--size": "3rem"} as any} />
+    <div className="radial-progress m-auto animate-spin" style={{"--value": 60, "--size": "3rem"} as any} />
   )
-}
+})
 
 function useMessageWebSocket() {
   const backendAddress = useStore(state => state.backendAddress!)
@@ -57,7 +48,7 @@ function useMessageWebSocket() {
   const changeAllChats = useStore(state => state.changeAllChat)
   const setSendJsonMessageRaw = useStore(state => state.setSendJsonMessageRaw)
   const setReady = useStore(state => state.setReady)
-  const errorAlert = useStore(state => state.successAlert)
+  const errorAlert = useStore(state => state.errorAlert)
 
   useEffect(() => {
     setSendJsonMessageRaw(sendJsonMessage)
@@ -111,7 +102,7 @@ function useMessageWebSocket() {
       default:
         console.error("Uncaught message: ", { message })
     }
-  }, [lastMessage, handleFunctionList])
+  }, [lastMessage])
 
   useEffect(() => {
     if (readyState !== ReadyState.CLOSED) return
@@ -134,6 +125,7 @@ function useAlert(setSuccessAlertOpen: (open: boolean) => void, setErrorAlertOpe
     setTimeout(() => {
       setSuccessAlertOpen(false)
     }, 5000)
+    console.trace()
   }, [setSuccessAlertOpen, setAlertContent])
 
   useEffect(() => {
@@ -146,6 +138,7 @@ function useAlert(setSuccessAlertOpen: (open: boolean) => void, setErrorAlertOpe
     setTimeout(() => {
       setErrorAlertOpen(false)
     }, 5000)
+    console.trace()
   }, [setErrorAlertOpen, setAlertContent])
 
   useEffect(() => {
@@ -185,7 +178,7 @@ const router = createBrowserRouter(
 function SubRouter() {
   return (
     <Suspense fallback={<Loading />}>
-      <RouterProvider router={router} />
+      <RouterProvider router={router} fallbackElement={<Loading />} />
     </Suspense>
   )
 }

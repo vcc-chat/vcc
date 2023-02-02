@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, DragEvent, memo, useId, DetailedHTMLProps, useLayoutEffect } from "react"
+import { useEffect, useState, useRef, useCallback, DragEvent, memo, useId, DetailedHTMLProps, useLayoutEffect, useReducer } from "react"
 import { createPortal } from "react-dom"
 import { useParams, useFetcher, Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
@@ -18,7 +18,7 @@ import SendIcon from "@material-design-icons/svg/filled/send.svg"
 import { type RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
 import { MessageAvatar, MessageLink } from "../Messages"
 import useStore from "../store"
-import { stringToNumber, useChatList, useNetwork } from "../tools"
+import { stringToNumber, useChatList, useNetwork, useTitle } from "../tools"
 import { useChatActionData } from "../loaders"
 
 const MessageComponent = memo(function MessageComponent({ nowMsg }: {
@@ -51,6 +51,13 @@ const MessageComponent = memo(function MessageComponent({ nowMsg }: {
       }
     }
   }, [html, req.msg, addMarkdownToHTML])
+  const [, rerender] = useReducer(a => a + 1, 0)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      rerender()
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [])
   return (
     <li key={nowMsg.time} className={classNames("chat", req.usrname == selfUsername ? "chat-end" : "chat-start")}>
       <MessageAvatar name={req.usrname} />
@@ -174,7 +181,7 @@ export function FileUploadDialog({ id }: {
 export default memo(function Chat() {
   const [msgBody, setMsgBody] = useState("")
   const params = useParams()
-  const { values: chats } = useChatList()
+  const { values: chats, names: chatNames } = useChatList()
   const chatRaw = Number(params.id)
   const chat = Number.isNaN(chatRaw) || !chats.includes(chatRaw) ? null : chatRaw
   const messageHistory = useStore(state => state.messages)
@@ -187,6 +194,9 @@ export default memo(function Chat() {
   const fileUploadDialogID = useId()
   const { t } = useTranslation()
   const ready = useStore(state => state.ready)
+
+  useTitle(session ?? chatNames[chats.indexOf(chat!)])
+
   useEffect(() => {
     if (ref.current == null) return
     ref.current.scrollTo(0, ref.current!.scrollHeight) 

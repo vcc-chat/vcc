@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next"
 import { LoginType } from "../state/login"
 import useStore from "../store"
 import { useLoginActionData } from "../loaders"
-import { useNetwork } from "../tools"
+import { useNetwork, useTitle } from "../tools"
 
 export default function Login(props: {}) {
   const username = useStore(state => state.username)
@@ -55,6 +55,8 @@ export default function Login(props: {}) {
     success()
     navigate("/")
   }, [makeRequest])
+
+  useTitle("Login")
 
   return (
     <>

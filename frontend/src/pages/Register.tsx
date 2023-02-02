@@ -3,7 +3,7 @@ import { useNavigate, Form } from "react-router-dom"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
 
-import { useNetwork } from "../tools"
+import { useNetwork, useTitle } from "../tools"
 import { useRegisterActionData } from "../loaders"
 import { LoginType } from "../state/login"
 import useStore from "../store"
@@ -35,6 +35,9 @@ export default function Register(props: {}) {
       }
     })()
   }, [result])
+
+  useTitle("Register")
+
   return (
     <>
       <div className={classNames("hero min-h-screen bg-base-200", {

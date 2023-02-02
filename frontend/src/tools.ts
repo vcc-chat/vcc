@@ -140,6 +140,6 @@ export function useChatList() {
 
 export function useTitle(title: string) {
   useEffect(() => {
-    document.title = title
+    document.title = title ? `${title} - web-vcc` : "web-vcc: vcc online"
   }, [title])
 }

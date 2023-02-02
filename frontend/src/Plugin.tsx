@@ -322,8 +322,7 @@ export function PluginProvider({ children }: {
     function callback(ev: MessageEvent<{ id: string, msg: Request }>) {
       if (ev.source !== iframeRef.current?.contentWindow) return
       if (ev.data.msg == undefined) return
-      if (callbacks[ev.data.id] == undefined) return
-      callbacks[ev.data.id](ev)
+      callbacks[ev.data.id]?.(ev)
       delete callbacks[ev.data.id]
     }
 

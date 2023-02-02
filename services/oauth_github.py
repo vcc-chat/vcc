@@ -2,6 +2,7 @@ import typing
 import uuid
 import asyncio
 
+from os import getenv
 import aiohttp.web
 from aiohttp import ClientSession, request
 import base
@@ -11,12 +12,13 @@ from base import ServiceExport as export
 
 from aiohttp.web import Response
 
-GH_CLIENTID = "Iv1.7013844b13272dab"
-GH_CLIENTSEC = "899a7090dcc7bdbca2638a5904b70ac19d1fc248"
-GH_CALLBACKURL = "http://localhost:1234/oauthcb"
+GH_CLIENTID = getenv("OAUTH_GH_CLIENTID")
+GH_CLIENTSEC = getenv("OAUTH_GH_CLIENTSEC")
+GH_CALLBACKURL = getenv("OAUTH_GH_CALLBACKURL")
 GH_URL_TEMPLATE = "https://github.com/login/oauth/authorize?client_id={clientid}&client_secret={clientsec}&redirect_uri={callbackurl}/{requestid};"
 GH_ACCESS_URL_TEMPLATE = "https://github.com/login/oauth/access_token/?client_id={clientid}&client_secret={clientsec}&code={code}&redirect_uri={callbackurl}/{requestid}"
 GH_GET_USER = "https://api.github.com/user"
+HTTP_PORT = int(getenv("OAUTH_GH_HTTP_PORT"))
 HTTP_RESPONSE_HTML = """
 <h1>Authorize finished! You can close this page</h1>
 """
@@ -25,7 +27,7 @@ HTTP_RESPONSE_TIMEOUT = """
 """
 
 
-def oauthGhHttp(port: int = 1234, table: dict[str, asyncio.Future] = {}):
+def oauthGhHttp(table: dict[str, asyncio.Future] = {}):
     app = aiohttp.web.Application()
     route = aiohttp.web.RouteTableDef()
 
@@ -59,12 +61,12 @@ def oauthGhHttp(port: int = 1234, table: dict[str, asyncio.Future] = {}):
     return type(
         "oauthGhHttp",
         (),
-        {"__call__": lambda _: aiohttp.web._run_app(app, port=port), "app": app},
+        {"__call__": lambda _: aiohttp.web._run_app(app, port=HTTP_PORT), "app": app},
     )()
 
 
 class oauthGithub(metaclass=base.ServiceMeta):
-    def __init__(self) -> int:
+    def __init__(self) -> None:
         self.table: dict[str, asyncio.Future] = {}
         self.http_server = oauthGhHttp(table=self.table)
 

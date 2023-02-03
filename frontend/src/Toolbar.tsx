@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, TargetedEvent } from "react"
 import { createPortal } from "react-dom"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
 
@@ -52,7 +52,7 @@ export function JoinDialog({ id }: {
         <div className="modal-box">
           <h3 className="font-bold text-lg">{t("Join chat")}</h3>
           <p className="py-4">{t("Enter the chat number you want to join")}.</p>
-          <input className="input" autoFocus placeholder={t("Chat id") ?? ""} value={dialogValue} onChange={ev => setDialogValue(ev.target.value)} />
+          <input className="input" autoFocus placeholder={t("Chat id") ?? ""} value={dialogValue} onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => setDialogValue(ev.currentTarget.value)} />
           <div className="modal-action">
             <label htmlFor={id} className="btn">{t("Close")}</label>
             <button className="btn" onClick={joinHandler}>{t("Join")}</button>

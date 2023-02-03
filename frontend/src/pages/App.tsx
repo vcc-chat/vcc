@@ -1,11 +1,10 @@
 import DOMPurify from "dompurify"
-import { type DOMAttributes, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import useStore from "../store"
 console.log(DOMPurify)
 
 class AppContainer extends HTMLElement {
-  html: string = ""
   connectedCallback() {
     const root = this.attachShadow({ mode: "open" })
     root.innerHTML = this.getAttribute("html")!
@@ -18,9 +17,9 @@ class AppContainer extends HTMLElement {
 }
 
 declare global {
-  namespace JSX {
+  namespace preact.createElement.JSX {
     interface IntrinsicElements {
-      "app-container": Partial<AppContainer & DOMAttributes<AppContainer> & { children: any }>;
+      "app-container": Partial<AppContainer & { html: string, children: any }>;
     }
   }
 }

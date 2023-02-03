@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, DragEvent, memo, useId, DetailedHTMLProps, useLayoutEffect, useReducer } from "react"
+import { useEffect, useState, useRef, useCallback, memo, useId, DetailedHTMLProps, useLayoutEffect, useReducer, ReactNode, TargetedEvent } from "react"
 import { createPortal } from "react-dom"
 import { useParams, useFetcher, Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
@@ -26,14 +26,14 @@ const MessageComponent = memo(function MessageComponent({ nowMsg }: {
 }) {
   const req = nowMsg.req
   const date = new Date(nowMsg.time)
-  const markdownToHTML = useStore(state => state.markdownToHTML, () => true)
+  const markdownToHTML = useState(() => useStore.getState().markdownToHTML)[0]
   const addMarkdownToHTML = useStore(state => state.addMarkdownToHTML)
-  const dragStartHandler = useCallback((ev: DragEvent<HTMLDivElement>) => {
-    ev.dataTransfer.dropEffect = "copy"
-    ev.dataTransfer.setData(MESSAGE_MIME_TYPE, JSON.stringify({
+  const dragStartHandler = useCallback((ev: DragEvent) => {
+    ev.dataTransfer!.dropEffect = "copy"
+    ev.dataTransfer!.setData(MESSAGE_MIME_TYPE, JSON.stringify({
       msg: req.msg
     }))
-    ev.dataTransfer.setData("text/plain", `${req.usrname}: ${req.msg}`)
+    ev.dataTransfer!.setData("text/plain", `${req.usrname}: ${req.msg}`)
   }, [req.msg])
   const selfUsername = useStore(state => state.username)
   const savedHTML = markdownToHTML[req.msg]
@@ -54,7 +54,7 @@ const MessageComponent = memo(function MessageComponent({ nowMsg }: {
   const [, rerender] = useReducer(a => a + 1, 0)
   useEffect(() => {
     const interval = setInterval(() => {
-      rerender()
+      rerender(undefined)
     }, 60000)
     return () => clearInterval(interval)
   }, [])
@@ -115,7 +115,10 @@ const MessageComponent = memo(function MessageComponent({ nowMsg }: {
             savePlugin
           ]}
           components={{
-            a: ({node, href, children, ...props}) => (
+            a: ({ href, children, ...props }: {
+              href: string,
+              children: ReactNode
+            }) => (
               <MessageLink link={href!} children={children} />
             ),
             ["file" as any]: ({ id }: { id: string }) => (
@@ -227,7 +230,7 @@ export default memo(function Chat() {
             ))
           }
         </ul>
-        <fetcher.Form method="post" className="mt-auto mb-2 mx-1 flex relative" onSubmit={ev => {
+        <fetcher.Form method="post" className="mt-auto mb-2 mx-1 flex relative" onSubmit={() => {
           setMsgBody("")
         }}>
           <input
@@ -237,10 +240,10 @@ export default memo(function Chat() {
             name="msg"
             disabled={!ready || chat == null}
             autoComplete="off"
-            onChange={event => {
-              setMsgBody(event.target.value)
+            onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
+              setMsgBody((ev.currentTarget as HTMLInputElement).value)
             }} 
-            onKeyDown={event => {
+            onKeyDown={(event: KeyboardEvent) => {
               if (event.keyCode == 10 || event.keyCode == 13) {
                 if (event.ctrlKey || event.metaKey) {
                   setMsgBody(msgBody + "\n")

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { TargetedEvent, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { useChatList, useNetwork, useTitle } from "../tools"
@@ -32,16 +32,16 @@ export default function CreateChat() {
               <label className="label">
                 <span className="label-text">{t("Name")}</span>
               </label>
-              <input type="text" placeholder={t("Name")!} className="input input-bordered" value={chatName} onChange={ev => {
-                setChatName(ev.target.value)
+              <input type="text" placeholder={t("Name")!} className="input input-bordered" value={chatName} onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
+                setChatName(ev.currentTarget.value)
               }} />
             </div>
             <div className="form-control">
               <label className="label">
                 <span className="label-text">{t("Parent Chat")}</span>
               </label>
-              <select className="select w-full max-w-xs" value={parentChat == -1 ? t("None")! : `${parentChat} ${chatNames[chats.indexOf(parentChat)]}`} onChange={ev => {
-                setParentChat(ev.target.value == t("None") ? -1 : parseInt(ev.target.value.split(" ")[0]))
+              <select className="select w-full max-w-xs" value={parentChat == -1 ? t("None")! : `${parentChat} ${chatNames[chats.indexOf(parentChat)]}`} onChange={(ev: TargetedEvent<HTMLSelectElement, Event>) => {
+                setParentChat(ev.currentTarget.value == t("None") ? -1 : parseInt(ev.currentTarget.value.split(" ")[0]))
               }}>
                 <option>{t("None")}</option>
                 {chats.map((chat, index) => {

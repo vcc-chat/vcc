@@ -6,7 +6,7 @@ export function SettingsEditItem({ checked, setChecked, label }: {
   label: string
 }) {
   const onChangeHandler = useCallback((ev: ChangeEvent<HTMLInputElement>) => {
-    setChecked(ev.target.checked)
+    setChecked(ev.currentTarget.checked)
   }, [setChecked])
   return (
     <div className="form-control">

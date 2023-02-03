@@ -1,5 +1,5 @@
 import { defineConfig } from "vite"
-import react from "@vitejs/plugin-react"
+import preact from "@preact/preset-vite"
 import legacy from "@vitejs/plugin-legacy"
 import { VitePWA } from "vite-plugin-pwa"
 import importToCDN, { autoComplete } from "vite-plugin-cdn-import"
@@ -17,7 +17,7 @@ const comment = `
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
+    preact(),
     legacy({
       targets: ["defaults", "not IE 11"]
     }),
@@ -60,8 +60,6 @@ export default defineConfig({
     }),
     importToCDN({
       modules: [
-        autoComplete("react"),
-        autoComplete("react-dom"),
         {
           name: "@tanstack/react-query",
           var: "ReactQuery",
@@ -75,7 +73,13 @@ export default defineConfig({
     banner(comment)
   ],
   resolve: {
-    preserveSymlinks: true
+    preserveSymlinks: true,
+    alias: {
+      "react": "preact/compat",
+      "react-dom": "preact/compat",
+      "create-react-class": "preact-compat/lib/create-react-class",
+      "react-dom-factories": "preact-compat/lib/react-dom-factories"
+    }
   },
   server: {
     port: 3000

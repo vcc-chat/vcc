@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useState } from "react"
+import { TargetedEvent, useCallback, useEffect, useState } from "react"
 import { useNavigate, Form } from "react-router-dom"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
@@ -82,8 +82,8 @@ export default function Login(props: {}) {
                   className="input input-bordered"
                   name="username" 
                   value={username}
-                  onChange={ev => {
-                    changeUsername(ev.target.value)
+                  onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
+                    changeUsername(ev.currentTarget.value)
                   }}
                 />
               </div>

@@ -1,6 +1,6 @@
 
 import { Form, useNavigate } from "react-router-dom"
-import { useEffect, useState } from "react"
+import { TargetedEvent, useEffect, useState } from "react"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
 
@@ -45,8 +45,8 @@ export default function ChooseBackend() {
               <div className="form-control">
                 <label className="label cursor-pointer">
                   <span className="label-text">{t("Use default server (Recommended)")}</span> 
-                  <input type="checkbox" className="toggle" checked={useDefaultServerAddress} onChange={ev => {
-                    setUseDefaultServerAddress(ev.target.checked)
+                  <input type="checkbox" className="toggle" checked={useDefaultServerAddress} onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
+                    setUseDefaultServerAddress(ev.currentTarget.checked)
                   }} />
                 </label>
               </div>
@@ -60,8 +60,8 @@ export default function ChooseBackend() {
                   className="input input-bordered"
                   value={serverAddress}
                   disabled={useDefaultServerAddress}
-                  onChange={ev => {
-                    setServerAddress(ev.target.value)
+                  onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
+                    setServerAddress(ev.currentTarget.value)
                   }}
                 />
               </div>

@@ -1,4 +1,4 @@
-import { useState, memo, useEffect } from "react"
+import { useState, memo, useEffect, TargetedEvent } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
@@ -65,13 +65,13 @@ export default memo(function SettingsActions(props: {}) {
       <label className="label">
         <span className="label-text">{t("Chat name")}</span>
       </label>
-      <input type="text" placeholder={t("Rename") ?? ""} className="input mr-auto" value={renameValue} onChange={ev => {
-        setRenameValue(ev.target.value)
+      <input type="text" placeholder={t("Rename") ?? ""} className="input mr-auto" value={renameValue} onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
+        setRenameValue(ev.currentTarget.value)
       }} />
       {/* <FormControlLabel className="ml-4" label="Public" control={<Switch checked={publicValue} onChange={ev => setPublic(ev.target.checked)} />} /> */}
       <label className="label cursor-pointer mr-auto">
         <span className="label-text mr-4">{t("Public")}</span> 
-        <input type="checkbox" className="toggle" checked={publicValue} onChange={ev => setPublic(ev.target.checked)} />
+        <input type="checkbox" className="toggle" checked={publicValue} onClick={(ev: TargetedEvent<HTMLInputElement, Event>) => setPublic(ev.currentTarget.checked)} />
       </label>
       <button className="btn mr-auto" disabled={publicRaw == publicValue && renameValue == chatName} onClick={() => {
         if (renameValue != chatName) {

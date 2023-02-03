@@ -7,6 +7,11 @@ import {
   RouterProvider
 } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
+import classNames from "classnames"
+import { useTranslation } from "react-i18next"
+import DoneIcon from "@material-design-icons/svg/outlined/done.svg"
+import ErrorIcon from "@material-design-icons/svg/outlined/error_outline.svg"
+
 
 import type { Request } from "./config"
 import { Notification, notify } from "./Notification"
@@ -14,8 +19,6 @@ import { responseToChatList, useChatList } from "./tools"
 import { LoginType } from "./state/login"
 import useStore from "./store"
 import * as loaders from "./loaders"
-import classNames from "classnames"
-import { useTranslation } from "react-i18next"
 
 const Invite = lazy(() => import("./pages/Invite"))
 const Login = lazy(() => import("./pages/Login"))
@@ -177,9 +180,7 @@ const router = createBrowserRouter(
 
 function SubRouter() {
   return (
-    <Suspense fallback={<Loading />}>
-      <RouterProvider router={router} fallbackElement={<Loading />} />
-    </Suspense>
+    <RouterProvider router={router} fallbackElement={<Loading />} />
   )
 }
 
@@ -194,13 +195,13 @@ function Alert() {
     <>
       <div className={classNames("alert alert-success shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", successAlertOpen || "hidden")}>
         <div>
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6 fill-none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <DoneIcon />
           <span>{t("Success")}: {alertContent}</span>
         </div>
       </div>
       <div className={classNames("alert alert-error shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", errorAlertOpen || "hidden")}>
         <div>
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6 fill-none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <ErrorIcon />
           <span>{t("Error")}! {alertContent}</span>
         </div>
       </div>
@@ -218,9 +219,11 @@ export default function () {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {!!backendAddress && <WebSocket />}
-      <Notification />
-      <Alert />
-      <SubRouter />
+      <Suspense fallback={<Loading />}>
+        <Notification />
+        <Alert />
+        <SubRouter />
+      </Suspense>
     </div>
   )
 }

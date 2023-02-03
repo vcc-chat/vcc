@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useCallback, DragEvent, Fragment, useMemo, MouseEvent, useId } from "react"
+import { ReactNode, useState, useEffect, useCallback, Fragment, useMemo, useId } from "react"
 import { useNavigate, useFetcher, FetcherWithComponents } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import classNames from "classnames"
@@ -68,15 +68,15 @@ function sendMessage(fetcher: FetcherWithComponents<any>, chat: number, msg: str
   })
 }
 
-function dragOverHandler(ev: DragEvent<HTMLLIElement>) {
+function dragOverHandler(ev: DragEvent) {
   ev.preventDefault()
-  ev.dataTransfer.dropEffect = "copy"
+  ev.dataTransfer!.dropEffect = "copy"
 }
 
 function dropHandler(fetcher: FetcherWithComponents<any>, chat: number, session: string | null) {
-  return function (ev: DragEvent<HTMLLIElement>) {
+  return function (ev: DragEvent) {
     ev.preventDefault()
-    const { msg } = JSON.parse(ev.dataTransfer.getData(MESSAGE_MIME_TYPE))
+    const { msg } = JSON.parse(ev.dataTransfer!.getData(MESSAGE_MIME_TYPE))
     sendMessage(fetcher, chat, msg, session)
   }
 }

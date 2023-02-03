@@ -1,10 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query"
 import { persistQueryClient } from "@tanstack/react-query-persist-client"
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
 import { broadcastQueryClient } from "@tanstack/query-broadcast-client-experimental"
 
-import { RequestType, Request } from "./config"
+import type { RequestType, Request } from "./config"
 import { LoginType } from "./state/login"
 import useStore from "./store"
 

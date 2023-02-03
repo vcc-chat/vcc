@@ -2,10 +2,10 @@
 /// <reference types="vite-plugin-pwa/client" />
 /// <reference types="vite-plugin-svgr/client" />
 
-import type { ComponentChildren } from "preact"
+import type { ComponentChildren, ComponentType as ComponentTypePreact } from "preact"
 
 declare module "react" {
   type ReactNode = ComponentChildren
-  type ComponentType<T = any> = any
-  type ComponentPropsWithoutRef<T = any> = any
+  type ComponentType<P = {}> = ComponentTypePreact<P>
+  type ComponentPropsWithoutRef = any
 }

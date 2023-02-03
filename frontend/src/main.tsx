@@ -8,6 +8,10 @@ import { queryClient } from './tools'
 import './index.css'
 import './i18n'
 
+if (import.meta.env.DEV) {
+  await import("preact/debug" as any)
+}
+
 render(
   <QueryClientProvider client={queryClient}>
     <PluginProvider>

@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef, useCallback, useId, useReducer } from "preact/hooks"
+import { useEffect, useState, useRef, useCallback, useId, useReducer, useMemo } from "preact/hooks"
+import { useSignal } from "@preact/signals"
 import { memo, type TargetedEvent, createPortal } from "preact/compat"
 import type { ComponentChildren } from "preact"
 import { useParams, useFetcher, Link } from "react-router-dom"
@@ -27,7 +28,7 @@ const MessageComponent = memo(function MessageComponent({ nowMsg }: {
 }) {
   const req = nowMsg.req
   const date = new Date(nowMsg.time)
-  const markdownToHTML = useState(() => useStore.getState().markdownToHTML)[0]
+  const markdownToHTML = useMemo(() => useStore.getState().markdownToHTML, [])
   const addMarkdownToHTML = useStore(state => state.addMarkdownToHTML)
   const dragStartHandler = useCallback((ev: DragEvent) => {
     ev.dataTransfer!.dropEffect = "copy"
@@ -183,7 +184,7 @@ export function FileUploadDialog({ id }: {
 }
 
 export default memo(function Chat() {
-  const [msgBody, setMsgBody] = useState("")
+  const msgBody = useSignal("")
   const params = useParams()
   const { values: chats, names: chatNames } = useChatList()
   const chatRaw = Number(params.id)
@@ -207,7 +208,7 @@ export default memo(function Chat() {
   }, [chat])
   useEffect(() => {
     if (ref.current == null) return
-    if ((ref.current as any).scrollTopMax != undefined && (ref.current as any).scrollTopMax - ref.current.scrollTop < 150) {
+    if (ref.current.scrollHeight - ref.current.clientHeight - ref.current.scrollTop < 150) {
       ref.current.scrollTo(0, ref.current.scrollHeight) 
     }
   }, [messages])
@@ -232,7 +233,7 @@ export default memo(function Chat() {
           }
         </ul>
         <fetcher.Form method="post" className="mt-auto mb-2 mx-1 flex relative" onSubmit={() => {
-          setMsgBody("")
+          msgBody.value = ""
         }}>
           <input
             type="text"
@@ -242,18 +243,18 @@ export default memo(function Chat() {
             disabled={!ready || chat == null}
             autoComplete="off"
             onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
-              setMsgBody((ev.currentTarget as HTMLInputElement).value)
+              msgBody.value = ev.currentTarget.value
             }} 
             onKeyDown={(event: KeyboardEvent) => {
               if (event.keyCode == 10 || event.keyCode == 13) {
                 if (event.ctrlKey || event.metaKey) {
-                  setMsgBody(msgBody + "\n")
+                  msgBody.value += "\n"
                 } else {
                   fetcher.submit(
-                    { msg: msgBody, session: session ?? "" },
+                    { msg: msgBody.value, session: session ?? "" },
                     { method: "post" }
                   )
-                  setMsgBody("")
+                  msgBody.value = ""
                   event.preventDefault()
                 }
               }

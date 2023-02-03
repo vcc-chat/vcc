@@ -16,15 +16,17 @@ class AppContainer extends HTMLElement {
   }
 }
 
-declare global {
-  namespace preact.createElement.JSX {
-    interface IntrinsicElements {
-      "app-container": Partial<{ html: string, children: any }>;
-    }
-  }
-}
+// declare global {
+//   namespace preact.createElement.JSX {
+//     interface IntrinsicElements {
+//       "app-container": Partial<{ html: string, children: any }>;
+//     }
+//   }
+// }
 
 customElements.define("app-container", AppContainer)
+
+const AppContainerElement = "app-container" as any
 
 export default function App() {
   const [html, setHtml] = useState<string | null>(null)
@@ -41,6 +43,6 @@ export default function App() {
     })()
   }, [appHook, name])
   return (
-    <app-container html={sanitizedHtml} />
+    <AppContainerElement html={sanitizedHtml} />
   )
 }

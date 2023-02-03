@@ -5,7 +5,6 @@ import { useEffect, useState } from "preact/hooks"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
 
-import { LoginType } from "../state/login"
 import useStore from "../store"
 import { useTitle } from "../tools"
 
@@ -21,7 +20,7 @@ function urlCorrect(urlString: string) {
 export default function ChooseBackend() {
   const backendAddress = useStore(state => state.backendAddress)
   const setBackendAddress = useStore(state => state.setBackendAddress)
-  const [serverAddress, setServerAddress] = useState(`wss://www.example.com/ws/`)
+  const [serverAddress, setServerAddress] = useState<string>(import.meta.env.DEFAULT_SERVER_ADDRESS)
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [useDefaultServerAddress, setUseDefaultServerAddress] = useState(true)

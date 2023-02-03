@@ -1,4 +1,5 @@
-import { TargetedEvent, useMemo, useState } from "react"
+import { useMemo, useState } from "preact/hooks"
+import type { TargetedEvent } from "preact/compat"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import { useChatList, useNetwork, useTitle } from "../tools"

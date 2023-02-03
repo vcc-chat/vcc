@@ -43,8 +43,6 @@ const createNetworkSlice: StateCreator<NetworkState> = (set, get) => ({
     sendJsonMessageRaw!(req)
   },
   async makeRequest(request) {
-    console.log(request, (new Error()).stack)
-    console.trace()
     const { sendJsonMessage } = get()
     const uuid = URL.createObjectURL(new Blob).slice(-36)
     sendJsonMessage({

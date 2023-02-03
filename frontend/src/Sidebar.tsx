@@ -1,4 +1,5 @@
-import { ReactNode, useState, useEffect, useCallback, Fragment, useMemo, useId } from "react"
+import { useState, useEffect, useCallback, useMemo, useId } from "preact/hooks"
+import type { ComponentChildren } from "preact"
 import { useNavigate, useFetcher, FetcherWithComponents } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import classNames from "classnames"
@@ -257,7 +258,7 @@ function UserItem({ name, id, online, setHandleUsername, setHandleUserID, first,
   setHandleUsername: (value: string) => void
   setHandleUserID: (value: number) => void
   first: boolean
-  menu: ReactNode
+  menu: ComponentChildren
 }) {
   const characters = name.split(" ")
   const letter1 = (characters[0]?.[0] ?? "").toUpperCase()
@@ -463,7 +464,7 @@ export function UsersSidebar({ open, setOpen }: {
 }
 
 export function MainLayout({ children }: {
-  children: ReactNode
+  children: ComponentChildren
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)

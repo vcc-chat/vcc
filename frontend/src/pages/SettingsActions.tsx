@@ -1,4 +1,5 @@
-import { useState, memo, useEffect, TargetedEvent } from "react"
+import { memo, type TargetedEvent } from "preact/compat"
+import { useState, useEffect } from "preact/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 

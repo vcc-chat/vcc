@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect } from "preact/hooks"
 import { useTranslation } from "react-i18next"
 import { Link, useRouteError, isRouteErrorResponse } from "react-router-dom"
 import { useTitle } from "../tools"

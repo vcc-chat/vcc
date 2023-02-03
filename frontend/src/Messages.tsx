@@ -1,4 +1,5 @@
-import { ReactNode, useMemo } from "react"
+import { useMemo } from "preact/hooks"
+import type { ComponentChildren } from "preact"
 import { Link } from "react-router-dom"
 
 import { stringToColor } from "./tools"
@@ -24,7 +25,7 @@ export function MessageAvatar({ name }: {
 
 export function MessageLink({ link, children }: {
   link: string,
-  children: ReactNode
+  children: ComponentChildren
 }) {
   const url = useMemo(() => (new URL(link, location.href)), [link])
   const sameSite = url.host == location.host

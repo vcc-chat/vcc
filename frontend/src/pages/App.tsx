@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "preact/hooks"
 import { useParams } from "react-router-dom"
 import useStore from "../store"
 console.log(DOMPurify)
@@ -19,7 +19,7 @@ class AppContainer extends HTMLElement {
 declare global {
   namespace preact.createElement.JSX {
     interface IntrinsicElements {
-      "app-container": Partial<AppContainer & { html: string, children: any }>;
+      "app-container": Partial<{ html: string, children: any }>;
     }
   }
 }

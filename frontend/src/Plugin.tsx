@@ -1,4 +1,5 @@
-import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "preact/hooks"
+import type { ComponentChildren } from "preact"
 import { useQueries } from "@tanstack/react-query"
 
 import { Request } from "./config"
@@ -292,7 +293,7 @@ function createIframeSrc(originalScripts: string[]) {
 }
 
 export function PluginProvider({ children }: {
-  children: ReactNode
+  children: ComponentChildren
 }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const callbacksRef = useRef<Record<string, ((ev: MessageEvent<{ id: string, msg: any }>) => void)>>({})

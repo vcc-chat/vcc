@@ -1,4 +1,4 @@
-import { memo } from "react"
+import { memo } from "preact/compat"
 import { Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 

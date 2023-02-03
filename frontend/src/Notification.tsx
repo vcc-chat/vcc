@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "preact/hooks"
 import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"

@@ -1,18 +1,19 @@
-import { ChangeEvent, ReactNode, useCallback } from "react"
+import type { TargetedEvent } from "preact/compat"
+import { useCallback } from "preact/hooks"
 
 export function SettingsEditItem({ checked, setChecked, label }: {
   checked: boolean,
   setChecked: (checked: boolean) => void,
   label: string
 }) {
-  const onChangeHandler = useCallback((ev: ChangeEvent<HTMLInputElement>) => {
+  const onInputHandler = useCallback((ev: TargetedEvent<HTMLInputElement, Event>) => {
     setChecked(ev.currentTarget.checked)
   }, [setChecked])
   return (
     <div className="form-control">
       <label className="label cursor-pointer">
         <span className="label-text capitalize">{label}</span> 
-        <input type="checkbox" className="toggle" checked={checked} onChange={onChangeHandler} />
+        <input type="checkbox" className="toggle" checked={checked} onInput={onInputHandler} />
       </label>
     </div>
   )

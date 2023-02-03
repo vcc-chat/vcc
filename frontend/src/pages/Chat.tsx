@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef, useCallback, memo, useId, DetailedHTMLProps, useLayoutEffect, useReducer, ReactNode, TargetedEvent } from "react"
-import { createPortal } from "react-dom"
+import { useEffect, useState, useRef, useCallback, useId, useReducer } from "preact/hooks"
+import { memo, type TargetedEvent, createPortal } from "preact/compat"
+import type { ComponentChildren } from "preact"
 import { useParams, useFetcher, Link } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import ReactMarkdown from "react-markdown"
@@ -117,7 +118,7 @@ const MessageComponent = memo(function MessageComponent({ nowMsg }: {
           components={{
             a: ({ href, children, ...props }: {
               href: string,
-              children: ReactNode
+              children: ComponentChildren
             }) => (
               <MessageLink link={href!} children={children} />
             ),

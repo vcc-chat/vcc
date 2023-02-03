@@ -1,4 +1,6 @@
-import { useEffect, useState, lazy, Suspense, ReactNode, memo, useCallback, useRef } from "react"
+import { useEffect, useState, useCallback, useRef } from "preact/hooks"
+import { lazy, Suspense, memo } from "preact/compat"
+
 import useWebSocket, { ReadyState } from "react-use-websocket"
 import {
   Route,

@@ -1,6 +1,7 @@
 
 import { Form, useNavigate } from "react-router-dom"
-import { TargetedEvent, useEffect, useState } from "react"
+import type { TargetedEvent } from "preact/compat"
+import { useEffect, useState } from "preact/hooks"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
 

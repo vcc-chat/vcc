@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect } from "preact/hooks"
 import { useParams, useNavigate, Outlet } from "react-router-dom"
 
 import { MainLayout } from "../Sidebar"

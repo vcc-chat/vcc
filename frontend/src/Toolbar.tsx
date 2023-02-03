@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, TargetedEvent } from "react"
-import { createPortal } from "react-dom"
+import { useState, useEffect, useCallback } from "preact/hooks"
+import { type TargetedEvent, createPortal } from "preact/compat"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
 
 import useStore from "./store"

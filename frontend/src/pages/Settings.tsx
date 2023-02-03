@@ -1,4 +1,4 @@
-import { memo } from "react"
+import { memo } from "preact/compat"
 import { useMatches, useNavigate, Outlet } from "react-router-dom"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"

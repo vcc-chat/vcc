@@ -58,15 +58,15 @@ export default defineConfig({
         ]
       }
     }),
-    importToCDN({
-      modules: [
-        {
-          name: "@tanstack/react-query",
-          var: "ReactQuery",
-          path: "build/umd/index.production.js"
-        }
-      ]
-    }),
+    // importToCDN({
+    //   modules: [
+    //     {
+    //       name: "@tanstack/react-query",
+    //       var: "ReactQuery",
+    //       path: "build/umd/index.production.js"
+    //     }
+    //   ]
+    // }),
     svgr({
       exportAsDefault: true
     }),

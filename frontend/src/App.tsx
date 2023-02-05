@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback, useRef } from "preact/hooks"
+import { useEffect } from "preact/hooks"
+import { signal } from "@preact/signals"
 import { lazy, Suspense, memo } from "preact/compat"
 
 import useWebSocket, { ReadyState } from "react-use-websocket"
@@ -44,7 +45,8 @@ const Loading = memo(() => {
 
 function useMessageWebSocket() {
   const backendAddress = useStore(state => state.backendAddress!)
-  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket<Request>(backendAddress)
+  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(backendAddress)
+  
   const queryClient = useQueryClient()
   const loginSuccess = useStore(state => state.type != LoginType.LOGIN_SUCCESS)
   const receiveHook = useStore(state => state.receiveHook)
@@ -118,41 +120,33 @@ function useMessageWebSocket() {
   }, [readyState])
 }
 
-function useAlert(setSuccessAlertOpen: (open: boolean) => void, setErrorAlertOpen: (open: boolean) => void) {
+const successAlertOpen = signal(false)
+const errorAlertOpen = signal(false)
+const alertContent = signal("")
+
+function useAlert() {
   const setSuccessAlert = useStore(state => state.setSuccessAlert)
   const setErrorAlert = useStore(state => state.setErrorAlert)
 
-  const [alertContent, setAlertContent] = useState("")
-
-  const successAlert = useCallback((content: string) => {
-    setSuccessAlertOpen(true)
-    setAlertContent(content)
-    setTimeout(() => {
-      setSuccessAlertOpen(false)
-    }, 5000)
-    console.trace()
-  }, [setSuccessAlertOpen, setAlertContent])
+  useEffect(() => {
+    setSuccessAlert((content: string) => {
+      successAlertOpen.value = true
+      alertContent.value = content
+      setTimeout(() => {
+        successAlertOpen.value = false
+      }, 5000)
+    })
+  }, [setSuccessAlert])
 
   useEffect(() => {
-    setSuccessAlert(successAlert)
-  }, [successAlert])
-
-  const errorAlert = useCallback((content: string) => {
-    setErrorAlertOpen(true)
-    setAlertContent(content)
-    setTimeout(() => {
-      setErrorAlertOpen(false)
-    }, 5000)
-    console.trace()
-  }, [setErrorAlertOpen, setAlertContent])
-
-  useEffect(() => {
-    setErrorAlert(errorAlert)
-  }, [errorAlert])
-  
-  return {
-    alertContent
-  }
+    setErrorAlert((content: string) => {
+      successAlertOpen.value = true
+      alertContent.value = content
+      setTimeout(() => {
+        successAlertOpen.value = false
+      }, 5000)
+    })
+  }, [setErrorAlert])
 }
 
 const router = createBrowserRouter(
@@ -187,21 +181,17 @@ function SubRouter() {
 }
 
 function Alert() {
-  const [successAlertOpen, setSuccessAlertOpen] = useState(false)
-  const [errorAlertOpen, setErrorAlertOpen] = useState(false)
   const { t } = useTranslation()
-  const { 
-    alertContent
-  } = useAlert(setSuccessAlertOpen, setErrorAlertOpen)
+  useAlert()
   return (
     <>
-      <div className={classNames("alert alert-success shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", successAlertOpen || "hidden")}>
+      <div className={classNames("alert alert-success shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", successAlertOpen.value || "hidden")}>
         <div>
           <DoneIcon />
           <span>{t("Success")}: {alertContent}</span>
         </div>
       </div>
-      <div className={classNames("alert alert-error shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", errorAlertOpen || "hidden")}>
+      <div className={classNames("alert alert-error shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", errorAlertOpen.value || "hidden")}>
         <div>
           <ErrorIcon />
           <span>{t("Error")}! {alertContent}</span>

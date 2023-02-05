@@ -12,7 +12,8 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5000,
-      cacheTime: Infinity
+      cacheTime: Infinity,
+      networkMode: "offlineFirst"
     }
   }
 })

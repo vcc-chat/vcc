@@ -63,7 +63,15 @@ class File:
         name = stat.metadata.get("X-Amz-Meta-realname")
         url = self.minio.presigned_get_object(bucket, id)
         return url, name  # pre-sign url and file name
-
+    def has_object(self, id, bucket="file"):
+        try:
+            self.minio.stat_object(bucket, id)
+        except minio.error.S3Error as err:
+            if err.code.startswith('NoSuch'):
+                return False
+            else:
+                raise
+        return True
     def get_object_content(self, id, bucket="file"):
         self._create_bucket(bucket)
 

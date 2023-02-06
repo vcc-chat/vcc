@@ -35,16 +35,19 @@ class Record(metaclass=base.ServiceMeta):
 
     @timer(1)
     async def flush_worker(self):
+        _time=int(time.time())
+        if not _time%5!=0:
+            return
         curser = 0
         while 1:
             curser, keys = await self._redis.scan(
                 cursor=curser, match="record:*", count=1
             )
-            list(map(lambda x: asyncio.create_task(self.do_flush(x)), keys))
+            list(map(lambda x: asyncio.create_task(self.do_flush(x,_time)), keys))
             if curser == 0:
                 break
+    async def do_flush(self, key,time):
 
-    async def do_flush(self, key):
         length = await self._redis.llen(key)  # Freeze thr length
         content_length = []
         key = key.decode()
@@ -55,7 +58,7 @@ class Record(metaclass=base.ServiceMeta):
                     await self._redis.rpop(a)
                 )
             )  # record:x -> recordl:x
-        filename = key.replace(":", "") + "-" + str(int(time.time()))
+        filename = key.replace(":", "") + "-" + str(time)
         file = await self._vcc.rpc.file.new_object(
             name=filename, id=filename, bucket="record"
         )
@@ -79,11 +82,18 @@ class Record(metaclass=base.ServiceMeta):
         await self._pubsub.psubscribe("messages:*")
         asyncio.get_event_loop().create_task(self.record_worker())
         return await self.flush_worker()
-
     @export(async_mode=True)
-    async def query_record(self,time):
-        return "nope"
-
+    async def query_record(self,chatid,time):
+        if time>int(globals()['time'].time()):
+            return False
+        aligned_time=time-time%5
+        print(f'redord{chatid}-{aligned_time}')
+        a=await self._vcc.rpc.file.has_object(bucket="record",id=f'redord{chatid}-{aligned_time}')
+        if a:
+            return self._vcc.rpc.file.get_obkect(id=f"redord{chatid}-{aligned_time}",bucket="record")
+        else:
+            return -1# Could be found in redis
+        return 0
     def __init__(self):
         self._vcc = vcc.RpcExchanger()
         self._redis = redis.Redis.from_url(

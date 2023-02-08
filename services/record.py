@@ -29,7 +29,7 @@ class Record(metaclass=base.ServiceMeta):
     async def record_worker(self):
         async for i in self._pubsub.listen():
             if i["type"] == "pmessage":
-                channel = i["channel"].decode().split(":")[1]
+                channel = str(json.loads(i["data"])["channel"]) 
                 await self._redis.lpush("record:" + channel, i["data"].decode())
                 await self._redis.lpush("recordl:" + channel, len(i["data"]))
 
@@ -79,7 +79,7 @@ class Record(metaclass=base.ServiceMeta):
 
     async def _ainit(self):
         await self._vcc.__aenter__()
-        await self._pubsub.psubscribe("messages:*")
+        await self._pubsub.psubscribe("messages")
         asyncio.get_event_loop().create_task(self.record_worker())
         return await self.flush_worker()
     @export(async_mode=True)
@@ -89,7 +89,7 @@ class Record(metaclass=base.ServiceMeta):
         aligned_time=time-time%5
         a=await self._vcc.rpc.file.has_object(bucket="record",id=f'redord{chatid}-{aligned_time}')
         if a:
-            return await self._vcc.rpc.file.get_object(id=f"redord{chatid}-{aligned_time}",bucket="record")
+            return await self._vcc.rpc.file.get_object(id=f"record{chatid}-{aligned_time}",bucket="record")
         else:
             return -1# Could be found in redis
         return 0

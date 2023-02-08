@@ -90,7 +90,7 @@ class Record(metaclass=base.ServiceMeta):
         print(f'redord{chatid}-{aligned_time}')
         a=await self._vcc.rpc.file.has_object(bucket="record",id=f'redord{chatid}-{aligned_time}')
         if a:
-            return self._vcc.rpc.file.get_obkect(id=f"redord{chatid}-{aligned_time}",bucket="record")
+            return await self._vcc.rpc.file.get_obkect(id=f"redord{chatid}-{aligned_time}",bucket="record")
         else:
             return -1# Could be found in redis
         return 0

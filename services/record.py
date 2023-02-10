@@ -11,6 +11,7 @@ import redis.asyncio as redis
 import aiohttp
 import models
 import peewee
+import json
 
 def timer(interval, func=None):
     if func == None:
@@ -18,9 +19,10 @@ def timer(interval, func=None):
 
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
+        await asyncio.sleep(interval-time.time()%interval)
         while 1:
-            await func(*args, **kwargs)
-            await asyncio.sleep(interval)
+            asyncio.create_task(func(*args, **kwargs))
+            await asyncio.sleep(interval-time.time()%interval)
 
     return wrapper
 
@@ -29,15 +31,14 @@ class Record(metaclass=base.ServiceMeta):
     async def record_worker(self):
         async for i in self._pubsub.listen():
             if i["type"] == "pmessage":
-                channel = str(json.loads(i["data"])["channel"]) 
+                channel = str(json.loads(i["data"])["chat"])
                 await self._redis.lpush("record:" + channel, i["data"].decode())
                 await self._redis.lpush("recordl:" + channel, len(i["data"]))
 
-    @timer(1)
+    @timer(5)
     async def flush_worker(self):
         _time=int(time.time())
-        if not _time%5!=0:
-            return
+        print(_time%5)
         curser = 0
         while 1:
             curser, keys = await self._redis.scan(
@@ -74,7 +75,7 @@ class Record(metaclass=base.ServiceMeta):
             res = await session.put(
                 url=file[0],
                 data=data_generator(),
-                headers={"Content-Length": str(sum(content_length) + len(header))},
+                headers={"Content-Length": str(sum(content_length) + len(header)+len(content_length))},
             )
 
     async def _ainit(self):
@@ -87,7 +88,7 @@ class Record(metaclass=base.ServiceMeta):
         if time>int(globals()['time'].time()):
             return False
         aligned_time=time-time%5
-        a=await self._vcc.rpc.file.has_object(bucket="record",id=f'redord{chatid}-{aligned_time}')
+        a=await self._vcc.rpc.file.has_object(bucket="record",id=f'record{chatid}-{aligned_time}')
         if a:
             return await self._vcc.rpc.file.get_object(id=f"record{chatid}-{aligned_time}",bucket="record")
         else:

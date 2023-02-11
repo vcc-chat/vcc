@@ -5,6 +5,7 @@ import setproctitle
 
 
 import prompt_toolkit
+
 from prompt_toolkit import Application, HTML
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.filters import Condition
@@ -36,11 +37,8 @@ def init():
 
 def async_wrapper(func):
     """used to convert async function to normal function"""
-    evloop = asyncio.get_event_loop()
-
     def wrapper(*args):
-        return evloop.run_until_complete(func(*args))
-
+        return asyncio.ensure_future(func(*args))
     return wrapper
 
 
@@ -50,10 +48,8 @@ async def show_dialog_as_float(app, dialog):
     root_container.floats.insert(0, float_)
     focused_before = app.layout.current_window
     app.layout.focus(dialog)
-    app._redraw()
     result = await dialog.future
     app.layout.focus(focused_before)
-    app._redraw()
     if float_ in root_container.floats:
         root_container.floats.remove(float_)
     return result
@@ -151,7 +147,7 @@ class mainapp:
                 self.current_chat = chat[0]
             else:
                 self.current_chat = None
-            self.chatlist =HSplit(children)
+            self.chatlist:HSplit =HSplit(children)
 
             self.chatbox = HSplit([])
 
@@ -175,11 +171,12 @@ class mainapp:
                     ),
                 ]
             )
-            root_container = FloatContainer(root_container, floats=[])
+            root_container = root_container
             kb = KeyBindings()
             kb.add("tab")(focus_next)
             kb.add("s-tab")(focus_previous)
             kb.add("c-c")(lambda ev: ev.app.exit())
+            kb.add("c-e")(lambda ev:self.create_chat())
             layout = Layout(root_container)
             app = prompt_toolkit.Application(
                 full_screen=True, layout=layout, mouse_support=True, key_bindings=kb
@@ -194,14 +191,26 @@ class mainapp:
         if buffer.text == "":
             return
         await self.client.send(buffer.text, self.current_chat[0], None)
-
+        buffer.text = ""
     @async_wrapper
     async def create_chat(self):
-        dialog = TextInputDialog("Create chat")
-        ret = await show_dialog_as_float(self.app, dialog)
-        id = await self.client.chat_create(ret)
+        future=asyncio.Future()
+        def accept(ev):
+            try:
+                future.set_result(ev.text)
+            except:
+                pass
+        input=to_container(TextArea(multiline=False,height=1,wrap_lines=True,accept_handler=accept,prompt="New: "))
+        self.chatlist.children.append(input)
+        self.app.layout.focus(input)
+        chatname=(await future)
+        self.chatlist.children.remove(input)
+        self.app.layout.focus(self.chatbar)
+        if chatname=="":
+            return
+        id = await self.client.chat_create(chatname)
         await self.client.chat_join(id)
-
+        await self.update_chatlist()
     async def update_chatlist(self,init=False):
         chat = await self.client.chat_list()
         children= map(
@@ -212,7 +221,9 @@ class mainapp:
         )
         if init:
             return chat,children
-        self.chatlist.children=children
+        self.chatlist.children.clear()
+        self.chatlist.children.extend(children)
+        self.app._redraw()
         return chat
 
 if __name__ == "__main__":

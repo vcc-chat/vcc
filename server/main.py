@@ -1,6 +1,7 @@
 import json
 import uuid
 import sys
+import os
 import traceback
 from functools import reduce
 from itertools import zip_longest
@@ -137,6 +138,7 @@ class RpcServer(protocol.Factory):
         print(1234)
         return RpcProtocol(self)
 
-
-endpoints.serverFromString(reactor, "tcp:2474:interface=127.0.0.1").listen(RpcServer())
-reactor.run()
+if __name__=="__main__":
+    host,port=os.getenv("RPCHOST","127.0.0.1:2474").split(":")
+    endpoints.serverFromString(reactor, f"tcp:{port}:interface={host}").listen(RpcServer())
+    reactor.run()

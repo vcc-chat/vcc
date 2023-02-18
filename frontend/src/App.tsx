@@ -82,7 +82,7 @@ function useMessageWebSocket() {
       case "message":
         if (!loginSuccess) break
         (async () => {
-          changeLastMessageTime(+new Date)
+          changeLastMessageTime()
           if (message.msg == "") return
           const newMessage = {
             req: receiveHook ? await receiveHook(message) : message,

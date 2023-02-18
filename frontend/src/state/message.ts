@@ -7,7 +7,7 @@ interface MessageState {
   lastMessageTime: number
   addMessage: (message: RequestWithTime) => void
   addMarkdownToHTML: (msg: string, html: any) => void
-  changeLastMessageTime: (time: number) => void
+  changeLastMessageTime: () => void
 }
 
 const createMessageSlice: StateCreator<MessageState> = (set) => ({
@@ -34,9 +34,9 @@ const createMessageSlice: StateCreator<MessageState> = (set) => ({
       }
     }))
   },
-  changeLastMessageTime(time) {
+  changeLastMessageTime() {
     set({
-      lastMessageTime: time
+      lastMessageTime: Math.floor(Date.now() / 1000)
     })
   }
 })

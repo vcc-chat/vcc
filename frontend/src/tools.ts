@@ -157,13 +157,14 @@ export function persistSignal<T>(signal: Signal<T>, key: string) {
   })
 }
 
-async function getChatRecord(chat: number) {
+async function getChatRecord(chat: number, index: number = 0) {
   const { makeRequest, lastMessageTime } = useStore.getState()
   const { msg: url } = await makeRequest({
-    uid: 1,
-    msg: (lastMessageTime / 1000) as any,
+    uid: chat,
+    msg: lastMessageTime as any,
     type: "record_query"
   })
+  console.log({ url })
   if (!url) return []
   const response = await fetch(url)
   const rawText = await response.text()
@@ -171,15 +172,18 @@ async function getChatRecord(chat: number) {
     const data = JSON.parse(dataString)
     return {
       req: {
-        ...data,
+        msg: data.msg,
         usrname: data.username,
+        uid: data.chat,
         type: "message"
       },
       // need to be changed
-      time: Date.now()
+      time: Date.now() + index
     }
   })
 }
+
+let first = true
 
 export async function syncMessages() {
   if (useStore.getState().type != LoginType.LOGIN_SUCCESS) return
@@ -187,10 +191,13 @@ export async function syncMessages() {
     queryKey: ["chat-list"],
     queryFn: queryChatList
   })
-  const records = (await Promise.all(chats.map(chat => getChatRecord(chat)))).flat()
+  const records = (await Promise.all(chats.map(getChatRecord))).flat()
   const addMessage = useStore.getState().addMessage
+  console.debug("records: ", records.map(a => a.req))
   for (const record of records) {
     addMessage(record)
   }
-  useStore.getState().changeLastMessageTime(+new Date)
+  if (!first) return
+  first = false
+  useStore.getState().changeLastMessageTime()
 }

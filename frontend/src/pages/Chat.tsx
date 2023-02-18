@@ -223,7 +223,7 @@ export default memo(function Chat() {
   }, [result])
   const messagesShow = messages.filter(a => a.req.session == session)
   useBeforeUnload(() => {
-    changeLastMessageTime(+new Date)
+    changeLastMessageTime()
   })
   return (
     <>
@@ -232,7 +232,7 @@ export default memo(function Chat() {
         <ul ref={ref} className="flex flex-col m-0 p-0 overflow-auto no-scrollbar flex-1 space-y-1">
           {messagesShow
             .map((nowMsg) => (
-              <MessageComponent nowMsg={nowMsg} key={nowMsg.time} />
+              <MessageComponent nowMsg={nowMsg} key={`${nowMsg.time}-${nowMsg.req.usrname}-${nowMsg.req.msg}`} />
             ))
           }
         </ul>

@@ -6,7 +6,7 @@ import json
 import logging
 
 try:
-    import uvloop # I dont want to install this thing in the fucking docker because it needs gcc
+    import uvloop # I dont want to install this thing in the fucking docker because it needs gcc # type: ignore
     uvloop.install()
 except:
     pass
@@ -16,7 +16,7 @@ from uuid import uuid4
 from datetime import datetime, timedelta, timezone
 from websockets.server import WebSocketServerProtocol, serve as websocket_serve
 from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
-from vcc import RpcExchanger, RpcExchangerClient, PermissionDeniedError
+from vcc import RpcExchanger, RpcExchangerClient, PermissionDeniedError, ChatNotJoinedError
 
 confpath = os.getenv("WEBVCC_CONFPATH", "config.json")#FIXME: I dont think a file just for key is a good idea
 
@@ -223,6 +223,17 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                 case "file_download":
                     url, name = await client.file_get_object(msg)
                     await send("file_download", username=name, msg=url)
+                case "record_query":
+                    client.check_authorized()
+                    client.check_joined(uid)
+                    if uid not in client._chat_list:
+                        raise TypeError("")
+                    result = await client._exchanger.rpc.record.query_record(chatid=uid, time=int(msg))
+                    if not result or result == -1:
+                        await send("record_query", username="", msg="")
+                    else:
+                        url, name = result
+                        await send("record_query", username=name, msg=url)
                 case _:
                     await websocket.close(1008)
                     return
@@ -232,7 +243,7 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
         logging.info(e)
     except Exception as e:
         logging.info(e, exc_info=True)
-        await websocket.close(1008)
+        await websocket.close(1008, ",".join(e.args))
 
 
 async def loop(websocket: WebSocketServerProtocol, exchanger: RpcExchanger) -> None:

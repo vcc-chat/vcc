@@ -35,7 +35,8 @@ const useStore = create<
           token: state.token,
           pluginLinks: state.pluginLinks,
           markdownToHTML: state.markdownToHTML,
-          backendAddress: state.backendAddress
+          backendAddress: state.backendAddress,
+          lastMessageTime: state.lastMessageTime
         })
       }
     )

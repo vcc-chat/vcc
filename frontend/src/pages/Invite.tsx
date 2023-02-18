@@ -11,9 +11,8 @@ export default function Invite(props: {}) {
   const { makeRequest, successAlert, errorAlert } = useNetwork()
   const ready = useStore(state => state.ready)
   const { chat, token } = useLoaderData() as { chat: number, token: string }
-  const { refresh: refreshChats, values: chats } = useChatList()
+  const { refetch, values: chats } = useChatList()
   const navigate = useNavigate()
-  const changeValue = useStore(state => state.changeChat)
   const { t } = useTranslation()
   useTitle(`Join Chat ${chat}`)
   return (
@@ -47,13 +46,13 @@ export default function Invite(props: {}) {
                   })
                   console.log(uid)
                   if (uid) {
+                    await refetch()
                     successAlert(t("You have joined the chat successfully. "))
-                    changeValue(chat)
-                    refreshChats()
+                    navigate(`/chats/${uid}`)
                   } else {
-                    errorAlert(t("Unexpected error occurred. "))
+                    errorAlert(t("Oh No! An unexpected error has occurred. "))
+                    navigate("/")
                   }
-                  navigate("/")
                 }}>{t("join")}</button>
               </div>
             </div>

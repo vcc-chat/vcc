@@ -1,5 +1,3 @@
-export const WEBSOCKET_PORT = 7000
-
 export type RequestType = 
   | "message" | "login" | "chat_create" | "chat_join" 
   | "chat_quit" | "chat_get_name" | "chat_list" 
@@ -9,7 +7,7 @@ export type RequestType =
   | "chat_check_invite" | "chat_invite" | "chat_get_permission" 
   | "chat_modify_permission" | "session_join" | "is_online" 
   | "file_upload" | "file_download" | "request_oauth"
-  | "login_oauth"
+  | "login_oauth" | "record_query"
 
 export type Request = {
   type: RequestType

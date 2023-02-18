@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "preact/hooks"
 import { type TargetedEvent, createPortal } from "preact/compat"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
+import { useNavigate } from "react-router-dom"
 
 import useStore from "./store"
 import { Request, RequestType } from "./config"
@@ -21,8 +22,9 @@ export function JoinDialog({ id }: {
 
   const changeValue = useStore(state => state.changeChat)
   const changeName = useStore(state => state.changeChatName)
+  const navigate = useNavigate()
   const { successAlert, errorAlert } = useNetwork()
-  const { refresh } = useChatList()
+  const { refetch } = useChatList()
 
   const joinHandler = useCallback(async () => {
     let chat: number
@@ -37,14 +39,13 @@ export function JoinDialog({ id }: {
       type: "chat_join"
     })
     if (request.uid) {
-      changeName(request.usrname)
-      changeValue(chat)
+      await refetch()
+      navigate(`/chats/${request.uid}`)
       successAlert(t("You have joined the chat successfully. "))
-      refresh()
     } else {
       errorAlert(t("No such chat. "))
     }
-  }, [successAlert, errorAlert, refresh, dialogValue])
+  }, [successAlert, errorAlert, refetch, dialogValue])
   return createPortal((
     <>
       <input type="checkbox" id={id} className="modal-toggle" />

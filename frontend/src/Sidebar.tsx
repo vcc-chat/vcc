@@ -32,7 +32,7 @@ export function NavBar({ toggle, toggleRightSidebar }: {
   const { t } = useTranslation()
   return (
     <div className="navbar bg-base-100">
-      <div className="flex-none">
+      <div className="flex-none sm:hidden">
         <button className="btn btn-square btn-ghost" onClick={toggle}>
           <MenuIcon />
         </button>
@@ -152,7 +152,7 @@ function SidebarItem({ value, setOpen, subChats }: {
     return function () {
       changeValue(value)
       changeName(name)
-      navigate(`/chats/${value}/settings/null`)
+      navigate(`/chats/${value}/settings/info`)
       setOpen(false)
     }
   }, [])
@@ -217,8 +217,8 @@ export function Sidebar({ open, setOpen }: {
       <JoinDialog id={joinChatDialogID} />
       <div 
         aria-hidden={!open} 
-        className={classNames("duration-300 overflow-x-hidden w-full transition-all no-scrollbar", {
-          "sm:max-w-xs max-w-full sm:w-xs w-full overflow-y-auto": open,
+        className={classNames("duration-300 overflow-x-hidden w-full transition-all no-scrollbar sm:max-w-[16rem] sm:w-[16rem]", {
+          "max-w-full w-full overflow-y-auto": open,
           "max-w-0 overflow-y-hidden": !open
         })}
       >

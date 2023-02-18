@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback, useId, useReducer, useMemo } 
 import { useSignal } from "@preact/signals"
 import { memo, type TargetedEvent, createPortal } from "preact/compat"
 import type { ComponentChildren } from "preact"
-import { useParams, useFetcher, Link } from "react-router-dom"
+import { useParams, useFetcher, Link, useBeforeUnload } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -118,7 +118,7 @@ const MessageComponent = memo(function MessageComponent({ nowMsg }: {
           ]}
           components={{
             a: ({ href, children, ...props }: {
-              href: string,
+              href?: any,
               children: ComponentChildren
             }) => (
               <MessageLink link={href!} children={children} />
@@ -199,6 +199,7 @@ export default memo(function Chat() {
   const fileUploadDialogID = useId()
   const { t } = useTranslation()
   const ready = useStore(state => state.ready)
+  const changeLastMessageTime = useStore(state => state.changeLastMessageTime)
 
   useTitle(session ?? chatNames[chats.indexOf(chat!)])
 
@@ -221,6 +222,9 @@ export default memo(function Chat() {
     }
   }, [result])
   const messagesShow = messages.filter(a => a.req.session == session)
+  useBeforeUnload(() => {
+    changeLastMessageTime(+new Date)
+  })
   return (
     <>
       <FileUploadDialog id={fileUploadDialogID} />

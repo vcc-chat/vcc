@@ -9,10 +9,11 @@ import {
 
 import store from "./store"
 import { LoginType } from "./state/login"
-import { queryClient } from "./tools"
+import { queryClient, syncMessages } from "./tools"
 import { PermissionKey, allPermissions } from "./Settings"
 
 import shellQuote from "shell-quote"
+import { initBackend } from "./components/ChooseBackend"
 
 export function wait() {
   return new Promise<void>(res => setTimeout(res, 0))
@@ -89,8 +90,31 @@ export async function inviteLoader({ request }: LoaderFunctionArgs) {
   return json({ chat, token })
 }
 
-export async function chatLoader() {
-  return authLoader()
+export async function chatLoader({ params }: LoaderFunctionArgs) {
+  const authResult = await authLoader()
+  if (authResult.status != 200) return authResult
+  const { id } = params
+  const { values: chats, names: chatNames } = (queryClient.getQueryData(["chat-list"]) ?? {
+    values: [],
+    names: []
+  }) as {
+    values: number[]
+    names: string[]
+  }
+  const chatRaw = Number(id)
+  const chat = Number.isNaN(chatRaw) || !chats.includes(chatRaw) ? null : chatRaw
+  const { changeChat, changeChatName } = store.getState()
+
+  changeChat(chat)
+  changeChatName(chat == null ? "" : chatNames[chats.indexOf(chat)])
+
+  if (chat == null && chats.length) {
+    return redirect(`/chats/${chats[0]}`)
+  }
+
+  syncMessages()
+
+  return new Response()
 }
 
 
@@ -246,7 +270,7 @@ export function useChatActionData() {
 
 export async function settingsIndexLoader({ params }: LoaderFunctionArgs) {
   const { id } = params
-  return redirect(`/chats/${id}/settings/null`)
+  return redirect(`/chats/${id}/settings/info`)
 }
 
 export async function settingsLoader() {
@@ -329,6 +353,7 @@ export async function loginLoader() {
 }
 
 export async function loginAction({ request }: ActionFunctionArgs) {
+  initBackend()
   const { makeRequest } = store.getState()
   const { username, password } = Object.fromEntries(await request.formData())
   if (typeof username != "string" || typeof password != "string") {

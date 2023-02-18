@@ -8,7 +8,7 @@ import useStore from "../store"
 
 export default memo(function Settings(props: {}) {
   const matches = useMatches()
-  const showSettings = matches[3].pathname.split("/").at(-1)!
+  const showSettings = matches[4].pathname.split("/").at(-1)!
   const navigate = useNavigate()
   const setShowSettings = (item: string | undefined) => {
     navigate(`../${item ?? "null"}`, {

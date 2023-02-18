@@ -4,13 +4,16 @@ import { RequestWithTime } from "../config"
 interface MessageState {
   messages: Record<number, RequestWithTime[]>
   markdownToHTML: Record<string, any>
+  lastMessageTime: number
   addMessage: (message: RequestWithTime) => void
   addMarkdownToHTML: (msg: string, html: any) => void
+  changeLastMessageTime: (time: number) => void
 }
 
 const createMessageSlice: StateCreator<MessageState> = (set) => ({
   messages: {},
   markdownToHTML: {},
+  lastMessageTime: Infinity,
   addMessage(message: RequestWithTime) {
     const chat = message.req.uid
     set(value => {
@@ -30,6 +33,11 @@ const createMessageSlice: StateCreator<MessageState> = (set) => ({
         [msg]: html
       }
     }))
+  },
+  changeLastMessageTime(time) {
+    set({
+      lastMessageTime: time
+    })
   }
 })
 

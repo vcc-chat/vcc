@@ -7,6 +7,7 @@ import { useNetwork, useTitle } from "../tools"
 import { useRegisterActionData } from "../loaders"
 import { LoginType } from "../state/login"
 import useStore from "../store"
+import ChooseBackend, { initBackend } from "../components/ChooseBackend"
 
 export default function Register(props: {}) {
   const loginStatus = useStore(state => state.type)
@@ -24,7 +25,8 @@ export default function Register(props: {}) {
     navigate("/login")
   }, [navigate])
   useEffect(() => {
-    (async () => {
+    initBackend()
+    ;(async () => {
       if (result === undefined) return
       const { success } = result
       if (success) {

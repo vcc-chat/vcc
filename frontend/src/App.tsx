@@ -35,7 +35,6 @@ const ErrorElement = lazy(() => import("./pages/ErrorElement"))
 const CreateChat = lazy(() => import("./pages/CreateChat"))
 const FileDownload = lazy(() => import("./pages/FileDownload"))
 const App = lazy(() => import("./pages/App"))
-const ChooseBackend = lazy(() => import("./pages/ChooseBackend"))
 
 const Loading = memo(() => {
   return (
@@ -48,7 +47,7 @@ function useMessageWebSocket() {
   const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(backendAddress)
   
   const queryClient = useQueryClient()
-  const loginSuccess = useStore(state => state.type != LoginType.LOGIN_SUCCESS)
+  const loginSuccess = useStore(state => state.type == LoginType.LOGIN_SUCCESS)
   const receiveHook = useStore(state => state.receiveHook)
   const { names: chatNames, values: chatValues } = useChatList()
   const addMessage = useStore(state => state.addMessage)
@@ -56,6 +55,10 @@ function useMessageWebSocket() {
   const setSendJsonMessageRaw = useStore(state => state.setSendJsonMessageRaw)
   const setReady = useStore(state => state.setReady)
   const errorAlert = useStore(state => state.errorAlert)
+  const changeLastMessageTime = useStore(state => state.changeLastMessageTime)
+
+  // @ts-ignore
+  window.sendJsonMessage = sendJsonMessage
 
   useEffect(() => {
     setSendJsonMessageRaw(sendJsonMessage)
@@ -77,8 +80,9 @@ function useMessageWebSocket() {
     }
     switch (message.type) {
       case "message":
-        if (loginSuccess) break
+        if (!loginSuccess) break
         (async () => {
+          changeLastMessageTime(+new Date)
           if (message.msg == "") return
           const newMessage = {
             req: receiveHook ? await receiveHook(message) : message,
@@ -114,7 +118,8 @@ function useMessageWebSocket() {
   useEffect(() => {
     if (readyState !== ReadyState.CLOSED) return
     const timeout = setTimeout(() => {
-      errorAlert!("An unexpected error occurred. ")
+      console.log({ errorAlert })
+      errorAlert!("Oh No! An unexpected error has occurred. ")
     }, 2000)
     return () => clearTimeout(timeout)
   }, [readyState])
@@ -140,10 +145,10 @@ function useAlert() {
 
   useEffect(() => {
     setErrorAlert((content: string) => {
-      successAlertOpen.value = true
+      errorAlertOpen.value = true
       alertContent.value = content
       setTimeout(() => {
-        successAlertOpen.value = false
+        errorAlertOpen.value = false
       }, 5000)
     })
   }, [setErrorAlert])
@@ -151,24 +156,25 @@ function useAlert() {
 
 const router = createBrowserRouter(
   createRoutesFromElements(
-    <Route errorElement={<ErrorElement content="500 Internal Server Error" />} loader={loaders.chooseBackendLoader}>
-      <Route path="/" loader={loaders.homeLoader} />
-      <Route path="/choose-backend" element={<ChooseBackend />} />
-      <Route path="/chats/invite/" element={<Invite />} loader={loaders.inviteLoader} />
-      <Route path="/chats/create/" element={<CreateChat />} loader={loaders.createChatLoader} />
-      <Route path="/chats/:id/" element={<ChatRoot />}>
-        <Route index element={<Chat />} action={loaders.chatAction} loader={loaders.chatLoader} />
-        <Route path="settings/" element={<Settings />}>
-          <Route index loader={loaders.settingsIndexLoader} />
-          <Route path="null" element={<></>} loader={loaders.settingsLoader} />
-          <Route path="info" element={<SettingsInfo />} loader={loaders.settingsInfoLoader} />
-          <Route path="actions" element={<SettingsActions />} loader={loaders.settingsActionsLoader} />
+    <Route path="/" errorElement={<ErrorElement content="500 Internal Server Error" />}>
+      <Route index loader={loaders.homeLoader} />
+      <Route path="chats">
+        <Route path="invite" element={<Invite />} loader={loaders.inviteLoader} />
+        <Route path="create" element={<CreateChat />} loader={loaders.createChatLoader} />
+        <Route path=":id" element={<ChatRoot />}>
+          <Route index element={<Chat />} action={loaders.chatAction} loader={loaders.chatLoader} />
+          <Route path="settings" element={<Settings />}>
+            <Route index loader={loaders.settingsIndexLoader} />
+            {/* <Route path="null" element={<></>} loader={loaders.settingsLoader} /> */}
+            <Route path="info" element={<SettingsInfo />} loader={loaders.settingsInfoLoader} />
+            <Route path="actions" element={<SettingsActions />} loader={loaders.settingsActionsLoader} />
+          </Route>
         </Route>
       </Route>
-      <Route path="/files/:id" element={<FileDownload />} loader={loaders.fileDownloadLoader} />
-      <Route path="/apps/:name" element={<App />} loader={loaders.appLoader} />
-      <Route path="/login" element={<Login />} loader={loaders.loginLoader} action={loaders.loginAction} />
-      <Route path="/register" element={<Register />} loader={loaders.registerLoader} action={loaders.registerAction} />
+      <Route path="files/:id" element={<FileDownload />} loader={loaders.fileDownloadLoader} />
+      <Route path="apps/:name" element={<App />} loader={loaders.appLoader} />
+      <Route path="login" element={<Login />} loader={loaders.loginLoader} action={loaders.loginAction} />
+      <Route path="register" element={<Register />} loader={loaders.registerLoader} action={loaders.registerAction} />
       <Route path="*" element={<ErrorElement content="404 Not Found" />} />
     </Route>
   )

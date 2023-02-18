@@ -9,6 +9,7 @@ import { LoginType } from "../state/login"
 import useStore from "../store"
 import { useLoginActionData } from "../loaders"
 import { useNetwork, useTitle } from "../tools"
+import ChooseBackend, { initBackend } from "../components/ChooseBackend"
 
 export default function Login(props: {}) {
   const username = useStore(state => state.username)
@@ -41,6 +42,7 @@ export default function Login(props: {}) {
   }, [loginStatus])
 
   const githubOauthHandler = useCallback(async () => {
+    initBackend()
     const { usrname: requestID, msg: url } = await makeRequest({
       type: "request_oauth",
       msg: "github"
@@ -72,7 +74,7 @@ export default function Login(props: {}) {
             <p className="py-6">{t("To send messages, you need to login first.")}</p>
           </div>
           <div className="card flex-shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
-            <div className="card-body">
+            <div className="card-body p-7">
               <div className="form-control">
                 <label className="label">
                   <span className="label-text">{t("Username")}</span>
@@ -98,7 +100,6 @@ export default function Login(props: {}) {
                 <div className="flex w-full btn-group">
                   <button className="btn btn-ghost" onClick={() => {
                     navigate("/register")
-                    console.log(1)
                   }} type="button">{t("Register")}</button>
                   <button className="flex-1 btn btn-primary" type="submit">{t("Login")}</button>
                 </div>
@@ -106,6 +107,7 @@ export default function Login(props: {}) {
                   {t("Continue with Github")}
                 </button>
               </div>
+              <ChooseBackend />
             </div>
           </div>
         </Form>

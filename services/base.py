@@ -5,6 +5,7 @@ import os
 import logging
 import threading
 import traceback
+import inspect
 
 # from twisted.internet import task ### No more twisted
 # from twisted.internet.defer import Deferred
@@ -53,9 +54,8 @@ class ServiceMeta(type):
             attr = dct[i]
             if isinstance(attr, ServiceExport):
                 ([exports, exports_async][attr.async_mode]).append(attr.__name__)
-        print(dct | {"exports": exports, "exports_async": exports_async})
         if exports != {} or exports_async != {}:
-            dct = dct | {"exports": exports, "exports_async": exports_async}
+            dct |= {"exports": exports, "exports_async": exports_async}
         return type(clsname, bases, dct)
 
 
@@ -178,19 +178,16 @@ class RpcServiceFactory:
                     getattr(instance, "exports", [])
                     + getattr(instance, "exports_async", [])
                 )
-                if i[0] != "_" and hasattr(getattr(instance, i), "__call__")
+                if i[0] != "_" and callable(getattr(instance, i))
             }
             self.async_func = getattr(instance, "exports_async", [])
         else:
             services = {
                 i: getattr(instance, i)
                 for i in dir(instance)
-                if i[0] != "_" and hasattr(getattr(instance, i), "__call__")
+                if i[0] != "_" and callable(getattr(instance, i))
             }
-            if self.async_mode:
-                self.async_func = list(services.keys())
-            else:
-                self.async_func = []
+            self.async_func = [key for key, value in services.items() if inspect.iscoroutinefunction(value)]
         annotations = {
             key1: {
                 key2: str(value2) if str(value2)[0] != "<" else value2.__name__

@@ -65,8 +65,7 @@ class Main:
     @db.atomic()
     def quit(self, bot_id: int, chat_id: int) -> bool:
         try:
-            chat, bot, chat_bot = self._get_chat_bot(chat_id, bot_id)
-            chat_bot.delete_instance()
+            ChatBot.get(chat=chat_id, bot=bot_id).delete_instance()
             return True
         except:
             return False

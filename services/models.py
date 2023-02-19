@@ -1,4 +1,4 @@
-from peewee import Model,BigAutoField,CharField,IntegerField,ForeignKeyField,BooleanField,BitField,SqliteDatabase
+from peewee import Model,BigAutoField,CharField,IntegerField,ForeignKeyField,BooleanField,BitField,SqliteDatabase, TimestampField, TextField
 
 import os
 
@@ -27,9 +27,9 @@ class Chat(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=20)
     # Parent chat
-    parent = ForeignKeyField("self", backref="sub_chats", null=True)
+    parent = ForeignKeyField("self", backref="sub_chats", null=True, on_delete="CASCADE")
     # Permissions
-    public = BooleanField(default=True)
+    public = BooleanField(default=False)
 
 
 class ChatUser(Model):
@@ -55,12 +55,10 @@ class ChatUser(Model):
     create_session = permissions.flag(64)
     # Being banned, any other permission will be ignored
     banned = permissions.flag(256)
-
-
-class ChatRecord(Model):
-    id = IntegerField(primary_key=True)
-    lastrecord=IntegerField(default=-1)
-    interval=IntegerField(default=5)
+    class Meta:
+        indexes = (
+            (("user", "chat"), True),
+        )
 
 
 class Bot(Model):
@@ -73,13 +71,18 @@ class ChatBot(Model):
     id = BigAutoField(primary_key=True)
     bot = ForeignKeyField(Bot, backref="chat_bots")
     chat = ForeignKeyField(Chat, backref="chat_bots")
+    class Meta:
+        indexes = (
+            (("bot", "chat"), True),
+        )
 
 
 def get_database():
     if "DATABASE" in os.environ:
         return eval(os.environ["DATABASE"])
     else:
-        return SqliteDatabase("db.db")
-
-
-__all__ = ["bind_model", "User", "Chat", "ChatUser", "Bot", "ChatBot", "get_database"]
+        return SqliteDatabase("db.db", pragmas={
+            "journal_mode": "wal",
+            "foreign_keys": 1,
+            "ignore_check_constraints": 0
+        })

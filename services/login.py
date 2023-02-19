@@ -99,9 +99,8 @@ class Login:
         if type(value) == str:
             print(value)
             metadata.value = value
-        elif hasattr(value, "__call__"):
+        elif isinstance(value, Callable):
             print(1)
-            cast(Callable, value)
             metadata.value = str(value(metadata.value))
         metadata.save()
 

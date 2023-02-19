@@ -22,9 +22,8 @@ class RpcProtocol(LineReceiver):
             self.send({"res": "error", "error": "not json"})
             return
         if "res" in data:
-            match data["res"]:
-                case "error" if self.role == "service":
-                    self.factory.make_respond(data["jobid"], data["error"], error=True)
+            if data["res"] == "error" and self.role == "service":
+                self.factory.make_respond(data["jobid"], data["error"], error=True)
             return
         match data["type"]:
             case "handshake":

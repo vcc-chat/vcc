@@ -55,7 +55,6 @@ class ChatService:
     ) -> int | None:
         # parent_chat_id is -1 if the chat has no parent
         try:
-            user = User.get_by_id(user_id)
             if parent_chat_id == -1:
                 new_chat = Chat.create(name=name, parent=None)
             else:
@@ -64,51 +63,43 @@ class ChatService:
                     # Only 2 levels are allowed
                     return None
                 # Make sure creator has already joined the parent chat
-                parent_chat_user = ChatUser.get(user=user, chat=parent_chat)
+                parent_chat_user = ChatUser.get(user=user_id, chat=parent_chat)
                 if not parent_chat_user.create_sub_chat or parent_chat_user.banned:
                     return None
                 new_chat = Chat.create(name=name, parent=parent_chat)
             ChatUser.create(
-                user=user, chat=new_chat, permissions=1 | 2 | 4 | 8 | 16 | 32 | 64 | 128
+                user=user_id, chat=new_chat, permissions=1 | 2 | 4 | 8 | 16 | 32 | 64
             )
             return new_chat.id
         except:
             return None
-    async def register_oauth(name:str,addr:str):
-        self._oauth[name]=addr
-    @db.atomic()
+    
     async def get_name(self, id: int) -> str | None:
         chat = Chat.get_or_none(id=id)
         if chat is None:
             return None
         return chat.name
 
-    @db.atomic()
     async def get_users(self, id: int) -> list[tuple[int, str]]:
         # Won't return users of sub-chats
-        chat = Chat.get_or_none(Chat.id == id)
-        if chat is None:
-            return []
-        chat_users = chat.chat_users
+        chat_users = ChatUser.select().where(ChatUser.chat == id).execute()
         user_names = [
             (chat_user.user.id, chat_user.user.name) for chat_user in chat_users
         ]
         return user_names
 
-    @db.atomic()
     async def join(self, chat_id: int, user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
             if not chat.public:
                 return False
-            user = User.get_by_id(user_id)
             if chat.parent is not None:
                 parent_chat = chat.parent
                 if not parent_chat.public:
                     return False
                 # Also join parent chat
                 parent_chat_user, parent_chat_user_created = ChatUser.get_or_create(
-                    chat=parent_chat, user=user
+                    chat=parent_chat, user=user_id
                 )
                 if parent_chat_user.banned:
                     return False
@@ -123,7 +114,6 @@ class ChatService:
         except:
             return False
 
-    @db.atomic()
     async def quit(self, chat_id: int, user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
@@ -147,7 +137,6 @@ class ChatService:
         except:
             return False
 
-    @db.atomic()
     async def kick(self, chat_id: int, user_id: int, kicked_user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
@@ -187,7 +176,6 @@ class ChatService:
         except:
             return False
 
-    @db.atomic()
     async def rename(self, chat_id: int, user_id: int, new_name: str) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
@@ -213,7 +201,6 @@ class ChatService:
         except:
             return False
 
-    @db.atomic()
     async def invite(self, chat_id: int, user_id: int, invited_user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
@@ -255,18 +242,14 @@ class ChatService:
         except:
             return False
 
-    @db.atomic()
     async def check_send(self, chat_id: int, user_id: int) -> bool:
         try:
-            chat = Chat.get_by_id(chat_id)
-            user = User.get_by_id(user_id)
-            chat_user = ChatUser.get(chat=chat, user=user)
+            chat_user = ChatUser.get(chat=chat_id, user=user_id)
             # Needn't check parent chat user
             return chat_user.send and not chat_user.banned
         except:
             return False
 
-    @db.atomic()
     async def check_create_session(self, chat_id: int, user_id: int) -> bool:
         try:
             chat = Chat.get_by_id(chat_id)
@@ -278,7 +261,6 @@ class ChatService:
         except:
             return False
 
-    @db.atomic()
     async def modify_user_permission(
         self, chat_id: int, user_id: int, modified_user_id: int, name: str, value: bool
     ) -> bool:
@@ -310,7 +292,6 @@ class ChatService:
         except:
             return False
 
-    @db.atomic()
     async def modify_permission(
         self, chat_id: int, user_id: int, name: str, value: bool
     ) -> bool:
@@ -336,19 +317,15 @@ class ChatService:
         except:
             return False
 
-    @db.atomic()
     async def get_user_permission(self, chat_id: int, user_id: int) -> dict[str, bool]:
         try:
-            chat = Chat.get_by_id(chat_id)
-            user = User.get_by_id(user_id)
-            chat_user = ChatUser.get(chat=chat, user=user)
+            chat_user = ChatUser.get(chat=chat_id, user=user_id)
             if chat_user.banned:
                 return False
             return {i: getattr(chat_user, i) for i in all_user_permissions}
         except:
             return {}
 
-    @db.atomic()
     async def get_permission(self, chat_id: int) -> dict[str, bool]:
         try:
             chat = Chat.get_by_id(chat_id)
@@ -356,11 +333,9 @@ class ChatService:
         except:
             return {}
 
-    @db.atomic()
     async def get_all_user_permission(self, chat_id: int) -> dict[int, dict[str, bool]]:
         try:
-            chat = Chat.get_by_id(chat_id)
-            chat_users = chat.chat_users
+            chat_users = ChatUser.select().where(ChatUser.chat == chat_id).execute()
             return {
                 chat_user.user.id: {
                     name: getattr(chat_user, name) for name in all_user_permissions
@@ -370,13 +345,12 @@ class ChatService:
         except:
             return {}
 
-    @db.atomic()
     async def list_somebody_joined(self, id: int) -> list[tuple[int, str, int | None]]:
         # after json.dumps, tuple returned will become json Array
         try:
-            user = User.get_by_id(id)
             chat_users = (
-                user.chat_users.where(~ChatUser.banned)
+                ChatUser.select()
+                .where(~ChatUser.banned, ChatUser.user == id)
                 .join(Chat)
                 .select(Chat.id, Chat.name, Chat.parent)
                 .execute()
@@ -392,14 +366,8 @@ class ChatService:
         except:
             return []
 
-    @db.atomic()
     async def list_sub_chats(self, id: int) -> list[tuple[int, str]]:
-        try:
-            chat = Chat.get_by_id(id)
-            sub_chats = chat.sub_chats
-            return [(i.id, i.name) for i in sub_chats]
-        except:
-            return []
+        return [(i.id, i.name) for i in Chat.select().where(Chat.parent == id).execute()]
 
 
 if __name__ == "__main__":

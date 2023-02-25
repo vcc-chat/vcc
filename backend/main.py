@@ -233,7 +233,7 @@ async def handle_request(websocket: WebSocketServerProtocol, client: RpcExchange
         pass
 
 async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClient) -> None:
-    task_list: set[asyncio.Task[None]] = []
+    task_list: set[asyncio.Task[None]] = set()
     try:
         async for json_msg in websocket:
             task_list.add(asyncio.create_task(handle_request(websocket, client, json_msg)))

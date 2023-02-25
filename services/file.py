@@ -86,6 +86,11 @@ class File:
         return data.decode(), stat.metadata.get(
             "X-Amz-Meta-realname"
         )  # file content and file name
+    
+    def list_object_names(self, prefix=None, bucket="record"):
+        objects = self.minio.list_objects(bucket, prefix=prefix)
+        names: list[str] = [object.object_name for object in objects]
+        return names
 
 
 if __name__ == "__main__":

@@ -86,14 +86,13 @@ class Record(metaclass=base.ServiceMeta):
     @export(async_mode=True)
     async def query_record(self,chatid,time):
         if time>int(globals()['time'].time()):
-            return False
+            return []
+        
         aligned_time=time-time%5
-        a=await self._vcc.rpc.file.has_object(bucket="record",id=f'record{chatid}-{aligned_time}')
-        if a:
-            return await self._vcc.rpc.file.get_object(id=f"record{chatid}-{aligned_time}",bucket="record")
-        else:
-            return -1# Could be found in redis
-        return 0
+
+        name_list = await self._vcc.rpc.file.list_object_names(prefix=f"record{chatid}-", bucket="record")
+        records: list[tuple[str, str]] = await asyncio.gather(*[asyncio.create_task(self._vcc.rpc.file.get_object_content(id=name, bucket="record")) for name in name_list])
+        return [record[0].split("\n")[1:-1] for record in records]
     def __init__(self):
         self._vcc = vcc.RpcExchanger()
         self._redis = redis.Redis.from_url(

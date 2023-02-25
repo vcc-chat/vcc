@@ -41,12 +41,12 @@ class ChatService:
 
     async def _send_message(self, chat: int, msg: str) -> None:
         await self._redis.publish(
-            f"messages:{chat}", json.dumps({"username": SYSTEM_USER_NAME, "msg": msg})
+            f"messages", json.dumps({"username": SYSTEM_USER_NAME, "msg": msg, "chat": chat})
         )
 
     async def _send_event(self, chat: int, type: EventType, data: Any) -> None:
         await self._redis.publish(
-            f"events:{chat}", json.dumps({"type": type, "data": data})
+            f"events", json.dumps({"type": type, "data": data, "chat": chat})
         )
 
     @db.atomic()

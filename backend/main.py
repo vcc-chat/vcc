@@ -19,7 +19,7 @@ with open(confpath) as config_file:
     config = json.load(config_file)
     key = config["key"]
 
-app = Sanic()
+app = Sanic(name="web-vcc")
 exchanger = RpcExchanger()
 
 async def recv_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
@@ -249,14 +249,13 @@ async def loop(request: Request, websocket: Websocket) -> None:
             task.cancel()
 
 @app.main_process_start
-async def init_exchanger():
+async def init_exchanger(*_):
     await exchanger.__aenter__()
 
 @app.main_process_stop
-async def destroy_exchanger():
-    await exchanger.__aexit__()
+async def destroy_exchanger(*_):
+    await exchanger.__aexit__(None, None, None)
 
-logging.basicConfig(level=logging.INFO)
 logging.getLogger("vcc.vcc").setLevel(logging.DEBUG)
-
-app.run(os.environ.get("WEBVCC_ADDR", "0.0.0.0"), 2479)
+if __name__ == "__main__":
+    app.run(os.environ.get("WEBVCC_ADDR", "0.0.0.0"), 2479)

@@ -29,7 +29,7 @@ import vcc
 import asyncio
 import nest_asyncio
 
-nest_asyncio.apply()
+#nest_asyncio.apply()
 def init():
     global vcc_client
     vcc_client = vcc.RpcExchanger()
@@ -91,30 +91,30 @@ class TextInputDialog:
         return self.dialog
 
 class mainapp:
-    def __init__(self, protocol):
-
-        self.protocol = protocol
-        setproctitle.setthreadtitle("VOS client")
+    def __init__(self, userinfo):
+        print("vos")
+        self.userinfo=userinfo
     async def message_reciver(self):
         async for msg in self.client:
 
             if msg[0] != "event":
                 username, msg, chat, session = msg[1:]
-                if chat == self.current_chat[0]:
-                    text = HTML(f"<ansiblue>{username}</ansiblue>:\n    {msg}\n")
-                    lens = len(text.value.split("\n")) - 1
-                    item = Window(
-                        height=lens, content=FormattedTextControl(text, focusable=False)
-                    )
-                    self.chatbox.children.append(item)
-                    curr = self.app.layout.current_window
-                    self.app.layout.focus(item)
-                    self.app._redraw()
-                    self.app.layout.focus(curr)
-                    self.app._redraw()
+                self.append_message(username, msg, chat, session)
             if msg[0] == "event":
                 print(11)
-
+    def append_message(self,username, msg, chat, session):
+        if chat == self.current_chat[0]:
+            text = HTML(f"<ansiblue>{username}</ansiblue>:\n    {msg}\n")
+            lens = len(text.value.split("\n")) - 1
+            item = Window(
+                height=lens, content=FormattedTextControl(text, focusable=False)
+            )
+            self.chatbox.children.append(item)
+            curr = self.app.layout.current_window
+            self.app.layout.focus(item)
+            self.app._redraw()
+            self.app.layout.focus(curr)
+            self.app._redraw()
     def change_chat(self, chatid):
         if self.current_chat != chatid:
             self.current_chat = chatid
@@ -126,8 +126,13 @@ class mainapp:
         async with vcc_client.create_client() as client:
             client: vcc.RpcExchangerClient
             self.client = client
+            if  self.userinfo["username"]=="oauth":
+                platform=await prompt_toolkit.PromptSession().prompt_async("Oauth platform:")
+                res=await client.request_oauth(platform)
+                prompt_toolkit.print_formatted_text(res)
+                return
             login_success = await client.login(
-                self.protocol.session.username, self.protocol.session.password
+                self.userinfo["username"], self.userinfo["password"]
             )
             if not login_success:
                 prompt_toolkit.print_formatted_text("oops! your password may be worong")

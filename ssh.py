@@ -8,11 +8,15 @@ import os
 import asyncio
 import threading
 import logging
-
+import asyncssh
 from zope.interface import implementer
 
 from twisted.conch import avatar
-from twisted.conch.checkers import InMemorySSHKeyDB, SSHPublicKeyChecker
+from twisted.conch.checkers import (
+    SSHPublicKeyChecker,
+    IAuthorizedKeysDB,
+    InMemorySSHKeyDB,
+)
 from twisted.conch.ssh import connection, factory, keys, session, userauth
 from twisted.conch.ssh.transport import SSHServerTransport
 from twisted.cred import portal, credentials
@@ -28,81 +32,42 @@ from prompt_toolkit.data_structures import Size
 
 import vos
 
-log.startLogging(sys.stderr)
 asyncio.new_event_loop()
 
 
-if not (DATAROOT:=os.environ.get("VOS_DATAROOT")):
-    DATAROOT="./"
-SERVER_KEY_PRIVATE = DATAROOT+"/ssh_host_key"
-SERVER_KEY_PUBLIC = DATAROOT+"/ssh_host_key.pub"
-SERVER_PRIME = DATAROOT+"/prime"
-if not os.path.exists(SERVER_KEY_PRIVATE) or  not os.path.exists(SERVER_KEY_PUBLIC):
-    os.system(f'ckeygen -t ED25519 -f {SERVER_KEY_PRIVATE} --no-passphrase   -q')
-if not os.path.exists(SERVER_PRIME):
-    print("Generating primes, this may takes a while")
-    os.system(f'sh scripts/generate_prime.sh {SERVER_PRIME}')
+if not (DATAROOT := os.environ.get("VOS_DATAROOT")):
+    DATAROOT = "./"
+SERVER_KEY_PRIVATE = DATAROOT + "/ssh_host_key"
+SERVER_KEY_PUBLIC = DATAROOT + "/ssh_host_key.pub"
+SERVER_PRIME = DATAROOT + "/prime"
+if not os.path.exists(SERVER_KEY_PRIVATE) or not os.path.exists(SERVER_KEY_PUBLIC):
+    os.system(f"ckeygen -t ED25519 -f {SERVER_KEY_PRIVATE} --no-passphrase   -q")
+import asyncio
+import traceback
+from typing import Any, Awaitable, Callable, Optional, TextIO, cast
 
-PRIMES = {
-    2048: [
-        (
-            2,
-            int(open(DATAROOT+"/prime/2048").read()),
-        )
-    ],
-    4096: [
-        (
-            2,
-            int(open(DATAROOT+"/prime/4096").read()),
-        )
-    ],
-}
+import asyncssh
+
+__all__ = ["PromptToolkitSSHSession", "PromptToolkitSSHServer"]
 
 
-@implementer(ICredentialsChecker)
-class VccAuth:
-    credentialInterfaces = (
-        credentials.IUsernamePassword,
-        credentials.IUsernameHashedPassword,
-    )
+class VccSSHSession(asyncssh.SSHServerSession):  # type: ignore
+    def __init__(self, server, enable_cpr: bool):
+        self.enable_cpr = enable_cpr
+        self.interact_task = None
+        self._chan = None
+        self.app_session = None
+        self.server = server
+        self._input: Optional[PipeInput] = None
+        self._output: Optional[Vt100_Output] = None
 
-    def _cbPasswordMatch(self, matched, username):
-        return username
-
-    def requestAvatarId(self, credentials):
-        return defer.maybeDeferred(
-            credentials.checkPassword, credentials.checkPassword
-        ).addCallback(
-            self._cbPasswordMatch, (credentials.username, credentials.password)
-        )
-
-
-class ExampleAvatar(avatar.ConchUser):
-    def __init__(self, credential):
-        avatar.ConchUser.__init__(self)
-        self.username = credential[0]
-        self.password = credential[1]
-        self.channelLookup.update({b"session": session.SSHSession})
-
-
-@implementer(portal.IRealm)
-class ExampleRealm:
-    def requestAvatar(self, avatarId, mind, *interfaces):
-        print("a", avatarId)
-        return interfaces[0], ExampleAvatar(avatarId), lambda: None
-
-
-class EchoProtocol(protocol.Protocol):
-    def __init__(self, session):
-        self.session = session
-        self.input = None
-
+        # Output object. Don't render to the real stdout, but write everything
+        # in the SSH channel.
         class Stdout:
             def write(s, data: str) -> None:
                 try:
-                    if self.transport is not None:
-                        #data=data.replace('\n', "\r\n")
-                        self.transport.write(data)
+                    if self._chan is not None:
+                        self._chan.write(data.replace("\n", "\r\n"))
                 except BrokenPipeError:
                     pass  # Channel not open for sending.
 
@@ -112,101 +77,110 @@ class EchoProtocol(protocol.Protocol):
             def flush(s) -> None:
                 pass
 
-            encoding = "UTF8"  # I think it must be utf8
+            @property
+            def encoding(s) -> str:
+                assert self._chan is not None
+                return str(self._chan._orig_chan.get_encoding()[0])
 
-        self.stdout = Stdout()
-        self.output = Vt100_Output(
-            self.stdout,
-            lambda: Size(rows=(_s := session.windowSize)[0], columns=_s[1]),
-            term=self.session.term,
+        self.stdout = cast(TextIO, Stdout())
+
+    def _get_size(self) -> Size:
+        """
+        Callable that returns the current `Size`, required by Vt100_Output.
+        """
+        if self._chan is None:
+            return Size(rows=20, columns=79)
+        else:
+            width, height, pixwidth, pixheight = self._chan.get_terminal_size()
+            return Size(rows=height, columns=width)
+
+    def connection_made(self, chan: Any) -> None:
+        self._chan = chan
+
+    def shell_requested(self) -> bool:
+        return True
+
+    def session_started(self) -> None:
+        self.interact_task = asyncio.get_event_loop().create_task(self._interact())
+
+    async def _interact(self) -> None:
+        
+        if self._chan is None:
+            # Should not happen.
+            raise Exception("`_interact` called before `connection_made`.")
+        if hasattr(self._chan, "set_line_mode") and self._chan._editor is not None:
+            # Disable the line editing provided by asyncssh. Prompt_toolkit
+            # provides the line editing.
+            self._chan.set_line_mode(False)
+        term = self._chan.get_terminal_type()
+        self._output = Vt100_Output(
+            self.stdout, self._get_size, term=term
         )
-
-    async def mainapp_wrapper(self):
-        with create_pipe_input() as input:
-            self.input = input
-            with create_app_session(input=self.input, output=self.output) as session:
-                self.appsession = session
-                mainapp=vos.mainapp(self)
-                self.mainapp=mainapp
+        print(self._output)
+        with create_pipe_input() as self._input:
+            with create_app_session(input=self._input, output=self._output) as session:
+                self.app_session = session
                 try:
-                    await mainapp.run()
-                except EOFError:
-                    pass
-        self.transport.connectionLost()
-    def connectionMade(self):
-        loop = asyncio.get_event_loop()
-        threading._start_new_thread(asyncio.run, (self.mainapp_wrapper(),))
-        # loop.run_until_complete(self.mainapp())
+                    userinfo={}
+                    userinfo['username']=self.server.username
+                    if self.server.username!="oauth":
+                        if hasattr(self.server.password):
+                            userinfo['password']=self.server.password
+                    await vos.mainapp(userinfo).run()
+                except BaseException:
+                    traceback.print_exc()
+                finally:
+                    # Close the connection.
+                    self._chan.close()
+                    self._input.close()
 
-    def dataReceived(self, data):
-        try:
-            self.input.send_text(data.decode("UTF8"))
-        except OSError:
-            self.transport.connectionLost()
+    def terminal_size_changed(
+        self, width: int, height: int, pixwidth: object, pixheight: object
+    ) -> None:
+        # Send resize event to the current application.
+        if self.app_session and self.app_session.app:
+            self.app_session.app._on_resize()
 
-    def change_size(self, size):
-        self.appsession.app._on_resize()
+    def data_received(self, data: str, datatype: object) -> None:
+        if self._input is None:
+            # Should not happen.
+            return
 
-
-@implementer(session.ISession, session.ISessionSetEnv)
-class ExampleSession:
-    def __init__(self, avatar):
-        self.username = avatar.username.decode("UTF8")
-        self.password = avatar.password.decode("UTF8")
-
-    def getPty(self, term, windowSize, attrs):
-        self.term = term
-        self.windowSize = windowSize
-
-    def setEnv(self, name, value):
-        pass
-
-    def windowChanged(self, size):
-        self.windowSize = size
-        self.protocol.change_size(size)
-
-    def execCommand(self, proto, cmd):
-        raise Exception("not executing commands")
-
-    def openShell(self, transport):
-        protocol = EchoProtocol(self)
-        protocol.makeConnection(transport)
-        transport.makeConnection(session.wrapProtocol(protocol))
-        self.protocol = protocol
-
-    def eofReceived(self):
-        pass
-
-    def closed(self):
-        pass
+        self._input.send_text(data)
 
 
-components.registerAdapter(
-    ExampleSession, ExampleAvatar, session.ISession, session.ISessionSetEnv
-)
-
-
-class ExampleFactory(factory.SSHFactory):
-    protocol = SSHServerTransport
-    services = {
-        b"ssh-userauth": userauth.SSHUserAuthServer,
-        b"ssh-connection": connection.SSHConnection,
-    }
-
+class PromptToolkitSSHServer(asyncssh.SSHServer):
     def __init__(self):
-        self.portal = portal.Portal(ExampleRealm(), [VccAuth()])
+        self.enable_cpr = True
+    def connection_made(self,conn:asyncssh.SSHServerConnection):
+        self._conn=conn
+    def begin_auth(self, username: str) -> bool:
+        self.username = username
+        if username=="oauth":
+            return False
+        return True
+    def password_auth_supported(self) -> bool:
+        return True
 
-    publicKeys = {b"ssh-ed25519": keys.Key.fromFile(SERVER_KEY_PUBLIC)}
+    def validate_password(self, username: str, password: str) -> bool:
+        self.password = password
+        return True
 
-    def getPrivateKeys(self):
-        return {b"ssh-ed25519": keys.Key.fromFile(SERVER_KEY_PRIVATE)}
-
-    def getPrimes(self):
-        return PRIMES
+    def session_requested(self):
+        print(1234)
+        return VccSSHSession(self, enable_cpr=True)
 
 
 if __name__ == "__main__":
     vos.init()
-    logging.getLogger("vcc.vcc").setLevel(logging.DEBUG)
-    reactor.listenTCP(5022, ExampleFactory())
-    reactor.run()
+    loop = asyncio.get_event_loop()
+
+    loop.run_until_complete(
+        asyncssh.create_server(
+            lambda: PromptToolkitSSHServer(),
+            "",
+            5022,
+            server_host_keys=[SERVER_KEY_PRIVATE],
+        )
+    )
+    loop.run_forever()

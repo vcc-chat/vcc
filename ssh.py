@@ -124,7 +124,7 @@ class VccSSHSession(asyncssh.SSHServerSession):  # type: ignore
                     userinfo={}
                     userinfo['username']=self.server.username
                     if self.server.username!="oauth":
-                        if hasattr(self.server.password):
+                        if hasattr(self.server,"password"):
                             userinfo['password']=self.server.password
                     await vos.mainapp(userinfo).run()
                 except BaseException:

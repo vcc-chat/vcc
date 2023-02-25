@@ -157,18 +157,14 @@ export function persistSignal<T>(signal: Signal<T>, key: string) {
   })
 }
 
-async function getChatRecord(chat: number, index: number = 0) {
+async function getChatRecord(chat: number) {
   const { makeRequest, lastMessageTime } = useStore.getState()
-  const { msg: url } = await makeRequest({
+  const { msg } = await makeRequest({
     uid: chat,
     msg: lastMessageTime as any,
     type: "record_query"
   })
-  console.log({ url })
-  if (!url) return []
-  const response = await fetch(url)
-  const rawText = await response.text()
-  return rawText.split("\n").slice(1, -1).map<RequestWithTime>(dataString => {
+  return (msg as unknown as string[]).map<RequestWithTime>((dataString, index) => {
     const data = JSON.parse(dataString)
     return {
       req: {

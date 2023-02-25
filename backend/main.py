@@ -4,19 +4,12 @@ import os
 import asyncio
 import json
 import logging
-
-try:
-    import uvloop # I dont want to install this thing in the fucking docker because it needs gcc # type: ignore
-    uvloop.install()
-except:
-    pass
 import jwt
 
 from uuid import uuid4
 from datetime import datetime, timedelta, timezone
-from websockets.server import WebSocketServerProtocol, serve as websocket_serve
-from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
-from vcc import RpcExchanger, RpcExchangerClient, PermissionDeniedError, ChatNotJoinedError
+from vcc import RpcExchanger, RpcExchangerClient, PermissionDeniedError
+from sanic import Sanic, Request, Websocket
 
 confpath = os.getenv("WEBVCC_CONFPATH", "config.json")#FIXME: I dont think a file just for key is a good idea
 
@@ -26,7 +19,10 @@ with open(confpath) as config_file:
     config = json.load(config_file)
     key = config["key"]
 
-async def recv_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClient) -> None:
+app = Sanic()
+exchanger = RpcExchanger()
+
+async def recv_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
     try:
         async for result in client:
             if result[0] == "event":
@@ -43,24 +39,21 @@ async def recv_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
                 "type": "message",
                 "uid": chat,
                 "usrname": username,
-                "msg": msg
+                "msg": msg,
+                "session": session
             })
             if username == "system" and ("kick" in msg or "rename" in msg):
                 await websocket.send(json.dumps({
-                    "type": "chat_list_somebody_joined",
+                    "type": "chat_list",
                     "uid": chat,
                     "usrname": username,
                     "msg": cast(Any, await client.chat_list())
                 }))
             await websocket.send(json_msg)
-    except ConnectionClosedOK:
-        pass
-    except ConnectionClosedError as e:
-        logging.info(e)
     except Exception as e:
         logging.info(e, exc_info=True)
         await websocket.close(1008)
-async def handle_request(websocket: WebSocketServerProtocol, client: RpcExchangerClient, json_msg: str | bytes):
+async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_msg: str | bytes):
     json_result = json.loads(json_msg)
     username: str = json_result.get("usrname")
     uid: int = json_result.get("uid")
@@ -222,25 +215,23 @@ async def handle_request(websocket: WebSocketServerProtocol, client: RpcExchange
                 url, name = await client.file_get_object(msg)
                 await send("file_download", username=name, msg=url)
             case "record_query":
-                client.check_authorized()
-                client.check_joined(uid)
-                result = await client._exchanger.rpc.record.query_record(chatid=uid, time=int(msg))
-                await send("record_query", msg=result)
+                # client.check_authorized()
+                # client.check_joined(uid)
+                # result = await client._exchanger.rpc.record.query_record(chatid=uid, time=int(msg))
+                # await send("record_query", msg=result)
+                # TODO: Temporily disable support for chat record
+                await send("record_query", msg=[])
             case _:
                 await websocket.close(1008)
                 return
     except asyncio.CancelledError:
         pass
 
-async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClient) -> None:
+async def send_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
     task_list: set[asyncio.Task[None]] = set()
     try:
         async for json_msg in websocket:
             task_list.add(asyncio.create_task(handle_request(websocket, client, json_msg)))
-    except ConnectionClosedOK:
-        pass
-    except ConnectionClosedError as e:
-        logging.info(e)
     except Exception as e:
         logging.info(e, exc_info=True)
         await websocket.close(1008, ",".join(e.args))
@@ -248,24 +239,24 @@ async def send_loop(websocket: WebSocketServerProtocol, client: RpcExchangerClie
         for i in task_list:
             i.cancel()
 
-
-async def loop(websocket: WebSocketServerProtocol, exchanger: RpcExchanger) -> None:
-    send_loop_task: asyncio.Task[None]
-    recv_loop_task: asyncio.Task[None]
-    websocket.request_headers
+@app.websocket("/ws/")
+async def loop(request: Request, websocket: Websocket) -> None:
     async with exchanger.create_client() as client:
         send_loop_task = asyncio.create_task(send_loop(websocket, client))
         recv_loop_task = asyncio.create_task(recv_loop(websocket, client))
         done, pending = await asyncio.wait([send_loop_task, recv_loop_task], return_when=asyncio.FIRST_COMPLETED)
         for task in pending:
             task.cancel()
- 
-async def main() -> None:
-    logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger("websockets.server").setLevel(logging.INFO)
-    async with RpcExchanger() as exchanger:
-        async with websocket_serve(lambda ws: loop(ws, exchanger), os.environ.get("WEBVCC_ADDR","localhost"), 2479):
-            logging.info("started: ws://localhost:2479")
-            await asyncio.Future()
 
-asyncio.run(main())
+@app.main_process_start
+async def init_exchanger():
+    await exchanger.__aenter__()
+
+@app.main_process_stop
+async def destroy_exchanger():
+    await exchanger.__aexit__()
+
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("vcc.vcc").setLevel(logging.DEBUG)
+
+app.run(os.environ.get("WEBVCC_ADDR", "0.0.0.0"), 2479)

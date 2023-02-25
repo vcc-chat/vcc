@@ -90,8 +90,11 @@ class Record(metaclass=base.ServiceMeta):
         
         aligned_time=time-time%5
 
-        name_list = await self._vcc.rpc.file.list_object_names(prefix=f"record{chatid}-", bucket="record")
-        records: list[tuple[str, str]] = await asyncio.gather(*[asyncio.create_task(self._vcc.rpc.file.get_object_content(id=name, bucket="record")) for name in name_list])
+        name_list: list[str] = await self._vcc.rpc.file.list_object_names(prefix=f"record{chatid}-", bucket="record")
+        records: list[tuple[str, str]] = await asyncio.gather(*[
+            asyncio.create_task(self._vcc.rpc.file.get_object_content(id=name, bucket="record"))
+            for name in name_list if int(name[name.find("-") + 1:]) > time
+        ])
         return [record[0].split("\n")[1:-1] for record in records]
     def __init__(self):
         self._vcc = vcc.RpcExchanger()

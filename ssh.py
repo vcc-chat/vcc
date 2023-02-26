@@ -1,29 +1,12 @@
 #!/usr/bin/env python
 
-# Copyright (c) Twisted Matrix Laboratories.
-# See LICENSE for details.
-
 import sys
 import os
 import asyncio
 import threading
 import logging
+
 import asyncssh
-from zope.interface import implementer
-
-from twisted.conch import avatar
-from twisted.conch.checkers import (
-    SSHPublicKeyChecker,
-    IAuthorizedKeysDB,
-    InMemorySSHKeyDB,
-)
-from twisted.conch.ssh import connection, factory, keys, session, userauth
-from twisted.conch.ssh.transport import SSHServerTransport
-from twisted.cred import portal, credentials
-from twisted.cred.checkers import ICredentialsChecker, credentials
-from twisted.internet import protocol, reactor, defer
-from twisted.python import components, log, failure
-
 import prompt_toolkit
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.output.vt100 import Vt100_Output
@@ -39,17 +22,10 @@ if not (DATAROOT := os.environ.get("VOS_DATAROOT")):
     DATAROOT = "./"
 SERVER_KEY_PRIVATE = DATAROOT + "/ssh_host_key"
 SERVER_KEY_PUBLIC = DATAROOT + "/ssh_host_key.pub"
-SERVER_PRIME = DATAROOT + "/prime"
 if not os.path.exists(SERVER_KEY_PRIVATE) or not os.path.exists(SERVER_KEY_PUBLIC):
     os.system(f"ckeygen -t ED25519 -f {SERVER_KEY_PRIVATE} --no-passphrase   -q")
-import asyncio
 import traceback
 from typing import Any, Awaitable, Callable, Optional, TextIO, cast
-
-import asyncssh
-
-__all__ = ["PromptToolkitSSHSession", "PromptToolkitSSHServer"]
-
 
 class VccSSHSession(asyncssh.SSHServerSession):  # type: ignore
     def __init__(self, server, enable_cpr: bool):

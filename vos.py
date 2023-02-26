@@ -14,6 +14,7 @@ from prompt_toolkit.layout.containers import (
     VSplit,
     HSplit,
     Window,
+    WindowAlign,
     FloatContainer,
     Float,
     to_container,
@@ -29,7 +30,7 @@ import vcc
 import asyncio
 import nest_asyncio
 
-#nest_asyncio.apply()
+nest_asyncio.apply()
 def init():
     global vcc_client
     vcc_client = vcc.RpcExchanger()
@@ -92,7 +93,6 @@ class TextInputDialog:
 
 class mainapp:
     def __init__(self, userinfo):
-        print("vos")
         self.userinfo=userinfo
     async def message_reciver(self):
         async for msg in self.client:
@@ -120,17 +120,18 @@ class mainapp:
             self.current_chat = chatid
             self.chatbox.children = []
         self.app.layout.focus(self.chatbar)
+        self.titlebar.text=f'{chatid[1]} - Vcc'
         self.app._redraw()
 
     async def run(self):
         async with vcc_client.create_client() as client:
             client: vcc.RpcExchangerClient
             self.client = client
-            if  self.userinfo["username"]=="oauth":
-                platform=await prompt_toolkit.PromptSession().prompt_async("Oauth platform:")
-                res=await client.request_oauth(platform)
-                prompt_toolkit.print_formatted_text(res)
-                return
+#            if  self.userinfo["username"]=="oauth":
+#                platform=await prompt_toolkit.PromptSession().prompt_async("Oauth platform:")
+#                res=await client.request_oauth(platform)
+#                prompt_toolkit.print_formatted_text(res)
+#                return
             login_success = await client.login(
                 self.userinfo["username"], self.userinfo["password"]
             )
@@ -155,7 +156,7 @@ class mainapp:
             self.chatlist:HSplit =HSplit(children)
 
             self.chatbox = HSplit([])
-
+            self.titlebar=FormattedTextControl("Vcc")
             root_container = VSplit(
                 [
                     HSplit(
@@ -166,11 +167,13 @@ class mainapp:
                             ),
                         ]
                     ),
-                    Window(width=1, char="|"),
+                    Window(width=1, char="│"),
                     HSplit(
                         [
+                            Window(height=1, content=self.titlebar,align=WindowAlign.CENTER),
+                            Window(height=1, char="─"),
                             ScrollablePane(content=self.chatbox, show_scrollbar=False),
-                            Window(height=1, char="-"),
+                            Window(height=1, char="─"),
                             chatbar,
                         ]
                     ),
@@ -232,7 +235,6 @@ class mainapp:
         return chat
 
 if __name__ == "__main__":
+    asyncio.set_event_loop(asyncio.new_event_loop())
     init()
-    session = type("", (), {"username": sys.argv[1], "password": sys.argv[2]})()
-    protocol = type("", (), {"session": session})()
-    asyncio.run(mainapp(protocol).run())
+    asyncio.run(mainapp({"username": sys.argv[1], "password": sys.argv[2]}).run())

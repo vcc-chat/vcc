@@ -16,6 +16,7 @@ const comment = `
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base:"/static/",
   plugins: [
     preact(),
     legacy({

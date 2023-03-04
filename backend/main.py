@@ -22,7 +22,6 @@ with open(confpath) as config_file:
 
 app = Sanic(name="web-vcc")
 app.ctx.exchanger = RpcExchanger()
-asyncio.run(app.ctx.exchanger.__aenter__())
 async def recv_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
     try:
         async for result in client:
@@ -255,15 +254,12 @@ async def loop(request: Request, websocket: Websocket) -> None:
         for task in pending:
             task.cancel()
 app.static("/static/", "static/")
-@app.main_process_start
+@app.before_server_start
 async def init_exchanger(*_):
-#    app.ctx.exchanger=await app.ctx.exchanger.__aenter__()
-#    print(app.ctx.exchanger.pubsub)
-    ...
+    app.ctx.exchanger=await app.ctx.exchanger.__aenter__()
 @app.exception(NotFound)
 async def ignore_404s(request, exception):
     return await  file_stream("static/index.html")
-
 @app.main_process_stop
 async def destroy_exchanger(*_):
     await app.ctx.exchanger.__aexit__(None, None, None)

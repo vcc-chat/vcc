@@ -10,7 +10,8 @@ from uuid import uuid4
 from datetime import datetime, timedelta, timezone
 from vcc import RpcExchanger, RpcExchangerClient, PermissionDeniedError
 from sanic import Sanic, Request, Websocket
-
+from sanic.response import text,file_stream
+from sanic.exceptions import NotFound
 confpath = os.getenv("WEBVCC_CONFPATH", "config.json")#FIXME: I dont think a file just for key is a good idea
 
 if not os.path.exists(confpath):
@@ -21,7 +22,7 @@ with open(confpath) as config_file:
 
 app = Sanic(name="web-vcc")
 app.ctx.exchanger = RpcExchanger()
-
+asyncio.run(app.ctx.exchanger.__aenter__())
 async def recv_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
     try:
         async for result in client:
@@ -60,6 +61,7 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
     msg: str = json_result.get("msg")
     uuid: str = json_result.get("uuid", str(uuid4()))
     async def send(type: str, *, uid: int=0, username: str="", msg: str="") -> None:
+        print(1)
         await websocket.send(json.dumps({
             "type": type,
             "uid": uid,
@@ -68,9 +70,12 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
             "uuid": uuid
         }))
     try:
+        print(json_result["type"])
         match json_result["type"]:
             case "login":
+                print("login1")
                 login_result = await client.login(username, msg)
+                print("l")
                 if login_result is not None:
                     await client.chat_list()
                     token = jwt.encode({
@@ -241,7 +246,7 @@ async def send_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
         for i in task_list:
             i.cancel()
 
-@app.websocket("/ws/", version=1)
+@app.websocket("/ws")
 async def loop(request: Request, websocket: Websocket) -> None:
     async with app.ctx.exchanger.create_client() as client:
         send_loop_task = asyncio.create_task(send_loop(websocket, client))
@@ -249,10 +254,15 @@ async def loop(request: Request, websocket: Websocket) -> None:
         done, pending = await asyncio.wait([send_loop_task, recv_loop_task], return_when=asyncio.FIRST_COMPLETED)
         for task in pending:
             task.cancel()
-
+app.static("/static/", "static/")
 @app.main_process_start
 async def init_exchanger(*_):
-    await app.ctx.exchanger.__aenter__()
+#    app.ctx.exchanger=await app.ctx.exchanger.__aenter__()
+#    print(app.ctx.exchanger.pubsub)
+    ...
+@app.exception(NotFound)
+async def ignore_404s(request, exception):
+    return await  file_stream("static/index.html")
 
 @app.main_process_stop
 async def destroy_exchanger(*_):

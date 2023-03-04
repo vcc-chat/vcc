@@ -2,7 +2,7 @@ import { useMemo } from "preact/hooks"
 import type { ComponentChildren } from "preact"
 import { Link } from "react-router-dom"
 
-import { stringToColor } from "./tools"
+import { stringToColor } from "../tools"
 
 export function MessageAvatar({ name }: {
   name: string

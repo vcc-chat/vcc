@@ -18,12 +18,12 @@ import FileUploadIcon from "@material-design-icons/svg/outlined/file_upload.svg"
 import SendIcon from "@material-design-icons/svg/filled/send.svg"
 
 import { type RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
-import { MessageAvatar, MessageLink } from "../Messages"
+import { MessageAvatar, MessageLink } from "../components/Messages"
 import useStore from "../store"
 import { stringToNumber, useChatList, useNetwork, useTitle } from "../tools"
 import { useChatActionData } from "../loaders"
 
-const MessageComponent = memo(function MessageComponent({ nowMsg }: {
+const NormalMessage = memo(function NormalMessage({ nowMsg }: {
   nowMsg: RequestWithTime
 }) {
   const req = nowMsg.req
@@ -132,6 +132,20 @@ const MessageComponent = memo(function MessageComponent({ nowMsg }: {
     </li>
   )
 })
+
+function MessageComponent({ nowMsg }: {
+  nowMsg: RequestWithTime
+}) {
+  return nowMsg.req.usrname == "system" ? <NormalMessage nowMsg={nowMsg} /> : (
+    <div className="toast">
+      <div className="alert alert-info">
+        <div>
+          <span>{nowMsg.req.msg}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function FileUploadDialog({ id }: {
   id: string

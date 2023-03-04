@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef } from "preact/hooks"
 import type { ComponentChildren } from "preact"
 import { useQueries } from "@tanstack/react-query"
 
-import { Request } from "./config"
-import useStore from "./store"
+import { Request } from "../config"
+import useStore from "../store"
 
 async function getMetaInfo(urlString: string) {
   const response = await fetch(urlString)

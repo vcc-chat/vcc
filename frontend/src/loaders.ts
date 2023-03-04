@@ -10,7 +10,7 @@ import {
 import store from "./store"
 import { LoginType } from "./state/login"
 import { queryClient, syncMessages } from "./tools"
-import { PermissionKey, allPermissions } from "./Settings"
+import { PermissionKey, allPermissions } from "./components/Settings"
 
 import shellQuote from "shell-quote"
 import { initBackend } from "./components/ChooseBackend"

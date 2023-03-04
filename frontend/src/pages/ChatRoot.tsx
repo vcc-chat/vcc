@@ -1,7 +1,7 @@
 import { useEffect } from "preact/hooks"
 import { useParams, useNavigate, Outlet } from "react-router-dom"
 
-import { MainLayout } from "../Sidebar"
+import { MainLayout } from "../components/Sidebar"
 import useStore from "../store"
 import { useChatList } from "../tools"
 

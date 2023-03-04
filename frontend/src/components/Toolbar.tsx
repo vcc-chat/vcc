@@ -3,9 +3,9 @@ import { type TargetedEvent, createPortal } from "preact/compat"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
 
-import useStore from "./store"
-import { Request, RequestType } from "./config"
-import { useChatList, useNetwork } from "./tools"
+import useStore from "../store"
+import { Request, RequestType } from "../config"
+import { useChatList, useNetwork } from "../tools"
 import {
   SettingsEditItem,
   allPermissions,

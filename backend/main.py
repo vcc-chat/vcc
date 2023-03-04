@@ -20,7 +20,7 @@ with open(confpath) as config_file:
     key = config["key"]
 
 app = Sanic(name="web-vcc")
-exchanger = RpcExchanger()
+app.ctx.exchanger = RpcExchanger()
 
 async def recv_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
     try:
@@ -219,8 +219,8 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                 # client.check_joined(uid)
                 # result = await client._exchanger.rpc.record.query_record(chatid=uid, time=int(msg))
                 # await send("record_query", msg=result)
-                # TODO: Temporily disable support for chat record
-                await send("record_query", msg=[])
+                # FIXME: Temporily disable support for chat record
+                await send("record_query", msg=cast(Any, []))
             case _:
                 await websocket.close(1008)
                 return
@@ -231,6 +231,8 @@ async def send_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
     task_list: set[asyncio.Task[None]] = set()
     try:
         async for json_msg in websocket:
+            if json_msg is None:
+                break
             task_list.add(asyncio.create_task(handle_request(websocket, client, json_msg)))
     except Exception as e:
         logging.info(e, exc_info=True)
@@ -239,9 +241,9 @@ async def send_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
         for i in task_list:
             i.cancel()
 
-@app.websocket("/ws/")
+@app.websocket("/ws/", version=1)
 async def loop(request: Request, websocket: Websocket) -> None:
-    async with exchanger.create_client() as client:
+    async with app.ctx.exchanger.create_client() as client:
         send_loop_task = asyncio.create_task(send_loop(websocket, client))
         recv_loop_task = asyncio.create_task(recv_loop(websocket, client))
         done, pending = await asyncio.wait([send_loop_task, recv_loop_task], return_when=asyncio.FIRST_COMPLETED)
@@ -250,11 +252,11 @@ async def loop(request: Request, websocket: Websocket) -> None:
 
 @app.main_process_start
 async def init_exchanger(*_):
-    await exchanger.__aenter__()
+    await app.ctx.exchanger.__aenter__()
 
 @app.main_process_stop
 async def destroy_exchanger(*_):
-    await exchanger.__aexit__(None, None, None)
+    await app.ctx.exchanger.__aexit__(None, None, None)
 
 logging.getLogger("vcc.vcc").setLevel(logging.DEBUG)
 if __name__ == "__main__":

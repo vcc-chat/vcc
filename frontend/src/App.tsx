@@ -17,7 +17,7 @@ import ErrorIcon from "@material-design-icons/svg/outlined/error_outline.svg"
 
 
 import type { Request } from "./config"
-import { Notification, notify } from "./Notification"
+import { Notification, notify } from "./components/Notification"
 import { responseToChatList, useChatList } from "./tools"
 import { LoginType } from "./state/login"
 import useStore from "./store"

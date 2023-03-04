@@ -15,10 +15,10 @@ import MoreHorizIcon from "@material-design-icons/svg/outlined/more_horiz.svg"
 import PeopleIcon from "@material-design-icons/svg/outlined/people.svg"
 import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
 
-import { MESSAGE_MIME_TYPE, Request } from "./config"
+import { MESSAGE_MIME_TYPE, Request } from "../config"
 import { JoinDialog, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
-import { stringToColor, useChatList, useNetwork } from "./tools"
-import useStore from "./store"
+import { stringToColor, useChatList, useNetwork } from "../tools"
+import useStore from "../store"
 import { useTranslation } from "react-i18next"
 
 export function NavBar({ toggle, toggleRightSidebar }: {

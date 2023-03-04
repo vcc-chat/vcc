@@ -182,6 +182,7 @@ async function getChatRecord(chat: number) {
 let first = true
 
 export async function syncMessages() {
+  return
   if (useStore.getState().type != LoginType.LOGIN_SUCCESS) return
   const { values: chats } = await queryClient.fetchQuery({
     queryKey: ["chat-list"],

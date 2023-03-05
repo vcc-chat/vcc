@@ -1,3 +1,4 @@
+export * from "preact/compat"
 export {
   Attributes,
   FunctionalComponent as SFC,
@@ -9,10 +10,7 @@ export {
   PreactProvider as Provider,
   VNode as ReactElement,
   ComponentChildren as ReactNode,
-  createElement,
-  Fragment,
   Ref,
-  render,
   JSX
 } from "preact"
 export type ComponentPropsWithoutRef<T> = any

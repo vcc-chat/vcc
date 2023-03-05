@@ -15,7 +15,7 @@ from pathlib import Path
 from sanic.response import text,file_stream
 from sanic.exceptions import NotFound
 confpath = os.getenv("WEBVCC_CONFPATH", "config.json")#FIXME: I dont think a file just for key is a good idea
-static_base = Path(__file__).parent / "frontend" / "dist"
+static_base = Path(__file__).parent.parent / "frontend" / "dist"
 if not os.path.exists(confpath):
     json.dump({"key":str(uuid4())},open(confpath,"w"))
 with open(confpath) as config_file:
@@ -262,7 +262,7 @@ async def init_exchanger(*_):
 @app.exception(NotFound)
 async def ignore_404s(request, exception):
     return await  file_stream(static_base / "index.html")
-@app.main_process_stop
+@app.after_server_stop
 async def destroy_exchanger(*_):
     await app.ctx.exchanger.__aexit__(None, None, None)
 

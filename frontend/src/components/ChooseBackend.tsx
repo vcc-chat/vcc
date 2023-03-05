@@ -17,15 +17,15 @@ function urlCorrect(urlString: string) {
     return false
   }
 }
-
+const defaultServer=location.origin.replace("http","ws")+"/ws/"
 export default function ChooseBackend() {
   const backendAddress = useStore(state => state.backendAddress)
   const setBackendAddress = useStore(state => state.setBackendAddress)
 
-  const serverAddress = useSignal(import.meta.env.VITE_DEFAULT_SERVER_ADDRESS)
+  const serverAddress = useSignal(defaultServer)
 
   useEffect(() => {
-    serverAddress.value = backendAddress ?? import.meta.env.VITE_DEFAULT_SERVER_ADDRESS
+    serverAddress.value = backendAddress ?? defaultServer
   }, [backendAddress])
 
   const { t } = useTranslation()
@@ -47,6 +47,6 @@ export default function ChooseBackend() {
 export function initBackend() {
   const { backendAddress, setBackendAddress } = useStore.getState()
   if (!backendAddress) {
-    setBackendAddress(import.meta.env.VITE_DEFAULT_SERVER_ADDRESS)
+    setBackendAddress(defaultServer)
   }
 }

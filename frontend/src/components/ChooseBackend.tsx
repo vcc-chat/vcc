@@ -17,7 +17,7 @@ function urlCorrect(urlString: string) {
     return false
   }
 }
-const defaultServer=location.origin.replace("http","ws")+"/ws/"
+const defaultServer=import.meta.env.VITE_DEFAULT_SERVER_ADDRES||(location.origin.replace("http","ws")+"/ws/")
 export default function ChooseBackend() {
   const backendAddress = useStore(state => state.backendAddress)
   const setBackendAddress = useStore(state => state.setBackendAddress)

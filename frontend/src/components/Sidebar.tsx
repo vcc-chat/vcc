@@ -20,6 +20,7 @@ import { JoinDialog, EditPermissionDialog as ModifyPermissionDialog } from "./To
 import { stringToColor, useChatList, useNetwork } from "../tools"
 import useStore from "../store"
 import { useTranslation } from "react-i18next"
+import { SidebarMenu } from "./SidebarMenu"
 
 export function NavBar({ toggle, toggleRightSidebar }: {
   toggle: () => void
@@ -214,7 +215,6 @@ export function Sidebar({ open, setOpen }: {
   
   return (
     <>
-      <JoinDialog id={joinChatDialogID} />
       <div 
         aria-hidden={!open} 
         className={classNames("duration-300 overflow-x-hidden w-full transition-all no-scrollbar sm:max-w-[16rem] sm:w-[16rem]", {
@@ -222,28 +222,8 @@ export function Sidebar({ open, setOpen }: {
           "max-w-0 overflow-y-hidden": !open
         })}
       >
-      <ul className="flex flex-col">
-        <div className="opacity-80 text-sm m-4">{t("Actions")}</div>
-        <li className="mx-2 py-2 px-4 flex btn btn-ghost font-normal normal-case">
-          <button className="flex flex-1" onClick={listCreateItemButtonClickHandler}>
-            <div className="my-auto opacity-60">
-              <AddCircleIcon />
-            </div>
-            <div className="ml-8 text-base">{t("Create Chat")}</div>
-          </button> 
-        </li>
-        <label htmlFor={joinChatDialogID} className="mx-2 py-2 px-4 flex btn btn-ghost font-normal normal-case">
-          <div className="flex flex-1">
-            <div className="my-auto opacity-60">
-              <GroupAddIcon />
-            </div>
-            <div className="ml-8 text-base">{t("Join Chat")}</div>
-          </div> 
-        </label>
-      </ul>
-      <div className="divider my-0" />
+        <SidebarMenu />
         <ul className="flex flex-col">
-          <div className="opacity-80 text-sm m-4">{t("Chat")}</div>
           {sidebarItems}
         </ul>
       </div>
@@ -264,7 +244,6 @@ function UserItem({ name, id, online, setHandleUsername, setHandleUserID, first,
   const letter1 = (characters[0]?.[0] ?? "").toUpperCase()
   const letter2 = (characters[1]?.[0] ?? "").toUpperCase()
   const { t } = useTranslation()
-  // const Badge = online ? OnlineBadge : OfflineBadge
   const [show, setShow] = useState(false)
   const centerIconButtonClickHandler = useCallback((ev: unknown) => {
     setShow(!show)

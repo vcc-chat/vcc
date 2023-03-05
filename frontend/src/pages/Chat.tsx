@@ -15,6 +15,7 @@ import classNames from "classnames"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN, zhTW, enUS as en } from "date-fns/locale"
 import FileUploadIcon from "@material-design-icons/svg/outlined/file_upload.svg"
+import InfoIcon from "@material-design-icons/svg/outlined/info.svg"
 import SendIcon from "@material-design-icons/svg/filled/send.svg"
 
 import { type RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
@@ -136,15 +137,16 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: {
 function MessageComponent({ nowMsg }: {
   nowMsg: RequestWithTime
 }) {
-  return nowMsg.req.usrname == "system" ? <NormalMessage nowMsg={nowMsg} /> : (
-    <div className="toast">
-      <div className="alert alert-info">
+  return nowMsg.req.usrname == "system" ? (
+    <div className="flex">
+      <div className="alert alert-info mx-auto w-auto">
         <div>
+          <InfoIcon />
           <span>{nowMsg.req.msg}</span>
         </div>
       </div>
     </div>
-  )
+  ) : <NormalMessage nowMsg={nowMsg} />
 }
 
 export function FileUploadDialog({ id }: {
@@ -197,6 +199,8 @@ export function FileUploadDialog({ id }: {
   ), document.body)
 }
 
+(window as any).addMessage = useStore.getState().addMessage
+
 export default memo(function Chat() {
   const msgBody = useSignal("")
   const params = useParams()
@@ -243,7 +247,7 @@ export default memo(function Chat() {
     <>
       <FileUploadDialog id={fileUploadDialogID} />
       <div className="flex flex-col overflow-hidden p-2 h-full flex-1">
-        <ul ref={ref} className="flex flex-col m-0 p-0 overflow-auto no-scrollbar flex-1 space-y-1">
+        <ul ref={ref} className="flex flex-col m-0 p-0 overflow-auto no-scrollbar flex-1 space-y-1 py-2">
           {messagesShow
             .map((nowMsg) => (
               <MessageComponent nowMsg={nowMsg} key={`${nowMsg.time}-${nowMsg.req.usrname}-${nowMsg.req.msg}`} />

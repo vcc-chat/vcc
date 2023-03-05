@@ -11,11 +11,11 @@ from datetime import datetime, timedelta, timezone
 from vcc import RpcExchanger, RpcExchangerClient, PermissionDeniedError
 from sanic import Sanic, Request, Websocket
 import os
-import sys
+from pathlib import Path
 from sanic.response import text,file_stream
 from sanic.exceptions import NotFound
 confpath = os.getenv("WEBVCC_CONFPATH", "config.json")#FIXME: I dont think a file just for key is a good idea
-static_base= os.path.dirname(sys.argv[0])
+static_base = Path(__file__).parent / "frontend" / "dist"
 if not os.path.exists(confpath):
     json.dump({"key":str(uuid4())},open(confpath,"w"))
 with open(confpath) as config_file:
@@ -255,13 +255,13 @@ async def loop(request: Request, websocket: Websocket) -> None:
         done, pending = await asyncio.wait([send_loop_task, recv_loop_task], return_when=asyncio.FIRST_COMPLETED)
         for task in pending:
             task.cancel()
-app.static("/static/", os.path.join(static_base,"static/"))
+app.static("/", static_base)
 @app.before_server_start
 async def init_exchanger(*_):
     app.ctx.exchanger=await app.ctx.exchanger.__aenter__()
 @app.exception(NotFound)
 async def ignore_404s(request, exception):
-    return await  file_stream(os.path.join(static_base,"static/index.html"))
+    return await  file_stream(static_base / "index.html")
 @app.main_process_stop
 async def destroy_exchanger(*_):
     await app.ctx.exchanger.__aexit__(None, None, None)

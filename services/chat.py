@@ -17,6 +17,7 @@ bind_model(User, db)
 bind_model(Chat, db)
 bind_model(ChatUser, db)
 
+SYSTEM_UID = -1
 SYSTEM_USER_NAME = "system"
 
 EventType = Literal["join", "quit", "kick", "rename", "invite"]
@@ -41,7 +42,7 @@ class ChatService:
 
     async def _send_message(self, chat: int, msg: str) -> None:
         await self._redis.publish(
-            f"messages", json.dumps({"username": SYSTEM_USER_NAME, "msg": msg, "chat": chat})
+            f"messages", json.dumps({"uid": SYSTEM_UID, "username": SYSTEM_USER_NAME, "msg": msg, "chat": chat})
         )
 
     async def _send_event(self, chat: int, type: EventType, data: Any) -> None:
@@ -84,7 +85,7 @@ class ChatService:
         # Won't return users of sub-chats
         chat_users = ChatUser.select().where(ChatUser.chat == id).execute()
         user_names = [
-            (chat_user.user.id, chat_user.user.name) for chat_user in chat_users
+            (chat_user.user.id, chat_user.user.name if chat_user.nickname is None else chat_user.nickname) for chat_user in chat_users
         ]
         return user_names
 
@@ -368,6 +369,20 @@ class ChatService:
 
     async def list_sub_chats(self, id: int) -> list[tuple[int, str]]:
         return [(i.id, i.name) for i in Chat.select().where(Chat.parent == id).execute()]
+    
+    async def change_nickname(self, chat_id: int, user_id: int, new_name: str):
+        ChatUser.update(nickname=new_name).where(chat=chat_id, user=user_id).execute()
+
+    async def get_nickname(self, chat_id: int, user_id: int):
+        if user_id == SYSTEM_UID:
+            return SYSTEM_USER_NAME
+        chat_user = ChatUser.get_or_none(chat=chat_id, user=user_id)
+        if chat_user is not None:
+            return chat_user.nickname
+        user = User.get_or_none(user=user_id)
+        if user is None:
+            return None
+        return user.name
 
 
 if __name__ == "__main__":

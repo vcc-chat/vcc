@@ -259,7 +259,7 @@ app.static("/", static_base)
 @app.before_server_start
 async def init_exchanger(*_):
     app.ctx.exchanger=await app.ctx.exchanger.__aenter__()
-@app.exception(NotFound)
+@app.exception(NotFound, IsADirectoryError)
 async def ignore_404s(request, exception):
     return await  file_stream(static_base / "index.html")
 @app.after_server_stop

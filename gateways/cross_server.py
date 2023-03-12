@@ -11,11 +11,24 @@ allow_list = os.getenv("VCC_SAFE_SERVERS", "").split(",")
 
 async def handle(text, websocket, exchanger: vcc.RpcExchanger):
     data = json.loads(text)
-    await websocket.send(json.dumps({
-        "data": await exchanger.rpc_request(data["service"], data["data"]),
-        "id": data["id"]
-    }))
-    
+    service = data["service"]
+    if service == "message/send_message":
+        await exchanger._redis.publish("messages", json.dumps(data["data"]))
+        await websocket.send(json.dumps({
+            "data": None,
+            "id": data["id"]
+        }))
+    elif service == "message/send_event":
+        await exchanger._redis.publish("events", json.dumps(data["data"]))
+        await websocket.send(json.dumps({
+            "data": None,
+            "id": data["id"]
+        }))
+    else:
+        await websocket.send(json.dumps({
+            "data": await exchanger.rpc_request(data["service"], data["data"]),
+            "id": data["id"]
+        }))
 
 websocket_list = weakref.WeakSet()
 

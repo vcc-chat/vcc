@@ -12,7 +12,7 @@ class User(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=16, unique=True)
     nickname=CharField(max_length=20,null=True)
-    password = CharField(max_length=16)
+    password = CharField(max_length=512)
     salt = CharField()
     # Permissions
     login = BooleanField(default=True)

@@ -104,22 +104,23 @@ class RpcServer(protocol.Factory):
             client.send({"res": "error", "error": "no such service", "jobid": jobid})
         try:
             if self.services[service[0]][service[1]]:
-                valid: bool = reduce(
-                    lambda a, b: a
-                    and b[0][0] == b[1][0]
-                    and (
-                        b[0][1] == type(b[1][1]).__name__
-                        or b[0][1] == "Any"
-                        or b[0][1] == "typing.Any"
-                    ),
-                    zip_longest(
-                        *[
-                            sorted(c.items())
-                            for c in [self.services[service[0]][service[1]], data]
-                        ]
-                    ),
-                    True,
-                )
+                # valid: bool = reduce(
+                #     lambda a, b: a
+                #     and b[0][0] == b[1][0]
+                #     and (
+                #         b[0][1] == type(b[1][1]).__name__
+                #         or b[0][1] == "Any"
+                #         or b[0][1] == "typing.Any"
+                #     ),
+                #     zip_longest(
+                #         *[
+                #             sorted(c.items())
+                #             for c in [self.services[service[0]][service[1]], data]
+                #         ]
+                #     ),
+                #     True,
+                # )
+                valid = True
                 if not valid:
                     raise TypeError("invalid request data type")
             self.promises[jobid] = client

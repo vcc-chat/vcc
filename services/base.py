@@ -216,3 +216,12 @@ class RpcServiceFactory:
 
     def connect(self, *args, **kwargs):
         asyncio.run(self.aconnect(*args, **kwargs))
+
+server_name = os.getenv("VCC_SERVER_NAME", "")
+
+def parse_server_name(content: str) -> tuple[int, str, bool]:
+    try:
+        id, server = content.split("@", 1)
+        return int(id), server, server == server_name
+    except ValueError:
+        return int(id), server_name, True

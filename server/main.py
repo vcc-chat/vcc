@@ -8,10 +8,12 @@ from itertools import zip_longest
 from twisted.internet import protocol, reactor, endpoints
 from twisted.protocols.basic import LineReceiver
 
+
 class RpcProtocol(LineReceiver):
     def __init__(self, factory):
         self.factory: RpcServer = factory
         self.name = None
+
     def send(self, data):
         self.sendLine(bytes(json.dumps(data), "UTF8"))
 
@@ -25,7 +27,7 @@ class RpcProtocol(LineReceiver):
             if data["res"] == "error" and self.role == "service":
                 self.factory.make_respond(data["jobid"], data["error"], error=True)
             return
-        match data["type"]:
+        match data.get("type"):
             case "handshake":
                 self.do_handshake(data)
             case "respond" if self.role == "service":
@@ -45,9 +47,14 @@ class RpcProtocol(LineReceiver):
         if data["role"] == "service":
             self.name = data["name"]
             self.factory.services[self.name] = data["services"]
-            self.factory.providers[self.name] = self
+            master = False
+            if self.name not in self.factory.providers:
+                self.factory.providers[self.name] = []
+                master = True
+            self.factory.providers[self.name].append(self)
+            self.send({"res": "ok", "master": master})
+            return
         self.send({"res": "ok"})
-
     def make_request(self, service, data, jobid):
         data = {"type": "call", "service": service, "data": data, "jobid": jobid}
         self.send(data)
@@ -56,11 +63,10 @@ class RpcProtocol(LineReceiver):
         data = {"type": "resp", "data": data, "jobid": jobid} | (
             {"error": error} if error else {}
         )
-        print(data)
         self.send(data)
 
     def connectionLost(self, reason):
-        print(5678)
+        pass
 
 
 class BuiltinService:
@@ -78,6 +84,7 @@ class RpcServer(protocol.Factory):
     services = {}  # map providers to services
     providers = {}  # map service name to actual instance
     promises = {}
+    lb_seq = {}  # map service name to load balence seq
 
     def list_providers(self) -> list:
         return list(self.providers.keys())
@@ -128,17 +135,27 @@ class RpcServer(protocol.Factory):
             traceback.print_exc()
             client.send({"res": "error", "error": "unknown error", "jobid": jobid})
         else:
-            self.providers[service[0]].make_request(service[1], data, jobid)
+            service_name = service[0]
+            providers = self.providers[service_name]
+            provider = providers[self.lb_seq.get(service_name, 0)]
+            provider.make_request(service[1], data, jobid)
+            self.lb_seq[service_name] = (
+                self.lb_seq.get(service_name,0)+1
+                if self.lb_seq.get(service_name,0) < len(providers) - 1
+                else 0
+            )
 
     def make_respond(self, jobid, data, error=False):
         self.promises[jobid].make_respond(jobid, data, error)
         del self.promises[jobid]
 
     def buildProtocol(self, addr):
-        print(1234)
         return RpcProtocol(self)
 
-if __name__=="__main__":
-    host,port=os.getenv("RPCHOST","127.0.0.1:2474").split(":")
-    endpoints.serverFromString(reactor, f"tcp:{port}:interface={host}").listen(RpcServer())
+
+if __name__ == "__main__":
+    host, port = os.getenv("RPCHOST", "127.0.0.1:2474").split(":")
+    endpoints.serverFromString(reactor, f"tcp:{port}:interface={host}").listen(
+        RpcServer()
+    )
     reactor.run()

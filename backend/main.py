@@ -62,7 +62,6 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
     msg: str = json_result.get("msg")
     uuid: str = json_result.get("uuid", str(uuid4()))
     async def send(type: str, *, uid: int=0, username: str="", msg: str="") -> None:
-        print(1)
         await websocket.send(json.dumps({
             "type": type,
             "uid": uid,
@@ -71,12 +70,9 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
             "uuid": uuid
         }))
     try:
-        print(json_result["type"])
         match json_result["type"]:
             case "login":
-                print("login1")
                 login_result = await client.login(username, msg)
-                print("l")
                 if login_result is not None:
                     await client.chat_list()
                     token = jwt.encode({
@@ -111,7 +107,6 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                     )
                     await client.add_online()
                 except (jwt.DecodeError, KeyError) as e:
-                    print(e)
                     await send(
                         "token_login",
                         uid=cast(Any, None),
@@ -258,7 +253,7 @@ async def loop(request: Request, websocket: Websocket) -> None:
 app.static("/", static_base)
 @app.before_server_start
 async def init_exchanger(*_):
-    app.ctx.exchanger=await app.ctx.exchanger.__aenter__()
+    await app.ctx.exchanger.__aenter__()
 @app.exception(NotFound, IsADirectoryError)
 async def ignore_404s(request, exception):
     return await  file_stream(static_base / "index.html")
@@ -268,4 +263,4 @@ async def destroy_exchanger(*_):
 
 logging.getLogger("vcc.vcc").setLevel(logging.DEBUG)
 if __name__ == "__main__":
-    app.run(os.environ.get("WEBVCC_ADDR", "0.0.0.0"), 2479)
+    app.run(os.environ.get("WEBVCC_ADDR", "0.0.0.0"), 2479, access_log=True)

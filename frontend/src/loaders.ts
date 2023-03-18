@@ -27,7 +27,7 @@ async function authLoader(jumpToLogin: boolean = true) {
   }
   if (loginStatus == LoginType.NOT_LOGIN) {
     if (jumpToLogin) {
-      return redirect("/login")
+      throw redirect("/login")
     }
     return new Response()
   }
@@ -48,13 +48,13 @@ async function authLoader(jumpToLogin: boolean = true) {
       store.getState().reset()
       store.getState().setToken(null)
       if (jumpToLogin) {
-        return redirect("/login")
+        throw redirect("/login")
       }
     }
   } else {
     store.getState().reset()
     if (jumpToLogin) {
-      return redirect("/login")
+      throw redirect("/login")
     }
   }
   return new Response()
@@ -70,8 +70,7 @@ function badRequest() {
 
 export async function inviteLoader({ request }: LoaderFunctionArgs) {
   const { makeRequest } = store.getState()
-  const authResult = await authLoader()
-  if (authResult.status != 200) return authResult
+  await authLoader()
 
   const url = new URL(request.url)
   const token = url.searchParams.get("token")
@@ -91,8 +90,7 @@ export async function inviteLoader({ request }: LoaderFunctionArgs) {
 }
 
 export async function chatLoader({ params }: LoaderFunctionArgs) {
-  const authResult = await authLoader()
-  if (authResult.status != 200) return authResult
+  await authLoader()
   const { id } = params
   const { values: chats, names: chatNames } = (queryClient.getQueryData(["chat-list"]) ?? {
     values: [],
@@ -279,8 +277,7 @@ export async function settingsLoader() {
 
 export async function settingsInfoLoader({ params }: LoaderFunctionArgs) {
   const { makeRequest } = store.getState()
-  const authResult = await authLoader()
-  if (authResult.status != 200) return authResult
+  await authLoader()
 
   const { id: chatString } = params
   if (chatString === undefined) throw badRequest()
@@ -305,8 +302,7 @@ export async function settingsInfoLoader({ params }: LoaderFunctionArgs) {
 
 export async function settingsActionsLoader({ params }: LoaderFunctionArgs) {
   const { makeRequest } = store.getState()
-  const authResult = await authLoader()
-  if (authResult.status != 200) return authResult
+  await authLoader()
 
   const { id: chatString } = params
   if (chatString === undefined) throw badRequest()

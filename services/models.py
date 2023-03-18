@@ -1,5 +1,5 @@
 from peewee import Model,BigAutoField,CharField,IntegerField,ForeignKeyField,BooleanField,BitField,SqliteDatabase, TimestampField, TextField
-
+from peewee import *
 import os
 
 

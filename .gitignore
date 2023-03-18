@@ -5,3 +5,5 @@
 __pycache__
 *.pyc
 config.json
+services/migrations/
+migrations/

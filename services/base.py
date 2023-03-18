@@ -187,7 +187,7 @@ class RpcServiceFactory:
                 for i in dir(instance)
                 if i[0] != "_" and callable(getattr(instance, i))
             }
-            self.async_func = [key for key, value in services.items() if inspect.iscoroutinefunction(value)]
+            self.async_func = [key for key, value in services.items() if self.async_mode]
         annotations = {
             key1: {
                 key2: str(value2) if str(value2)[0] != "<" else value2.__name__

@@ -7,7 +7,7 @@ import json
 import uuid
 
 from typing import Any, Callable, cast
-from aiohttp.http_websocket import PACK_LEN1
+#from aiohttp.http_websocket import PACK_LEN1
 from peewee import *
 
 import base

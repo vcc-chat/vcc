@@ -1,10 +1,8 @@
 peewee==3.15.1
 Twisted==22.10.0
 minio
-<<<<<<< HEAD
 websockets
-=======
 aiohttp
 pymysql
 redis
->>>>>>> aa62f28 (update requirements)
+

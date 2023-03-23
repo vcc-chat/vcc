@@ -66,13 +66,14 @@ class RpcProtocol(LineReceiver):
         self.send(data)
 
     def connectionLost(self, reason):
-        pass
+        if self.role=="service":
+            self.factory.providers[self.name].remove(self)
 
 
 class BuiltinService:
     def __init__(self, factory, functions: dict, name: str = "rpc"):
         self.factory = factory
-        self.factory.providers[name] = self
+        self.factory.providers[name] = [self]
         self.functions = functions
         self.factory.services[name] = {key: {} for key in self.functions.keys()}
 

@@ -49,10 +49,7 @@ class RpcExchangerRpcHandler2:
 
     def __getattr__(self, service: str) -> Callable[..., Awaitable[Any]]:
         async def func(**data: dict[str, Any]) -> Any:
-            log.debug(f"{self._provider=} {service=} {data=}")
-            result = await self._exchanger.rpc_request(self._provider+"/"+service, data)
-            log.debug(f"{result=}")
-            return result
+            return await self._exchanger.rpc_request(self._provider+"/"+service, data)
             
         return func
 
@@ -228,6 +225,7 @@ class RpcExchanger:
                     await loop.sock_recv(self._sock,1) # \n
                     return data.decode()
     async def rpc_request(self, service: str, data: dict[str, Any]) -> Any:
+        log.debug(f"{service=} {data=}")
         loop = asyncio.get_event_loop()
         new_uuid = str(uuid.uuid4())
         await loop.sock_sendall(self._sock, json.dumps({
@@ -239,7 +237,9 @@ class RpcExchanger:
         logging.debug(f"{service=}{data=}")
         future = asyncio.Future[Any]()
         self._futures[new_uuid] = future
-        return await future
+        result = await future
+        log.debug(f"{result=}")
+        return result
 
     def get_redis_instance(self) -> redis.Redis[bytes]:
         return self._redis

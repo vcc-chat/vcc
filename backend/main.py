@@ -250,13 +250,14 @@ async def loop(request: Request, websocket: Websocket) -> None:
         done, pending = await asyncio.wait([send_loop_task, recv_loop_task], return_when=asyncio.FIRST_COMPLETED)
         for task in pending:
             task.cancel()
-app.static("/", static_base)
 @app.before_server_start
 async def init_exchanger(*_):
     await app.ctx.exchanger.__aenter__()
-@app.exception(NotFound, IsADirectoryError)
-async def ignore_404s(request, exception):
-    return await  file_stream(static_base / "index.html")
+if os.getenv("WEBVCC_SERVE_STATIC") is not None:
+    app.static("/", static_base)
+    @app.exception(NotFound, IsADirectoryError)
+    async def ignore_404s(request, exception):
+        return await  file_stream(static_base / "index.html")
 @app.after_server_stop
 async def destroy_exchanger(*_):
     await app.ctx.exchanger.__aexit__(None, None, None)

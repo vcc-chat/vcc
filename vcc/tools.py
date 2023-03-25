@@ -34,8 +34,12 @@ def rpc_request(service: str | None=None, *, id_arg: str | None=None):
         def wrapper(self: RpcExchangerBaseClient, *args, **kwargs):
             bound_signature = signature.bind(self, *args, **kwargs)
             bound_signature.apply_defaults()
-            return self._exchanger.rpc_request(_service, bound_signature.arguments | ({} if id_arg is None else {
-                id_arg: self._id
-            }))
+            arguments = bound_signature.arguments
+            if id_arg is not None:
+                arguments.update({
+                    id_arg: self._id
+                })
+            del arguments["self"]
+            return self._exchanger.rpc_request(_service, arguments)
         return wrapper # type: ignore
     return decorator

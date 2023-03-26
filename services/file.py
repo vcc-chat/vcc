@@ -11,7 +11,7 @@ import base
 
 class File:
     def __init__(self):
-
+        self.bucket_prefix=os.environ.get("FILE_BUCKET_PREFIX","")
         self.minio = minio.Minio(
             os.environ.get("MINIO_URL", "localhost:9000"),
             os.environ.get("MINIO_ACCESS", "minioadmin"),
@@ -24,6 +24,7 @@ class File:
             self.minio.make_bucket(bucket)
 
     def new_object(self, name, id=None, bucket="file"):
+        bucket=self.bucket_prefix+bucket
         self._create_bucket(bucket)
         if id == None:
             id = str(uuid.uuid4())
@@ -34,6 +35,7 @@ class File:
         return url, id
 
     def new_object_with_content(self, name, content, bucket="file"):
+        bucket=self.bucket_prefix+bucket
         self._create_bucket(bucket)
         id = str(uuid.uuid4())
         data = io.BytesIO(content.encode())
@@ -53,6 +55,7 @@ class File:
     #     sources=list(map(lambda x:ComposeSource(bucket+"/"+x),sources))
     #     self.minio.compose_object(bucket,id,sourc es)
     def get_object(self, id, bucket="file"):
+        bucket=self.bucket_prefix+bucket
         self._create_bucket(bucket)
 
         try:
@@ -64,6 +67,7 @@ class File:
         url = self.minio.presigned_get_object(bucket, id)
         return url, name  # pre-sign url and file name
     def has_object(self, id, bucket="file"):
+        bucket=self.bucket_prefix+bucket
         try:
             self.minio.stat_object(bucket, id)
         except minio.error.S3Error as err:
@@ -73,6 +77,7 @@ class File:
                 raise
         return True
     def get_object_content(self, id, bucket="file"):
+        bucket=self.bucket_prefix+bucket
         self._create_bucket(bucket)
 
         try:
@@ -88,6 +93,7 @@ class File:
         )  # file content and file name
     
     def list_object_names(self, prefix=None, bucket="record"):
+        bucket=self.bucket_prefix+bucket
         objects = self.minio.list_objects(bucket, prefix=prefix)
         names: list[str] = [object.object_name for object in objects]
         return names

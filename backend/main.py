@@ -8,12 +8,28 @@ import jwt
 
 from uuid import uuid4
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
 from vcc import RpcExchanger, RpcExchangerClient, PermissionDeniedError
 from sanic import Sanic, Request, Websocket
-import os
-from pathlib import Path
 from sanic.response import text,file_stream
 from sanic.exceptions import NotFound
+from limits import parse
+from limits.storage import storage_from_string
+from limits.aio.strategies import MovingWindowRateLimiter
+
+
+redis_storage = storage_from_string("async+redis://localhost:6379")
+
+moving_window = MovingWindowRateLimiter(redis_storage)
+per_minute = parse("40/minute")
+
+async def rate_limit(ip: str):
+   need_wait = await moving_window.hit(per_minute, ip)
+   if need_wait:
+        while not moving_window.test(per_minute, ip):
+            await asyncio.sleep(0.01)
+
 confpath = os.getenv("WEBVCC_CONFPATH", "config.json")#FIXME: I dont think a file just for key is a good idea
 static_base = Path(__file__).parent.parent / "frontend" / "dist"
 if not os.path.exists(confpath):
@@ -69,6 +85,7 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
             "msg": msg,
             "uuid": uuid
         }))
+
     try:
         match json_result["type"]:
             case "login":
@@ -228,12 +245,13 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
     except asyncio.CancelledError:
         pass
 
-async def send_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
+async def send_loop(websocket: Websocket, client: RpcExchangerClient, ip: str) -> None:
     task_list: set[asyncio.Task[None]] = set()
     try:
         async for json_msg in websocket:
             if json_msg is None:
                 break
+            await rate_limit(ip)
             task_list.add(asyncio.create_task(handle_request(websocket, client, json_msg)))
     except Exception as e:
         logging.info(e, exc_info=True)
@@ -245,7 +263,8 @@ async def send_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
 @app.websocket("/ws")
 async def loop(request: Request, websocket: Websocket) -> None:
     async with app.ctx.exchanger.create_client() as client:
-        send_loop_task = asyncio.create_task(send_loop(websocket, client))
+        ip: str = request.ip if request.ip != "127.0.0.1" else request.headers["X-Real-IP"]
+        send_loop_task = asyncio.create_task(send_loop(websocket, client, ip))
         recv_loop_task = asyncio.create_task(recv_loop(websocket, client))
         done, pending = await asyncio.wait([send_loop_task, recv_loop_task], return_when=asyncio.FIRST_COMPLETED)
         for task in pending:
@@ -261,6 +280,8 @@ if os.getenv("WEBVCC_SERVE_STATIC") is not None:
 @app.after_server_stop
 async def destroy_exchanger(*_):
     await app.ctx.exchanger.__aexit__(None, None, None)
+
+app.config.WEBSOCKET_MAX_SIZE = 1 << 13
 
 logging.getLogger("vcc.vcc").setLevel(logging.DEBUG)
 if __name__ == "__main__":

@@ -99,20 +99,20 @@ function SubChatSidebarItem({ chat, clickHandler, settingsClickHandler, setOpen 
   return (
     <>
       <li className="py-1 px-2 flex w-full btn-group">
-        <button className={classNames("flex flex-1 btn font-normal normal-case", (chatValue == chat && currentSession == null) ? "btn-accent" : "btn-ghost")} onClick={() => {
+        <button className={classNames("flex flex-1 btn font-normal normal-case", (chatValue == chat && currentSession == null) ? "btn-primary" : "btn-ghost")} onClick={() => {
             setOpen(false)
             clickHandler(chat, chatNames[chatValues.indexOf(chat)], null)
         }}>
           <div className="ml-2 text-base my-auto mr-auto">{chatNames[chatValues.indexOf(chat)]}</div>
         </button> 
         {!!sessions.length && (
-          <button className="btn btn-secondary" onClick={() => {
+          <button className="btn btn-accent" onClick={() => {
             setFold(!fold)
           }}>
             {fold ? <ExpandMoreIcon /> : <ExpandLessIcon />}
           </button>
         )}
-        <button className="btn btn-primary" onClick={settingsClickHandler(chat, chatNames[chatValues.indexOf(chat)])}>
+        <button className="btn btn-secondary" onClick={settingsClickHandler(chat, chatNames[chatValues.indexOf(chat)])}>
           <TuneIcon />
         </button>
       </li>
@@ -160,20 +160,20 @@ function SidebarItem({ value, setOpen, subChats }: {
   return (
     <>
       <li className="py-1 px-2 flex w-full btn-group">
-        <button className={classNames("flex flex-1 btn font-normal normal-case", chatValue == value ? "btn-accent" : "btn-ghost")} onClick={() => {
+        <button className={classNames("flex flex-1 btn font-normal normal-case", chatValue == value ? "btn-primary" : "btn-ghost")} onClick={() => {
           setOpen(false)
           clickHandler(value, chatNames[chatValues.indexOf(value)])
         }}>
           <div className="text-base my-auto mr-auto">{chatNames[chatValues.indexOf(value)]}</div>
         </button> 
-        <button className={classNames("btn btn-secondary", {
+        <button className={classNames("btn btn-accent", {
           hidden: !subChats.length
         })} onClick={() => {
           setFold(!fold)
         }}>
           {fold ? <ExpandMoreIcon /> : <ExpandLessIcon />}
         </button>
-        <button className="btn btn-primary" onClick={settingsClickHandler(value, chatNames[chatValues.indexOf(value)])}>
+        <button className="btn btn-secondary" onClick={settingsClickHandler(value, chatNames[chatValues.indexOf(value)])}>
           <TuneIcon />
         </button>
       </li>

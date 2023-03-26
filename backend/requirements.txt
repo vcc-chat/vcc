@@ -5,3 +5,4 @@ vcc-lib
 websockets==10.3
 multidict==6.0.4
 sanic
+limits

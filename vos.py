@@ -94,6 +94,7 @@ class TextInputDialog:
 class mainapp:
     def __init__(self, userinfo):
         self.userinfo=userinfo
+        self.typing:int=0
     async def message_reciver(self):
         async for msg in self.client:
 
@@ -101,7 +102,15 @@ class mainapp:
                 username, msg, chat, session = msg[1:]
                 self.append_message(username, msg, chat, session)
             if msg[0] == "event":
-                print(11)
+                type, data, chat, username = msg[1:]
+                if type=="typing":
+                    if data:
+                        print(111)
+                        self.typing+=1
+                    else:
+                        self.typing-=1
+                    self.update_title()
+                    self.app._redraw()
     def append_message(self,username, msg, chat, session):
         if chat == self.current_chat[0]:
             text = HTML(f"<ansiblue>{username}</ansiblue>:\n    {msg}\n")
@@ -120,8 +129,29 @@ class mainapp:
             self.current_chat = chatid
             self.chatbox.children = []
         self.app.layout.focus(self.chatbar)
-        self.titlebar.text=f'{chatid[1]} - Vcc'
+        self.update_title()
         self.app._redraw()
+    def update_title(self):
+        typing=""
+        if self.typing>0:
+            typing=f'{self.typing} people is typing '
+        self.titlebar.text=f'{self.current_chat[1]} {typing}- Vcc'
+        
+    def typing_tracer(self,*_):
+        if hasattr(self, "_typing_tracer_callback") and not self._typing_tracer_callback.cancelled():
+            self._typing_tracer_callback.cancel()
+        else:
+            asyncio.create_task(self.client.send_typing_event(1, self.current_chat[0], None))
+            self.typing+=1
+            self.update_title()
+        def task():
+            asyncio.create_task(
+                self.client.send_typing_event(0, self.current_chat[0], None)
+            )
+        self._typing_tracer_callback = asyncio.get_event_loop().call_later(
+            3,
+            task
+        )
 
     async def run(self):
         async with vcc_client.create_client() as client:
@@ -179,6 +209,7 @@ class mainapp:
                     ),
                 ]
             )
+            chatbar.buffer.on_text_insert += self.typing_tracer
             root_container = root_container
             kb = KeyBindings()
             kb.add("tab")(focus_next)

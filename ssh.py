@@ -23,7 +23,7 @@ if not (DATAROOT := os.environ.get("VOS_DATAROOT")):
 SERVER_KEY_PRIVATE = DATAROOT + "/ssh_host_key"
 SERVER_KEY_PUBLIC = DATAROOT + "/ssh_host_key.pub"
 if not os.path.exists(SERVER_KEY_PRIVATE) or not os.path.exists(SERVER_KEY_PUBLIC):
-    os.system(f"ckeygen -t ED25519 -f {SERVER_KEY_PRIVATE} --no-passphrase   -q")
+    os.system(f"ssh-keygen -t ed25519  -f ssh_host_key -q -N")
 import traceback
 from typing import Any, Awaitable, Callable, Optional, TextIO, cast
 

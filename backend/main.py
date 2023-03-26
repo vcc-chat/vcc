@@ -15,11 +15,11 @@ from sanic import Sanic, Request, Websocket
 from sanic.response import text,file_stream
 from sanic.exceptions import NotFound
 from limits import parse
-from limits.storage import storage_from_string
+from limits.aio.storage import RedisStorage
 from limits.aio.strategies import MovingWindowRateLimiter
 
 
-redis_storage = storage_from_string("async+redis://localhost:6379")
+redis_storage = RedisStorage("async+redis://localhost:6379", protocol_version=2)
 
 moving_window = MovingWindowRateLimiter(redis_storage)
 per_minute = parse("40/minute")

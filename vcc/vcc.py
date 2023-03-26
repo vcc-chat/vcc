@@ -228,12 +228,12 @@ class RpcExchanger:
         log.debug(f"{service=} {data=}")
         loop = asyncio.get_event_loop()
         new_uuid = str(uuid.uuid4())
-        await loop.sock_sendall(self._sock, json.dumps({
+        await asyncio.shield(loop.sock_sendall(self._sock, json.dumps({
             "type": "request",
             "service": service,
             "data": data,
             "jobid": new_uuid
-        }).encode() + b"\r\n")
+        }).encode() + b"\r\n"))
         logging.debug(f"{service=}{data=}")
         future = asyncio.Future[Any]()
         self._futures[new_uuid] = future

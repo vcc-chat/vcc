@@ -6,7 +6,7 @@ import { useTitle } from "../tools"
 import useStore from "../store"
 
 
-export default memo(function Settings(props: {}) {
+export const Component = memo(function Settings(props: {}) {
   const matches = useMatches()
   const showSettings = matches[4].pathname.split("/").at(-1)!
   const navigate = useNavigate()

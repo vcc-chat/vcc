@@ -28,7 +28,7 @@ customElements.define("app-container", AppContainer)
 
 const AppContainerElement = "app-container" as any
 
-export default function App() {
+export function Component() {
   const [html, setHtml] = useState<string | null>(null)
   // <wbr> is for fixing a bug of sanitizing <style /> 
   const sanitizedHtml = useMemo(() => (html ? DOMPurify.sanitize("<wbr>" + html, {

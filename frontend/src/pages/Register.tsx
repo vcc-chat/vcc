@@ -9,7 +9,7 @@ import { LoginType } from "../state/login"
 import useStore from "../store"
 import ChooseBackend, { initBackend } from "../components/ChooseBackend"
 
-export default function Register(props: {}) {
+export function Component(props: {}) {
   const loginStatus = useStore(state => state.type)
   const navigate = useNavigate()
   const { successAlert, errorAlert } = useNetwork()

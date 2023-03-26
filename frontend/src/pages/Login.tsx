@@ -11,7 +11,7 @@ import { useLoginActionData } from "../loaders"
 import { useNetwork, useTitle } from "../tools"
 import ChooseBackend, { initBackend } from "../components/ChooseBackend"
 
-export default function Login(props: {}) {
+export function Component(props: {}) {
   const username = useStore(state => state.username)
   const changeUsername = useStore(state => state.changeUsername)
   const navigate = useNavigate()

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { useChatList, useNetwork, useTitle } from "../tools"
 import useStore from "../store"
 
-export default function CreateChat() {
+export function Component() {
   const { values: chats, names: chatNames, parentChats, refresh } = useChatList()
   const { makeRequest, successAlert, errorAlert } = useNetwork()
   const navigate = useNavigate()

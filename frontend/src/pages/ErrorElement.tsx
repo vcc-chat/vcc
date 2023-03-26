@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import { Link, useRouteError, isRouteErrorResponse } from "react-router-dom"
 import { useTitle } from "../tools"
 
-export default function NotFound({ content }: {
+export default function ErrorElement({ content }: {
   content: string
 }) {
   const error = useRouteError()

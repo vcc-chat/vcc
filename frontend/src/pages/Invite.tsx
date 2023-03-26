@@ -7,7 +7,7 @@ import useStore from "../store"
 import classNames from "classnames"
 
 
-export default function Invite(props: {}) {
+export function Component(props: {}) {
   const { makeRequest, successAlert, errorAlert } = useNetwork()
   const ready = useStore(state => state.ready)
   const { chat, token } = useLoaderData() as { chat: number, token: string }

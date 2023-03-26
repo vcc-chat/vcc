@@ -17,7 +17,7 @@ function urlCorrect(urlString: string) {
   }
 }
 
-export default function ChooseBackend() {
+export function Component() {
   const backendAddress = useStore(state => state.backendAddress)
   const setBackendAddress = useStore(state => state.setBackendAddress)
   const [serverAddress, setServerAddress] = useState<string>(import.meta.env.DEFAULT_SERVER_ADDRESS)

@@ -107,7 +107,7 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                 if login_result is not None:
                     value = await client.chat_list()
                     logging.debug(f"{value=}")
-                    await send("chat_list_somebody_joined", msg=cast(Any, value))
+                    await send("chat_list", msg=cast(Any, value))
             case "token_login":
                 try:
                     result = jwt.decode(msg, key, ["HS512"])

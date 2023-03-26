@@ -7,7 +7,7 @@ import useStore from "../store"
 import { useChatList, useNetwork } from "../tools"
 import { useSettingsActionsLoaderData } from "../loaders"
 
-export default memo(function SettingsActions(props: {}) {
+export const Component = memo(function SettingsActions(props: {}) {
   const chat = useStore(state => state.chat)
   const chatName = useStore(state => state.chatName)
   const { refresh: refreshChats } = useChatList()

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import useStore from "../store"
 import { useSettingsInfoLoaderData } from "../loaders"
 
-export default memo(function SettingsInfo(props: {}) {
+export const Component = memo(function SettingsInfo(props: {}) {
   const chat = useStore(state => state.chat)
   const chatName = useStore(state => state.chatName)
   const { t } = useTranslation()

@@ -2,7 +2,7 @@ import { useEffect, useState } from "preact/hooks"
 import { useNetwork, useTitle } from "../tools"
 import { useNavigate, useParams } from "react-router-dom"
 
-export default function FileDownload() {
+export function Component() {
   const { makeRequest } = useNetwork()
   const { id } = useParams()
   const navigate = useNavigate()

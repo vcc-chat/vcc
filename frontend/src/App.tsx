@@ -23,18 +23,7 @@ import { LoginType } from "./state/login"
 import useStore from "./store"
 import * as loaders from "./loaders"
 
-const Invite = lazy(() => import("./pages/Invite"))
-const Login = lazy(() => import("./pages/Login"))
-const Register = lazy(() => import("./pages/Register"))
-const ChatRoot = lazy(() => import("./pages/ChatRoot"))
-const Chat = lazy(() => import("./pages/Chat"))
-const Settings = lazy(() => import("./pages/Settings"))
-const SettingsActions = lazy(() => import("./pages/SettingsActions"))
-const SettingsInfo = lazy(() => import("./pages/SettingsInfo"))
 const ErrorElement = lazy(() => import("./pages/ErrorElement"))
-const CreateChat = lazy(() => import("./pages/CreateChat"))
-const FileDownload = lazy(() => import("./pages/FileDownload"))
-const App = lazy(() => import("./pages/App"))
 
 const Loading = memo(() => {
   return (
@@ -159,22 +148,22 @@ const router = createBrowserRouter(
     <Route path="/" errorElement={<ErrorElement content="500 Internal Server Error" />}>
       <Route index loader={loaders.homeLoader} />
       <Route path="chats">
-        <Route path="invite" element={<Invite />} loader={loaders.inviteLoader} />
-        <Route path="create" element={<CreateChat />} loader={loaders.createChatLoader} />
-        <Route path=":id" element={<ChatRoot />}>
-          <Route index element={<Chat />} action={loaders.chatAction} loader={loaders.chatLoader} />
-          <Route path="settings" element={<Settings />}>
+        <Route path="invite" lazy={() => import("./pages/Invite")} loader={loaders.inviteLoader} />
+        <Route path="create" lazy={() => import("./pages/CreateChat")} loader={loaders.createChatLoader} />
+        <Route path=":id" lazy={() => import("./pages/ChatRoot")}>
+          <Route index lazy={() => import("./pages/Chat")} action={loaders.chatAction} loader={loaders.chatLoader} />
+          <Route path="settings" lazy={() => import("./pages/Settings")}>
             <Route index loader={loaders.settingsIndexLoader} />
             {/* <Route path="null" element={<></>} loader={loaders.settingsLoader} /> */}
-            <Route path="info" element={<SettingsInfo />} loader={loaders.settingsInfoLoader} />
-            <Route path="actions" element={<SettingsActions />} loader={loaders.settingsActionsLoader} />
+            <Route path="info" lazy={() => import("./pages/SettingsInfo")} loader={loaders.settingsInfoLoader} />
+            <Route path="actions" lazy={() => import("./pages/SettingsActions")} loader={loaders.settingsActionsLoader} />
           </Route>
         </Route>
       </Route>
-      <Route path="files/:id" element={<FileDownload />} loader={loaders.fileDownloadLoader} />
-      <Route path="apps/:name" element={<App />} loader={loaders.appLoader} />
-      <Route path="login" element={<Login />} loader={loaders.loginLoader} action={loaders.loginAction} />
-      <Route path="register" element={<Register />} loader={loaders.registerLoader} action={loaders.registerAction} />
+      <Route path="files/:id" lazy={() => import("./pages/FileDownload")} loader={loaders.fileDownloadLoader} />
+      <Route path="apps/:name" lazy={() => import("./pages/App")} loader={loaders.appLoader} />
+      <Route path="login" lazy={() => import("./pages/Login")} loader={loaders.loginLoader} action={loaders.loginAction} />
+      <Route path="register" lazy={() => import("./pages/Register")} loader={loaders.registerLoader} action={loaders.registerAction} />
       <Route path="*" element={<ErrorElement content="404 Not Found" />} />
     </Route>
   )

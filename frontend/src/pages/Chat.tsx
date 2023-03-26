@@ -201,7 +201,7 @@ export function FileUploadDialog({ id }: {
 
 (window as any).addMessage = useStore.getState().addMessage
 
-export default memo(function Chat() {
+export const Component = memo(function Chat() {
   const msgBody = useSignal("")
   const params = useParams()
   const { values: chats, names: chatNames } = useChatList()

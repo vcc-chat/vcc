@@ -68,6 +68,7 @@ class RpcProtocol(LineReceiver):
     def connectionLost(self, reason):
         if self.role=="service":
             self.factory.providers[self.name].remove(self)
+            self.factory.lb_seq[self.name]=0
 
 
 class BuiltinService:

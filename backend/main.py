@@ -16,7 +16,7 @@ from sanic.response import text,file_stream
 from sanic.exceptions import NotFound
 from limits import parse
 from limits.aio.storage import RedisStorage
-from limits.storage import MemoryStorage
+from limits.aio.storage import MemoryStorage
 from limits.aio.strategies import MovingWindowRateLimiter
 
 #redis_storage = RedisStorage("async+"+os.getenv("REDIS_URL", "redis://localhost:6379") , protocol_version=2)

@@ -1,3 +1,4 @@
+from inspect import trace
 from typing import Any, NamedTuple, cast
 
 import os
@@ -32,6 +33,7 @@ async def rate_limit(ip: str):
 
 confpath = os.getenv("WEBVCC_CONFPATH", "config.json")#FIXME: I dont think a file just for key is a good idea
 static_base = os.path.dirname(sys.argv[0])+"/static"
+print(static_base)
 if not os.path.exists(confpath):
     json.dump({"key":str(uuid4())},open(confpath,"w"))
 with open(confpath) as config_file:
@@ -251,7 +253,7 @@ async def send_loop(websocket: Websocket, client: RpcExchangerClient, ip: str) -
         async for json_msg in websocket:
             if json_msg is None:
                 break
-            await rate_limit(ip)
+            #await rate_limit(ip)
             task_list.add(asyncio.create_task(handle_request(websocket, client, json_msg)))
     except Exception as e:
         logging.info(e, exc_info=True)
@@ -260,22 +262,6 @@ async def send_loop(websocket: Websocket, client: RpcExchangerClient, ip: str) -
         for i in task_list:
             i.cancel()
 
-@app.websocket("/ws")
-async def loop(request: Request, websocket: Websocket,retry=False) -> None:
-    try:
-        async with app.ctx.exchanger.create_client() as client:
-            ip: str = request.ip if request.ip != "127.0.0.1" else request.headers["X-Real-IP"]
-            send_loop_task = asyncio.create_task(send_loop(websocket, client, ip))
-            recv_loop_task = asyncio.create_task(recv_loop(websocket, client))
-            done, pending = await asyncio.wait([send_loop_task, recv_loop_task], return_when=asyncio.FIRST_COMPLETED)
-            for task in pending:
-                task.cancel()
-    except BrokenPipeError:
-        if retry:
-            await request.respond(text("error"), status=500)
-        #await app.ctx.exchanger.__aexit__(None,None,None)
-        await app.ctx.exchanger.__aenter__()
-        return cast(None, await loop(request, websocket, retry=True))
 
 @app.before_server_start
 async def init_exchanger(*_):
@@ -286,10 +272,31 @@ async def destroy_exchanger(*_):
     await app.ctx.exchanger.__aexit__(None, None, None)
 
 if os.getenv("WEBVCC_DISABLE_STATIC") is None:
-    app.static("/", static_base)
     @app.exception(NotFound, IsADirectoryError)
-    async def ignore_404s(request, exception):
-        return await  file_stream(static_base / "index.html")
+    async def ignore_404s(request:Request,exception):
+        print(request.path)
+        try:
+            return await  file_stream(static_base+ request.path)
+        except:
+            return await  file_stream(static_base+ "/index.html")
+@app.websocket("/ws")
+async def loop(request: Request, websocket: Websocket,retry=False) -> None:
+    try:
+        async with app.ctx.exchanger.create_client() as client:
+            print(123)
+            ip: str = request.ip if request.ip != "127.0.0.1" else request.headers.get("X-Real-IP","0.0.0.0")
+            send_loop_task = asyncio.create_task(send_loop(websocket, client, ip))
+            recv_loop_task = asyncio.create_task(recv_loop(websocket, client))
+            done, pending = await asyncio.wait([send_loop_task, recv_loop_task], return_when=asyncio.FIRST_COMPLETED)
+            for task in pending:
+                task.cancel()
+    except BrokenPipeError:
+        print(1234)
+        if retry:
+            await request.respond(text("error"), status=500)
+        #await app.ctx.exchanger.__aexit__(None,None,None)
+        await app.ctx.exchanger.__aenter__()
+        return cast(None, await loop(request, websocket, retry=True))
 
 app.config.WEBSOCKET_MAX_SIZE = 1 << 13
 

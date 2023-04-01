@@ -275,9 +275,9 @@ if os.getenv("WEBVCC_DISABLE_STATIC") is None:
     @app.exception(NotFound, IsADirectoryError)
     async def ignore_404s(request:Request,exception):
         print(request.path)
-        try:
+        if os.path.isfile(path:=static_base+ request.path):
             return await  file_stream(static_base+ request.path)
-        except:
+        else:
             return await  file_stream(static_base+ "/index.html")
 @app.websocket("/ws")
 async def loop(request: Request, websocket: Websocket,retry=False) -> None:

@@ -18,8 +18,7 @@ from limits import parse
 from limits.aio.storage import RedisStorage
 from limits.aio.strategies import MovingWindowRateLimiter
 
-
-redis_storage = RedisStorage("async+redis://localhost:6379", protocol_version=2)
+redis_storage = RedisStorage("async+"+getenv("REDIS_URL", "redis://localhost:6379") , protocol_version=2)
 
 moving_window = MovingWindowRateLimiter(redis_storage)
 per_minute = parse("40/minute")

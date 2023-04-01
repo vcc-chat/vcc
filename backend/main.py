@@ -5,7 +5,7 @@ import asyncio
 import json
 import logging
 import jwt
-
+import sys
 from uuid import uuid4
 from datetime import datetime, timedelta, timezone
 from pathlib import Path

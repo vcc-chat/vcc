@@ -31,7 +31,7 @@ async def rate_limit(ip: str):
             await asyncio.sleep(0.01)
 
 confpath = os.getenv("WEBVCC_CONFPATH", "config.json")#FIXME: I dont think a file just for key is a good idea
-static_base = os.path.dirname(sys.argv[0])
+static_base = os.path.dirname(sys.argv[0])+"/static"
 if not os.path.exists(confpath):
     json.dump({"key":str(uuid4())},open(confpath,"w"))
 with open(confpath) as config_file:

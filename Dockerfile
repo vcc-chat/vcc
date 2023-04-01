@@ -3,14 +3,12 @@ ADD ./frontend ./
 RUN npm i&&npm run build
 
 FROM alpine:edge
-RUN apk add supervisor inotify-tools py3-pip
-RUN apk add nginx && mkdir /app
-ADD scripts/generate_nginx_conf.py  /app/generate_nginx_conf.py
-ADD res/supervisord.conf /app/supervisord.conf
+RUN apk add py3-pip
+RUN mkdir /app
 ADD ./backend /app/backend
 RUN pip3 install -r /app/backend/requirements.txt
-COPY --from=frontend_build dist /app/static
+COPY --from=frontend_build dist /app/frontend/static
 
 
-CMD ["/usr/bin/supervisord","-c","/app/supervisord.conf"]
+CMD ["/usr/bin/python3","/app/backend/main.py"]
 

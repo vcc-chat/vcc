@@ -521,7 +521,7 @@ class RpcExchangerClient(RpcExchangerBaseClient):
     async def chat_list(self) -> list[tuple[int, str, int | None]]:
         """List all chat you joined"""
         result: list[tuple[int, str, int | None]] = [
-            cast(Any, tuple(i)) for i in await self._rpc.chat.list_somebody_joined(id=self._id)
+            cast(Any, tuple(i)) for i in await self._rpc.chat.list(id=self._id)
         ]
         result_set = {i[0] for i in result}
         async with self._chat_list_lock:
@@ -551,6 +551,22 @@ class RpcExchangerClient(RpcExchangerBaseClient):
     @check(auth=True, joined="chat_id")
     @rpc_request(id_arg="user_id")
     async def chat_modify_permission(self, chat_id: int, name: ChatPermissionName, value: bool) -> bool: ...
+
+    @check(auth=True, joined="chat_id")
+    @rpc_request(id_arg="user_id")
+    async def chat_change_nickname(self, chat_id: int, new_name: str) -> None: ...
+
+    @check(auth=True, joined="chat_id")
+    @rpc_request(id_arg="user_id")
+    async def chat_get_nickname(self, chat_id: int) -> str: ...
+
+    @check(auth=True)
+    @rpc_request("login/change_nickname", id_arg="id")
+    async def change_nickname(self, nickname: str) -> None: ...
+
+    @check(auth=True)
+    @rpc_request("login/get_nickname", id_arg="id")
+    async def get_nickname(self) -> str: ...
 
     async def __aexit__(self, *args: Any) -> None:
         self._exchanger.client_list.discard(self)

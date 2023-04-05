@@ -111,6 +111,18 @@ class Login:
             return None
         return user.name
 
+    def get_nickname(self, id: int) -> str | None:
+        user = User.get_or_none(id=id)
+        if user is None:
+            return None
+        if user.nickname is not None:
+            return user.nickname
+        return user.name
+
+    @db.atomic()
+    def change_nickname(self, id: int, nickname: str) -> None:
+        User.update(nickname=nickname).where(User.nickname == nickname).execute()
+
     @db.atomic()
     def add_online(self, id: int) -> bool:
         user = User.get_or_none(id=id)  # A stupid query just for check if user exists

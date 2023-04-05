@@ -58,11 +58,7 @@ def oauthGhHttp(table: dict[str, asyncio.Future] = {}):
         return Response(text=HTTP_RESPONSE_HTML, content_type="text/html")
 
     app.add_routes([aiohttp.web.get("/oauthcb/{requestid}", callback_url)])
-    return type(
-        "oauthGhHttp",
-        (),
-        {"__call__": lambda _: aiohttp.web._run_app(app, port=HTTP_PORT), "app": app},
-    )()
+    return lambda: aiohttp.web._run_app(app, port=HTTP_PORT)
 
 
 class oauthGithub(metaclass=base.ServiceMeta):

@@ -66,10 +66,11 @@ class RedisMessage(TypedDict):
     # TODO: add NotRequired after upgrading to python3.11
     session: str
     chat: int
+    uid: int
 
 Event = Literal["join", "quit", "kick", "rename", "invite"]
 
-MessageCallback = Callable[[str, str, int, str | None], None | Awaitable[None]]
+MessageCallback = Callable[[int, str, str, int, str | None], None | Awaitable[None]]
 EventCallback = Callable[[Event, Any, int], None | Awaitable[None]]
 
 class RedisEvent(TypedDict):
@@ -123,11 +124,12 @@ class RpcExchanger:
                     username = json_message["username"]
                     msg = json_message["msg"]
                     chat = int(json_message["chat"])
+                    uid = int(json_message["uid"])
                     if "session" in json_message:
                         session = json_message["session"]
                     for client in self.client_list:
                         if chat in client._chat_list and (session is None or isinstance(client, RpcRobotExchangerClient) or (chat, session) in client._session_list):
-                            client._recv_future.set_result(("message", username, msg, chat, session))
+                            client._recv_future.set_result(("message", uid, username, msg, chat, session))
                     if "session" in json_message:
                         session = json_message["session"]
                     log.debug(f"{username=} {msg=} {chat=} {session=}")
@@ -195,6 +197,7 @@ class RpcExchanger:
     async def send_msg(self, uid: int, username: str, msg: str, chat: int, session: str | None=None) -> None:
         log.debug(f"messages")
         await self._redis.publish(f"messages", json.dumps({
+            "uid": uid,
             "username": username,
             "msg": msg,
             "chat": chat,
@@ -257,7 +260,7 @@ class RpcExchangerBaseClient:
     _name: str | None
     _pubsub: PubSub
     _rpc: RpcExchangerRpcHandler
-    _recv_future: asyncio.Future[tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]]
+    _recv_future: asyncio.Future[tuple[Literal["message"], int, str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]]
 
     _msg_callback: MessageCallback | None
     _event_callbacks: dict[Event, EventCallback]
@@ -306,7 +309,7 @@ class RpcExchangerBaseClient:
             raise PermissionDeniedError()
         await self._exchanger.send_msg(uid, username, msg, chat, session)  
     
-    async def recv(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
+    async def recv(self) -> tuple[Literal["message"], int, str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
         content = await self._recv_future
         if content[0] == "event":
             data = content[2]
@@ -371,7 +374,7 @@ class RpcExchangerBaseClient:
     def __aiter__(self) -> RpcExchangerBaseClient:
         return self
 
-    async def __anext__(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
+    async def __anext__(self) -> tuple[Literal["message"], int, str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
         return await self.recv()
 
     async def __aenter__(self):
@@ -405,9 +408,9 @@ class RpcExchangerBaseClient:
     async def run_forever(self) -> None:
         async for result in self:
             if result[0] == "message":
-                _, username, msg, chat, session = result
+                _, uid, username, msg, chat, session = result
                 if self._msg_callback is not None:
-                    returned = self._msg_callback(username, msg, chat, session)
+                    returned = self._msg_callback(uid, username, msg, chat, session)
                     if isinstance(returned, Awaitable):
                         await returned
             else:

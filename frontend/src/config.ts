@@ -7,7 +7,8 @@ export type RequestType =
   | "chat_check_invite" | "chat_invite" | "chat_get_permission" 
   | "chat_modify_permission" | "session_join" | "is_online" 
   | "file_upload" | "file_download" | "request_oauth"
-  | "login_oauth" | "record_query"
+  | "login_oauth" | "record_query" | "chat_get_nickname"
+  | "chat_change_nickname"
 
 export type Request = {
   type: RequestType
@@ -16,6 +17,7 @@ export type Request = {
   msg: string
   uuid?: string
   session?: string
+  user_id?: number
 }
 
 export interface RequestWithTime {

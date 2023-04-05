@@ -14,6 +14,7 @@ import classNames from "classnames"
 // import { materialLight } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN, zhTW, enUS as en } from "date-fns/locale"
+import { useQuery } from "@tanstack/react-query"
 import FileUploadIcon from "@material-design-icons/svg/outlined/file_upload.svg"
 import InfoIcon from "@material-design-icons/svg/outlined/info.svg"
 import SendIcon from "@material-design-icons/svg/filled/send.svg"
@@ -42,7 +43,19 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: {
   const savedHTML = markdownToHTML[req.msg]
   const markdownChildren = savedHTML === undefined ? req.msg : ""
   const html = savedHTML === undefined ? null : savedHTML
+  const { makeRequest } = useNetwork()
   const { t, i18n } = useTranslation()
+  const { data: username } = useQuery({
+    queryKey: ["get-nickname", nowMsg.req.user_id!],
+    queryFn: async () => {
+      return (await makeRequest({
+        type: "chat_get_nickname",
+        uid: nowMsg.req.user_id!
+      })).usrname
+    },
+    placeholderData: nowMsg.req.usrname,
+    enabled: nowMsg.req.user_id != undefined
+  })
   const savePlugin: any = useCallback(() => {
     return (transformer: any) => {
       if (html) {
@@ -63,9 +76,9 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: {
   }, [])
   return (
     <li key={nowMsg.time} className={classNames("chat", req.usrname == selfUsername ? "chat-end" : "chat-start")}>
-      <MessageAvatar name={req.usrname} />
+      <MessageAvatar name={username!} />
       <div className={classNames("chat-header flex space-x-2", req.usrname == selfUsername ? "flex-row-reverse" : "flex-row")}>
-        {req.usrname}
+        {username!}
         <div className="text-xs opacity-50 mx-2 my-auto" draggable onDragStart={dragStartHandler}>
           {formatDistanceToNow(date, {
             locale: i18n.language == "zh-TW" ? zhTW : (

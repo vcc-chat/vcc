@@ -53,11 +53,12 @@ async def recv_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
                 })
                 await websocket.send(json_msg)
                 continue
-            _, username, msg, chat, session = result
+            _, uid, username, msg, chat, session = result
             logging.debug(f"{username=} {msg=} {chat=}")
             json_msg = json.dumps({
                 "type": "message",
                 "uid": chat,
+                "user_id": uid,
                 "usrname": username,
                 "msg": msg,
                 "session": session
@@ -241,6 +242,11 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                 # await send("record_query", msg=result)
                 # FIXME: Temporily disable support for chat record
                 await send("record_query", msg=cast(Any, []))
+            case "chat_get_nickname":
+                await send("chat_get_nickname", username=await client.chat_get_nickname(uid))
+            case "chat_change_nickname":
+                await client.chat_change_nickname(uid, username)
+                await send("chat_change_nickname")
             case _:
                 await websocket.close(1008)
                 return
@@ -280,27 +286,30 @@ if os.getenv("WEBVCC_DISABLE_STATIC") is None:
         else:
             return await  file_stream(static_base+ "/index.html")
 @app.websocket("/ws")
-async def loop(request: Request, websocket: Websocket,retry=False) -> None:
-    try:
-        async with app.ctx.exchanger.create_client() as client:
-            print(123)
-            ip: str = request.ip if request.ip != "127.0.0.1" else request.headers.get("X-Real-IP","0.0.0.0")
-            send_loop_task = asyncio.create_task(send_loop(websocket, client, ip))
-            recv_loop_task = asyncio.create_task(recv_loop(websocket, client))
-            done, pending = await asyncio.wait([send_loop_task, recv_loop_task], return_when=asyncio.FIRST_COMPLETED)
-            for task in pending:
-                task.cancel()
-    except BrokenPipeError:
-        print(1234)
-        if retry:
-            await request.respond(text("error"), status=500)
-        #await app.ctx.exchanger.__aexit__(None,None,None)
-        await app.ctx.exchanger.__aenter__()
-        return cast(None, await loop(request, websocket, retry=True))
+async def loop(request: Request, websocket: Websocket) -> None:
+    retry = False
+    while True:
+        try:
+            async with app.ctx.exchanger.create_client() as client:
+                print(123)
+                ip: str = request.ip if request.ip != "127.0.0.1" else request.headers.get("X-Real-IP","0.0.0.0")
+                send_loop_task = asyncio.create_task(send_loop(websocket, client, ip))
+                recv_loop_task = asyncio.create_task(recv_loop(websocket, client))
+                done, pending = await asyncio.wait([send_loop_task, recv_loop_task], return_when=asyncio.FIRST_COMPLETED)
+                for task in pending:
+                    task.cancel()
+        except BrokenPipeError:
+            if retry:
+                await websocket.close(1001)
+                return
+            #await app.ctx.exchanger.__aexit__(None,None,None)
+            await app.ctx.exchanger.__aenter__()
+            retry = True
+            continue
+        break
 
 app.config.WEBSOCKET_MAX_SIZE = 1 << 13
 
 logging.getLogger("vcc.vcc").setLevel(logging.DEBUG)
 if __name__ == "__main__":
     app.run(os.environ.get("WEBVCC_ADDR", "0.0.0.0"), 2479, access_log=True)
-'['

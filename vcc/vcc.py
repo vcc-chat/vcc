@@ -192,7 +192,7 @@ class RpcExchanger:
         self._sock.shutdown(socket.SHUT_RDWR)
         self._sock.close()
 
-    async def send_msg(self, username: str, msg: str, chat: int, session: str | None=None) -> None:
+    async def send_msg(self, uid: int, username: str, msg: str, chat: int, session: str | None=None) -> None:
         log.debug(f"messages")
         await self._redis.publish(f"messages", json.dumps({
             "username": username,
@@ -201,16 +201,15 @@ class RpcExchanger:
             **({} if session is None else {"session": session})
         }))
         log.debug(f"{username=} {msg=} {chat=}")
-    async def send_event(self, username: str, type:str,data:Any, chat: int, session: str | None=None) -> None:
+    async def send_event(self, type:str,data:Any, chat: int, session: str | None=None) -> None:
         log.debug(f"event")
         await self._redis.publish(f"events", json.dumps({
-            "username": username,
             "type": type,
             "data": data,
             "chat": chat,
             **({} if session is None else {"session": session})
         }))
-        log.debug(f"{username=} {type=} {chat=}")
+        log.debug(f"{type=} {chat=}")
 
     async def sock_recvline(self) -> str:
         loop = asyncio.get_event_loop()
@@ -300,12 +299,12 @@ class RpcExchangerBaseClient:
             raise ChatAlreadyJoinedError()
     
     @check(auth=True, joined="chat")
-    async def send_with_another_username(self, username: str, msg: str, chat: int, session: str | None) -> None:
+    async def send_with_another_username(self, uid: int, username: str, msg: str, chat: int, session: str | None) -> None:
         if session is not None and (chat, session) not in self._session_list:
             raise ChatNotJoinedError()
         if not await self._rpc.chat.check_send_with_another_username(chat_id=chat, user_id=self._id):
             raise PermissionDeniedError()
-        await self._exchanger.send_msg(username, msg, chat, session)  
+        await self._exchanger.send_msg(uid, username, msg, chat, session)  
     
     async def recv(self) -> tuple[Literal["message"], str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
         content = await self._recv_future
@@ -466,7 +465,7 @@ class RpcExchangerClient(RpcExchangerBaseClient):
             raise ChatNotJoinedError()
         if not await self._rpc.chat.check_send(chat_id=chat, user_id=self._id):
             raise PermissionDeniedError()
-        await self._exchanger.send_msg(cast(str, self._name), msg, chat, session)   
+        await self._exchanger.send_msg(cast(int, self._id), cast(str, self._name), msg, chat, session)   
     @check(auth=True, joined="chat")
     async def send_typing_event(self,status:bool,chat:int,session: str|None) -> None:
         self.check_authorized()
@@ -475,15 +474,19 @@ class RpcExchangerClient(RpcExchangerBaseClient):
             raise ChatNotJoinedError()
         if not await self._rpc.chat.check_send(chat_id=chat, user_id=self._id):
             raise PermissionDeniedError()
-        await self._exchanger.send_event(cast(str, self._name), "typing",status,chat, session)
+        await self._exchanger.send_event("typing", {
+            "status": status,
+            "uid": self.id
+        }, chat, session)
 
     @check(auth=True, joined="chat")
-    async def send_with_another_username(self, username: str, msg: str, chat: int, session: str | None) -> None:
+    async def send_with_another_username(self, uid: int, msg: str, chat: int, session: str | None) -> None:
         if session is not None and (chat, session) not in self._session_list:
             raise ChatNotJoinedError()
         if not await self._rpc.chat.check_send_with_another_username(chat_id=chat, user_id=self._id):
             raise PermissionDeniedError()
-        await self._exchanger.send_msg(username, msg, chat, session)  
+        username = await self._rpc.chat.get_nickname(chat_id=chat, user_id=uid)
+        await self._exchanger.send_msg(uid, username, msg, chat, session)  
 
     @check(auth=True, joined="chat_id")
     async def session_join(self, name: str, chat_id: int) -> bool:
@@ -597,10 +600,11 @@ class RpcRobotExchangerClient(RpcExchangerBaseClient):
         return uid
 
     @check(auth=True, joined="chat")
-    async def send(self, username: str, msg: str, chat: int, session: str | None) -> None:
+    async def send(self, uid: int, username: str, msg: str, chat: int, session: str | None) -> None:
         if not await self._rpc.bot.check_send(chat_id=chat, bot_id=self._id):
             raise PermissionDeniedError()
-        await self._exchanger.send_msg(f"{username}[{cast(str, self.name)}]", msg, chat, session)
+        # -1 means system or robot
+        await self._exchanger.send_msg(-1, f"{username}[{cast(str, self.name)}]", msg, chat, session)
     
     @check(auth=True, not_joined="id")
     async def chat_join(self, id: int) -> bool:

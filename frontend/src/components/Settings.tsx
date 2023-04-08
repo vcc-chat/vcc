@@ -18,5 +18,5 @@ export function SettingsEditItem({ checked, setChecked, label }: {
     </div>
   )
 }
-export const allPermissions = ["kick", "rename", "invite", "modify_permission", "send", "create_sub_chat", "create_session", "banned"] as const
+export const allPermissions = ["kick", "rename", "invite", "modify_permission", "send", "create_sub_chat", "create_session", "banned", "change_nickname"] as const
 export type PermissionKey = typeof allPermissions[number]

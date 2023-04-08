@@ -45,7 +45,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: {
   const html = savedHTML === undefined ? null : savedHTML
   const { makeRequest } = useNetwork()
   const { t, i18n } = useTranslation()
-  const username = useNickname(nowMsg.req.user_id!)
+  const username = useNickname(req.user_id!, { initialData: req.usrname })
   const savePlugin: any = useCallback(() => {
     return (transformer: any) => {
       if (html) {

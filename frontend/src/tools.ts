@@ -140,9 +140,9 @@ export function useChatList() {
   }, data!)
 }
 
-export function useNickname(uid: number, { enabled = true, placeholder }: {
+export function useNickname(uid: number, { enabled = true, initialData }: {
   enabled?: boolean
-  placeholder?: string
+  initialData?: string
 } = {}) {
   const { makeRequest } = useNetwork()
   const { data } = useQuery({
@@ -154,8 +154,8 @@ export function useNickname(uid: number, { enabled = true, placeholder }: {
       })).usrname
     },
     enabled: enabled,
-    ...(placeholder == undefined ? {} : {
-      placeholderData: placeholder
+    ...(initialData == undefined ? {} : {
+      initialData: initialData
     })
   })
   return data

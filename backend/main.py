@@ -245,8 +245,7 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
             case "chat_get_nickname":
                 await send("chat_get_nickname", username=await client.chat_get_nickname(uid))
             case "chat_change_nickname":
-                await client.chat_change_nickname(cast(int, msg), uid, username)
-                await send("chat_change_nickname")
+                await send("chat_change_nickname", uid=int(await client.chat_change_nickname(cast(int, msg), uid, username)))
             case _:
                 await websocket.close(1008)
                 return

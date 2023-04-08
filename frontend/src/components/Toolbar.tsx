@@ -71,22 +71,18 @@ export function ChangeNickname({ id, uid }: {
   const [dialogValue, setDialogValue] = useState("")
   const { makeRequest } = useNetwork()
   const { t } = useTranslation()
+  const chat = useStore(state => state.chat)
 
   const navigate = useNavigate()
   const { successAlert, errorAlert } = useNetwork()
   const { refetch } = useChatList()
 
-  const joinHandler = useCallback(async () => {
-    let chat: number
-    try {
-      chat = parseInt(dialogValue)
-    } catch (e) {
-      return
-    }
-    if (chat === null) return
+  const changeHandler = useCallback(async () => {
+    if (dialogValue === null) return
     const request = await makeRequest({
       msg: chat as unknown as string,
       uid,
+      usrname: dialogValue,
       type: "chat_change_nickname"
     })
     if (request.uid) {
@@ -107,7 +103,7 @@ export function ChangeNickname({ id, uid }: {
           <input className="input" autoFocus placeholder={t("New nickname") ?? ""} value={dialogValue} onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => setDialogValue(ev.currentTarget.value)} />
           <div className="modal-action">
             <label htmlFor={id} className="btn">{t("Close")}</label>
-            <button className="btn" onClick={joinHandler}>{t("Change")}</button>
+            <button className="btn" onClick={changeHandler}>{t("Change")}</button>
           </div>
         </div>
       </div>
@@ -151,7 +147,8 @@ export function EditPermissionDialog({ uid, username, modifyPermissionDialogID }
     send: true,
     create_sub_chat: false,
     create_session: true,
-    banned: false
+    banned: false,
+    change_nickname: false
   })
   const { t } = useTranslation()
   function makeModifyPermissionRequest(name: PermissionKey) {

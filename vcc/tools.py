@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import logging
 
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, TypeVar
@@ -9,6 +10,8 @@ if TYPE_CHECKING:
     from .vcc import RpcExchangerBaseClient
 
 T = TypeVar("T", bound=Callable)
+
+log = logging.getLogger("vcc")
 
 def check(*, auth: bool=False, joined: str | None=None, not_joined: str | None=None):
     def decorator(func: T) -> T:
@@ -32,6 +35,7 @@ def rpc_request(service: str | None=None, *, id_arg: str | None=None):
         signature = inspect.signature(func)
         @wraps(func)
         def wrapper(self: RpcExchangerBaseClient, *args, **kwargs):
+            log.debug(f"{service=} {id_arg=} {_service=} {args=} {kwargs=}")
             bound_signature = signature.bind(self, *args, **kwargs)
             bound_signature.apply_defaults()
             arguments = bound_signature.arguments

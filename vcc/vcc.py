@@ -16,7 +16,7 @@ from os import getenv
 
 from .tools import check, rpc_request
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("vcc")
 log.addHandler(logging.NullHandler())
 
 ChatUserPermissionName = Literal["kick", "rename", "invite", "modify_permission", "send"]

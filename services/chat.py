@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # type: ignore
+from __future__ import annotations
 import json
 import os
 
@@ -287,7 +288,7 @@ class ChatService:
             modified_chat_user.save()
             if name == "banned" and value:
                 ChatUser.update(permissions=ChatUser.banned.set()).where(
-                    ChatUser.chat.parent == chat & ChatUser.user == modified_user
+                    ChatUser.chat.parent == chat, ChatUser.user == modified_user
                 ).execute()
             return True
         except:
@@ -377,7 +378,7 @@ class ChatService:
                 and chat_user.change_nickname and not chat_user.banned
             )
         ):
-            ChatUser.update(nickname=new_name).where(chat=chat_id, user=changed_user_id).execute()
+            ChatUser.update(nickname=new_name).where(ChatUser.chat == chat_id, ChatUser.user == changed_user_id).execute()
             return True
         return False
 

@@ -243,7 +243,7 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                 # FIXME: Temporily disable support for chat record
                 await send("record_query", msg=cast(Any, []))
             case "chat_get_nickname":
-                await send("chat_get_nickname", username=await client.chat_get_nickname(uid))
+                await send("chat_get_nickname", username=await client.chat_get_nickname(int(username), uid))
             case "chat_change_nickname":
                 await send("chat_change_nickname", uid=int(await client.chat_change_nickname(cast(int, msg), uid, username)))
             case _:

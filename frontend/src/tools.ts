@@ -140,17 +140,18 @@ export function useChatList() {
   }, data!)
 }
 
-export function useNickname(uid: number, { enabled = true, initialData }: {
+export function useNickname(chat: number, uid: number, { enabled = true, initialData }: {
   enabled?: boolean
   initialData?: string
 } = {}) {
   const { makeRequest } = useNetwork()
   const { data } = useQuery({
-    queryKey: ["get-nickname", uid],
+    queryKey: ["get-nickname", chat, uid],
     queryFn: async () => {
       return (await makeRequest({
         type: "chat_get_nickname",
-        uid
+        uid,
+        usrname: chat as unknown as string
       })).usrname
     },
     enabled: enabled,

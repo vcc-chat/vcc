@@ -13,19 +13,19 @@ T = TypeVar("T", bound=Callable)
 
 log = logging.getLogger("vcc")
 
-def check(*, auth: bool=False, joined: str | None=None, not_joined: str | None=None):
+def check(*, auth: bool=True, joined: str | None=None, not_joined: str | None=None):
     def decorator(func: T) -> T:
         signature = inspect.signature(func)
         @wraps(func)
-        def wrapper(self: RpcExchangerBaseClient, *args, **kwargs):
+        async def wrapper(self: RpcExchangerBaseClient, *args, **kwargs):
             bound_signature = signature.bind(self, *args, **kwargs)
             if auth:
                 self.check_authorized()
             if joined is not None:
-                self.check_joined(bound_signature.arguments[joined])
+                await self.check_joined(bound_signature.arguments[joined])
             if not_joined is not None:
-                self.check_not_joined(bound_signature.arguments[not_joined])
-            return func(self, *args, **kwargs)
+                await self.check_not_joined(bound_signature.arguments[not_joined])
+            return await func(self, *args, **kwargs)
         return wrapper # type: ignore
     return decorator
 

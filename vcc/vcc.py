@@ -563,8 +563,8 @@ class RpcExchangerClient(RpcExchangerBaseClient):
     async def chat_change_nickname(self, chat_id: int, changed_user_id: int, new_name: str) -> bool: ...
 
     @check(auth=True, joined="chat_id")
-    @rpc_request(id_arg="user_id")
-    async def chat_get_nickname(self, chat_id: int) -> str: ...
+    @rpc_request()
+    async def chat_get_nickname(self, chat_id: int, user_id: int) -> str: ...
 
     @check(auth=True)
     @rpc_request("login/change_nickname", id_arg="id")

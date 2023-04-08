@@ -22,7 +22,7 @@ import SendIcon from "@material-design-icons/svg/filled/send.svg"
 import { type RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
 import { MessageAvatar, MessageLink } from "../components/Messages"
 import useStore from "../store"
-import { stringToNumber, useChatList, useNetwork, useTitle } from "../tools"
+import { stringToNumber, useChatList, useNetwork, useNickname, useTitle } from "../tools"
 import { useChatActionData } from "../loaders"
 
 const NormalMessage = memo(function NormalMessage({ nowMsg }: {
@@ -45,17 +45,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: {
   const html = savedHTML === undefined ? null : savedHTML
   const { makeRequest } = useNetwork()
   const { t, i18n } = useTranslation()
-  const { data: username } = useQuery({
-    queryKey: ["get-nickname", nowMsg.req.user_id!],
-    queryFn: async () => {
-      return (await makeRequest({
-        type: "chat_get_nickname",
-        uid: nowMsg.req.user_id!
-      })).usrname
-    },
-    placeholderData: nowMsg.req.usrname,
-    enabled: nowMsg.req.user_id != undefined
-  })
+  const username = useNickname(nowMsg.req.user_id!)
   const savePlugin: any = useCallback(() => {
     return (transformer: any) => {
       if (html) {

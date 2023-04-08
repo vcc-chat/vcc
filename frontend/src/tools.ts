@@ -140,6 +140,27 @@ export function useChatList() {
   }, data!)
 }
 
+export function useNickname(uid: number, { enabled = true, placeholder }: {
+  enabled?: boolean
+  placeholder?: string
+} = {}) {
+  const { makeRequest } = useNetwork()
+  const { data } = useQuery({
+    queryKey: ["get-nickname", uid],
+    queryFn: async () => {
+      return (await makeRequest({
+        type: "chat_get_nickname",
+        uid
+      })).usrname
+    },
+    enabled: enabled,
+    ...(placeholder == undefined ? {} : {
+      placeholderData: placeholder
+    })
+  })
+  return data
+}
+
 export function useTitle(title: string) {
   useEffect(() => {
     document.title = title ? `${title} - web-vcc` : "web-vcc: vcc online"

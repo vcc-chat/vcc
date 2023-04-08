@@ -16,7 +16,7 @@ import PeopleIcon from "@material-design-icons/svg/outlined/people.svg"
 import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
 
 import { MESSAGE_MIME_TYPE, Request } from "../config"
-import { JoinDialog, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
+import { ChangeNickname, JoinDialog, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
 import { stringToColor, useChatList, useNetwork } from "../tools"
 import useStore from "../store"
 import { useTranslation } from "react-i18next"
@@ -27,9 +27,7 @@ export function NavBar({ toggle, toggleRightSidebar }: {
   toggleRightSidebar: () => void
 }) {
   const chatName = useStore(state => state.chatName)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const session = useStore(state => state.session)
-  const menuOpen = !!anchorEl
   const { t } = useTranslation()
   return (
     <div className="navbar bg-base-100">
@@ -340,7 +338,6 @@ export function UsersSidebar({ open, setOpen }: {
     }
   }, [usersData, onlineData])
 
-  const [dialogOpen, setDialogOpen] = useState(false)
   const [handleUsername, setHandleUsername] = useState("")
   const [handleUserID, setHandleUserID] = useState(0)
 
@@ -396,12 +393,14 @@ export function UsersSidebar({ open, setOpen }: {
   }, [handleUserID])
 
   const modifyPermissionDialogID = useId()
+  const changeNicknameID = useId()
 
   const menu = (
     <ul className="menu mt-4 bg-base-100 flex-1 ml-auto dropdown-content whitespace-nowrap" tabIndex={0}>
       <li><a onClick={handleKickButtonClick}>{t(handleUsername == username ? "Quit" : "Kick")}</a></li>
       <li><a onClick={handleBanButtonClick}>{t(permissionRawData?.[handleUserID]?.banned ? "Unban" : "Ban")}</a></li>
       <li><label htmlFor={modifyPermissionDialogID}>{t("Modify Permission")}</label></li>
+      <li><label htmlFor={changeNicknameID}>{t("Change Nickname")}</label></li>
     </ul>
   )
 
@@ -417,7 +416,8 @@ export function UsersSidebar({ open, setOpen }: {
       "sm:max-w-[18rem] max-w-full sm:w-[18rem] w-full overflow-y-auto": open,
       "max-w-0 overflow-y-hidden": !open
     })}>
-      <ModifyPermissionDialog open={dialogOpen} setOpen={setDialogOpen} uid={handleUserID} username={handleUsername} modifyPermissionDialogID={modifyPermissionDialogID} />
+      <ModifyPermissionDialog uid={handleUserID} username={handleUsername} modifyPermissionDialogID={modifyPermissionDialogID} />
+      <ChangeNickname id={changeNicknameID} uid={handleUserID} />
       <ul className="flex-1 flex flex-col py-2 max-w-full">
         <button className="btn btn-ghost btn-circle sm:hidden" onClick={() => setOpen(false)}>
           <CloseIcon />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "preact/hooks"
+import { useState, useEffect, useCallback, useReducer } from "preact/hooks"
 import { type TargetedEvent, createPortal } from "preact/compat"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
@@ -52,7 +52,7 @@ export function JoinDialog({ id }: {
       <div className="modal">
         <div className="modal-box">
           <h3 className="font-bold text-lg">{t("Join chat")}</h3>
-          <p className="py-4">{t("Enter the chat number you want to join")}.</p>
+          <p className="py-4">{t("Enter the chat number you want to join.")}</p>
           <input className="input" autoFocus placeholder={t("Chat id") ?? ""} value={dialogValue} onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => setDialogValue(ev.currentTarget.value)} />
           <div className="modal-action">
             <label htmlFor={id} className="btn">{t("Close")}</label>
@@ -64,9 +64,58 @@ export function JoinDialog({ id }: {
   ), document.body)
 }
 
-export function EditPermissionDialog({ open, setOpen, uid, username, modifyPermissionDialogID }: {
-  open: boolean,
-  setOpen: (value: boolean) => void,
+export function ChangeNickname({ id, uid }: {
+  id: string,
+  uid: number
+}) {
+  const [dialogValue, setDialogValue] = useState("")
+  const { makeRequest } = useNetwork()
+  const { t } = useTranslation()
+
+  const navigate = useNavigate()
+  const { successAlert, errorAlert } = useNetwork()
+  const { refetch } = useChatList()
+
+  const joinHandler = useCallback(async () => {
+    let chat: number
+    try {
+      chat = parseInt(dialogValue)
+    } catch (e) {
+      return
+    }
+    if (chat === null) return
+    const request = await makeRequest({
+      msg: chat as unknown as string,
+      uid,
+      type: "chat_change_nickname"
+    })
+    if (request.uid) {
+      await refetch()
+      navigate(`/chats/${request.uid}`)
+      successAlert(t("You have changed the nickname successfully. "))
+    } else {
+      errorAlert(t("Permission denied. "))
+    }
+  }, [successAlert, errorAlert, refetch, dialogValue])
+  return createPortal((
+    <>
+      <input type="checkbox" id={id} className="modal-toggle" />
+      <div className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">{t("Change nickname")}</h3>
+          <p className="py-4">{t("Enter the new nickname you want to change.")}</p>
+          <input className="input" autoFocus placeholder={t("New nickname") ?? ""} value={dialogValue} onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => setDialogValue(ev.currentTarget.value)} />
+          <div className="modal-action">
+            <label htmlFor={id} className="btn">{t("Close")}</label>
+            <button className="btn" onClick={joinHandler}>{t("Change")}</button>
+          </div>
+        </div>
+      </div>
+    </>
+  ), document.body)
+}
+
+export function EditPermissionDialog({ uid, username, modifyPermissionDialogID }: {
   uid: number,
   username: string,
   modifyPermissionDialogID: string
@@ -89,7 +138,12 @@ export function EditPermissionDialog({ open, setOpen, uid, username, modifyPermi
   })
   const permissionOriginal = permissionRawData?.[uid]
   const queryClient = useQueryClient()
-  const [permissions, setPermissions] = useState({
+  const [permissions, setPermissions] = useReducer((state, { key, value }: { key: PermissionKey, value: boolean }) => {
+    return {
+      ...state,
+      [key]: value
+    }
+  }, {
     kick: false,
     rename: false,
     invite: false,
@@ -100,14 +154,6 @@ export function EditPermissionDialog({ open, setOpen, uid, username, modifyPermi
     banned: false
   })
   const { t } = useTranslation()
-  function setPermission(key: PermissionKey) {
-    return function (value: boolean) {
-      setPermissions({
-        ...permissions,
-        [key]: value
-      })
-    }
-  }
   function makeModifyPermissionRequest(name: PermissionKey) {
     const value = permissions[name]
     if (permissionOriginal != undefined && permissionOriginal[name] == value) {
@@ -148,7 +194,7 @@ export function EditPermissionDialog({ open, setOpen, uid, username, modifyPermi
                 {allPermissions.map(key => (
                   <SettingsEditItem
                     checked={permissions[key]}
-                    setChecked={setPermission(key)}
+                    setChecked={checked => setPermissions({ key, value: checked })}
                     label={t(key)}
                     key={key}
                   />

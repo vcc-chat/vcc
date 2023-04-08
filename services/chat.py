@@ -32,6 +32,7 @@ all_user_permissions = [
     "create_sub_chat",
     "create_session",
     "banned",
+    "change_nickname"
 ]
 all_chat_permissions = ["public"]
 

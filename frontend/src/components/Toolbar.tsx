@@ -75,7 +75,7 @@ export function ChangeNickname({ id, uid }: {
 
   const navigate = useNavigate()
   const { successAlert, errorAlert } = useNetwork()
-  const { refetch } = useChatList()
+  const queryClient = useQueryClient()
 
   const changeHandler = useCallback(async () => {
     if (dialogValue === null) return
@@ -86,13 +86,13 @@ export function ChangeNickname({ id, uid }: {
       type: "chat_change_nickname"
     })
     if (request.uid) {
-      await refetch()
+      queryClient.invalidateQueries(["get-nickname", uid])
       navigate(`/chats/${request.uid}`)
       successAlert(t("You have changed the nickname successfully. "))
     } else {
       errorAlert(t("Permission denied. "))
     }
-  }, [successAlert, errorAlert, refetch, dialogValue])
+  }, [successAlert, errorAlert, dialogValue])
   return createPortal((
     <>
       <input type="checkbox" id={id} className="modal-toggle" />

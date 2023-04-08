@@ -53,6 +53,7 @@ class Login:
         try:
             User(
                 name=username,
+                nickname=username,
                 password=hashed_password,
                 salt=salt,
                 oauth=oauth,

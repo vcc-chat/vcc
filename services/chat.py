@@ -85,7 +85,7 @@ class ChatService:
         # Won't return users of sub-chats
         chat_users = ChatUser.select().where(ChatUser.chat == id).execute()
         user_names = [
-            (chat_user.user.id, chat_user.user.name if chat_user.nickname is None else chat_user.nickname) for chat_user in chat_users
+            (chat_user.user.id, chat_user.user.nickname if chat_user.nickname is None else chat_user.nickname) for chat_user in chat_users
         ]
         return user_names
 
@@ -382,9 +382,7 @@ class ChatService:
         user = User.get_or_none(user=user_id)
         if user is None:
             return None
-        if user.nickname is not None:
-            return user.nickname
-        return user.name
+        return user.nickname
 
 
 if __name__ == "__main__":

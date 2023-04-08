@@ -303,6 +303,13 @@ export function UsersSidebar({ open, setOpen }: {
     },
     enabled: chat != null
   })
+  useEffect(() => {
+    if (!usersData) return
+    for (const [uid, nickname] of usersData) {
+      queryClient.setQueryData(["get-nickname", chat, uid], nickname)
+
+    }
+  }, [usersData])
   const { data: permissionRawData } = useQuery({
     queryKey: ["user-permission", chat],
     queryFn: async () => {

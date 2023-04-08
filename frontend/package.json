@@ -15,7 +15,7 @@
     "@tanstack/query-broadcast-client-experimental": "^4.22.0",
     "@tanstack/query-core": "^4.22.0",
     "@tanstack/query-sync-storage-persister": "^4.22.0",
-    "@tanstack/react-query": "^4.20.4",
+    "@tanstack/react-query": "^4.22.0",
     "@tanstack/react-query-persist-client": "^4.22.0",
     "character-entities-legacy": "^3.0.0",
     "character-reference-invalid": "^2.0.1",

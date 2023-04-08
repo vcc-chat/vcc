@@ -69,7 +69,7 @@ class ChatService:
                     return None
                 new_chat = Chat.create(name=name, parent=parent_chat)
             ChatUser.create(
-                user=user_id, chat=new_chat, permissions=1 | 2 | 4 | 8 | 16 | 32 | 64
+                user=user_id, chat=new_chat, permissions=1 | 2 | 4 | 8 | 16 | 32 | 64 | 512
             )
             return new_chat.id
         except:
@@ -370,8 +370,16 @@ class ChatService:
     async def list_sub_chats(self, id: int) -> list[tuple[int, str]]:
         return [(i.id, i.name) for i in Chat.select().where(Chat.parent == id).execute()]
     
-    async def change_nickname(self, chat_id: int, user_id: int, new_name: str):
-        ChatUser.update(nickname=new_name).where(chat=chat_id, user=user_id).execute()
+    async def change_nickname(self, chat_id: int, user_id: int, changed_user_id: int, new_name: str):
+        if (
+            changed_user_id == user_id or (
+                (chat_user := ChatUser.get_or_none(chat=chat_id, user=user_id)) is not None 
+                and chat_user.change_nickname and not chat_user.banned
+            )
+        ):
+            ChatUser.update(nickname=new_name).where(chat=chat_id, user=changed_user_id).execute()
+            return True
+        return False
 
     async def get_nickname(self, chat_id: int, user_id: int):
         if user_id == SYSTEM_UID:

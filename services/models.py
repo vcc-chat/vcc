@@ -55,6 +55,8 @@ class ChatUser(Model):
     create_session = permissions.flag(64)
     # Being banned, any other permission will be ignored
     banned = permissions.flag(256)
+    # Change one's nickname
+    change_nickname = permissions.flag(512)
     class Meta:
         indexes = (
             (("user", "chat"), True),

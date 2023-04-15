@@ -15,6 +15,8 @@ export function Component(props: {}) {
   const { successAlert, errorAlert } = useNetwork()
   const result = useRegisterActionData()
   const { t } = useTranslation()
+  const setToken = useStore(state => state.setToken)
+  const success = useStore(state => state.success)
   useEffect(() => {
     if (loginStatus == LoginType.LOGIN_SUCCESS) {
       navigate("/")
@@ -28,10 +30,11 @@ export function Component(props: {}) {
     initBackend()
     ;(async () => {
       if (result === undefined) return
-      const { success } = result
-      if (success) {
-        successAlert(t("The account has been registered successfully, you can login now. "))
-        navigate("/login")
+      if (result.success) {
+        successAlert(t("The account has been registered successfully. "))
+        success()
+        setToken(result.token)
+        navigate("/")
       } else {
         errorAlert(t("Operation failed. "))
       }

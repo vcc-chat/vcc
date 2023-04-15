@@ -389,26 +389,43 @@ export async function registerLoader() {
 }
 
 export async function registerAction({ request }: ActionFunctionArgs) {
+  initBackend()
   const { makeRequest } = store.getState()
   const { username, password } = Object.fromEntries(await request.formData())
   if (typeof username != "string" || typeof password != "string") {
     throw badRequest()
   }
-  const { uid } = await makeRequest({
+  const { uid: registerSuccess } = await makeRequest({
     uid: 0,
     type: "register",
     usrname: username,
     msg: password
   })
-  return {
-    success: !!uid
+  if (!registerSuccess) return {
+    success: false,
+    token: null
+  }
+  const { uid, msg } = await makeRequest({
+    uid: 0,
+    type: "login",
+    usrname: username,
+    msg: password
+  })
+  if (uid) {
+    return {
+      success: true,
+      token: msg
+    }
+  } else {
+    return {
+      success: false,
+      token: null
+    }
   }
 }
 
 export function useRegisterActionData() {
-  return useActionData() as {
-    success: boolean
-  } | undefined
+  return useLoginActionData()
 }
 
 export function createChatLoader() {

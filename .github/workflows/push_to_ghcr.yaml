@@ -27,4 +27,4 @@ jobs:
           - name: 'Build Inventory Image'
             run: |
               docker build . --tag ghcr.io/vcc-chat/vcc_rpc
-              docker push ghcr.io/vcc-chat/vcc_rp:latest
+              docker push ghcr.io/vcc-chat/vcc_rpc:latest

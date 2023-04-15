@@ -1,5 +1,6 @@
 from peewee import Model,BigAutoField,CharField,IntegerField,ForeignKeyField,BooleanField,BitField,SqliteDatabase, TimestampField, TextField
 from peewee import *
+from playhouse.shortcuts import ReconnectMixin
 import os
 
 
@@ -78,7 +79,8 @@ class ChatBot(Model):
             (("bot", "chat"), True),
         )
 
-
+def ReconnectDB(database:type,*args,**kwargs):
+    return type(database.__name__,(ReconnectMixin,database),{})(*args,**kwargs)
 def get_database():
     if "DATABASE" in os.environ:
         return eval(os.environ["DATABASE"])

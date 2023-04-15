@@ -61,7 +61,7 @@ class Login:
         except:
             return False
 
-    #  ### TODO
+    # @db.atomic() ### TODO
     # def do_raw_query(self,cond:dict):
     #     for i in cond:
     #         try:
@@ -121,7 +121,7 @@ class Login:
     def change_nickname(self, id: int, nickname: str) -> None:
         User.update(nickname=nickname).where(User.nickname == nickname).execute()
 
-    
+    @db.atomic()
     def add_online(self, id: int) -> bool:
         user = User.get_or_none(id=id)  # A stupid query just for check if user exists
         if user is None:
@@ -129,7 +129,7 @@ class Login:
         self.modify_metadata(id, "online_count", lambda x: int(x) + 1 if x != "" else 1)
         return True
 
-    
+    @db.atomic()
     def add_offline(self, id: int) -> bool:
         user = User.get_or_none(id=id)
         if user is None:
@@ -141,7 +141,7 @@ class Login:
         )
         return True
 
-    
+    @db.atomic()
     def is_online(self, ids: Any) -> list[bool]:
         try:
             return [
@@ -151,9 +151,9 @@ class Login:
                     UserMetadata.value == "0",
                 )
                 for id in ids
+            ]
         except:
             return []
-            ]
 
 
 if __name__ == "__main__":

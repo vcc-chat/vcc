@@ -88,11 +88,6 @@ class Reconnect(object):
             print(1)
             if self.in_transaction():
                 raise exc
-            for err_fragment in self._reconnect_errors[exc_class]:
-                if err_fragment in exc_repr:
-                    break
-            else:
-                raise exc
             self.close()
             self.connect()
             print(123)

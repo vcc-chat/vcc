@@ -27,7 +27,6 @@ def random_string(length: int) -> str:
 
 
 class Login:
-    @db.atomic()
     def login(self, username: str, password: str) -> int | None:
         if username == "system":
             return None
@@ -43,7 +42,6 @@ class Login:
             return None
         return user.id
 
-    @db.atomic()
     def register(self, username, password, oauth=None, oauth_data=None):
         if username == "system":
             return False
@@ -63,7 +61,7 @@ class Login:
         except:
             return False
 
-    # @db.atomic() ### TODO
+    #  ### TODO
     # def do_raw_query(self,cond:dict):
     #     for i in cond:
     #         try:
@@ -72,7 +70,7 @@ class Login:
     #             return None
     #         e
 
-    @db.atomic()
+
     def post_oauth(self, platform: str, metadata: str):
         if (
             user := User.get_or_none(
@@ -86,13 +84,12 @@ class Login:
             user = User.get_or_none(User.name == username)
         return user.id
 
-    @db.atomic()
+
     def query_metadata(self, uid: int, key: str):
         return UserMetadata.get_or_none(
             UserMetadata.id == uid, UserMetadata.key == key
         ).value
 
-    @db.atomic()
     def modify_metadata(self, uid, key, value):
         metadata = UserMetadata.get_or_none(
             UserMetadata.id == uid, UserMetadata.key == key
@@ -105,7 +102,7 @@ class Login:
             metadata.value = str(value(metadata.value))
         metadata.save()
 
-    @db.atomic()
+
     def get_name(self, id: int) -> str | None:
         user = User.get_or_none(id=id)
         if user is None:
@@ -120,11 +117,11 @@ class Login:
             return user.nickname
         return user.name
 
-    @db.atomic()
+
     def change_nickname(self, id: int, nickname: str) -> None:
         User.update(nickname=nickname).where(User.nickname == nickname).execute()
 
-    @db.atomic()
+    
     def add_online(self, id: int) -> bool:
         user = User.get_or_none(id=id)  # A stupid query just for check if user exists
         if user is None:
@@ -132,7 +129,7 @@ class Login:
         self.modify_metadata(id, "online_count", lambda x: int(x) + 1 if x != "" else 1)
         return True
 
-    @db.atomic()
+    
     def add_offline(self, id: int) -> bool:
         user = User.get_or_none(id=id)
         if user is None:
@@ -144,7 +141,7 @@ class Login:
         )
         return True
 
-    @db.atomic()
+    
     def is_online(self, ids: Any) -> list[bool]:
         try:
             return [
@@ -154,9 +151,9 @@ class Login:
                     UserMetadata.value == "0",
                 )
                 for id in ids
-            ]
         except:
             return []
+            ]
 
 
 if __name__ == "__main__":

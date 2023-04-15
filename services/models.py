@@ -78,9 +78,27 @@ class ChatBot(Model):
         indexes = (
             (("bot", "chat"), True),
         )
-
+class Reconnect(object):
+    def __init__(self, *args, **kwargs):
+        super(Reconnect, self).__init__(*args, **kwargs)
+    def execute(self, sql, params=None, commit=None):
+        try:
+            return super(Reconnect, self).execute(sql, params)
+        except Exception as exc:
+            print(1)
+            if self.in_transaction():
+                raise exc
+            for err_fragment in self._reconnect_errors[exc_class]:
+                if err_fragment in exc_repr:
+                    break
+            else:
+                raise exc
+            self.close()
+            self.connect()
+            print(123)
+            return super(ReconnectMixin, self).execute(sql, params)
 def ReconnectDB(database:type,*args,**kwargs):
-    return type(database.__name__,(ReconnectMixin,database),{})(*args,**kwargs)
+    return type(database.__name__,(Reconnect,database),{})(*args,**kwargs)
 def get_database():
     if "DATABASE" in os.environ:
         return eval(os.environ["DATABASE"])

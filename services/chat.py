@@ -51,7 +51,7 @@ class ChatService:
             f"events", json.dumps({"type": type, "data": data, "chat": chat})
         )
 
-    @db.atomic()
+    
     async def create_with_user(
         self, name: str, user_id: int, parent_chat_id: int
     ) -> int | None:

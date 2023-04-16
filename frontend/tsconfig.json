@@ -21,7 +21,7 @@
       "react-dom": ["./node_modules/preact/compat/"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "public/sw.js"],
   "exclude": ["node_modules"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

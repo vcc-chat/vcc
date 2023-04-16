@@ -2,7 +2,7 @@ import { defineConfig } from "vite"
 import preact from "@preact/preset-vite"
 import legacy from "@vitejs/plugin-legacy"
 import { VitePWA } from "vite-plugin-pwa"
-import importToCDN, { autoComplete } from "vite-plugin-cdn-import"
+// import importToCDN, { autoComplete } from "vite-plugin-cdn-import"
 import svgr from "vite-plugin-svgr"
 import banner from "vite-plugin-banner"
 
@@ -22,43 +22,47 @@ export default defineConfig({
     legacy({
       targets: ["defaults", "not IE 11"]
     }),
-    VitePWA({
-      registerType: "autoUpdate",
-      devOptions: {
-        enabled: true
-      },
-      includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
-      manifest: {
-        name: "web-vcc: vcc online",
-        short_name: "web-vcc",
-        description: "web-vcc: a new way for chat",
-        theme_color: "#7a26c1",
-        icons: [
-          {
-            src: "pwa-192x192.png",
-            sizes: "192x192",
-            type: "image/png"
-          },
-          {
-            src: "pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png"
-          },
-          {
-            src: "pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any maskable"
-          }
-        ]
-      },
-      workbox: {
-        globPatterns: [
-          "**/*.{js,css,html,ico,png,svg}"
-          // "locales/**/*.json"
-        ]
-      }
-    }),
+    // VitePWA({
+    //   registerType: "autoUpdate",
+    //   devOptions: {
+    //     enabled: true
+    //   },
+    //   includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
+    //   manifest: {
+    //     name: "web-vcc: vcc online",
+    //     short_name: "web-vcc",
+    //     description: "web-vcc: a new way for chat",
+    //     theme_color: "#7a26c1",
+    //     icons: [
+    //       {
+    //         src: "pwa-192x192.png",
+    //         sizes: "192x192",
+    //         type: "image/png"
+    //       },
+    //       {
+    //         src: "pwa-512x512.png",
+    //         sizes: "512x512",
+    //         type: "image/png"
+    //       },
+    //       {
+    //         src: "pwa-512x512.png",
+    //         sizes: "512x512",
+    //         type: "image/png",
+    //         purpose: "any maskable"
+    //       }
+    //     ]
+    //   },
+    //   workbox: {
+    //     globPatterns: [
+    //       "**/*.{js,css,html,ico,png,svg}"
+    //       // "locales/**/*.json"
+    //     ]
+    //   }
+    //   // strategies: "injectManifest",
+    //   // injectManifest: {
+    //   //   rollupFormat: "iife"
+    //   // }
+    // }),
     // importToCDN({
     //   modules: [
     //     {

@@ -1,4 +1,4 @@
-import { useEffect } from "preact/hooks"
+import { useEffect, useRef } from "preact/hooks"
 import { signal } from "@preact/signals"
 import { lazy, Suspense, memo } from "preact/compat"
 
@@ -7,7 +7,8 @@ import {
   Route,
   createBrowserRouter,
   createRoutesFromElements,
-  RouterProvider
+  RouterProvider,
+  useNavigate
 } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import classNames from "classnames"
@@ -31,9 +32,37 @@ const Loading = memo(() => {
   )
 })
 
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route path="/" errorElement={<ErrorElement content="500 Internal Server Error" />}>
+      <Route index loader={loaders.homeLoader} />
+      <Route path="chats">
+        <Route path="invite" lazy={() => import("./pages/Invite")} loader={loaders.inviteLoader} />
+        <Route path="create" lazy={() => import("./pages/CreateChat")} loader={loaders.createChatLoader} />
+        <Route path=":id" lazy={() => import("./pages/ChatRoot")}>
+          <Route index lazy={() => import("./pages/Chat")} action={loaders.chatAction} loader={loaders.chatLoader} />
+          <Route path="settings" lazy={() => import("./pages/Settings")}>
+            <Route index loader={loaders.settingsIndexLoader} />
+            {/* <Route path="null" element={<></>} loader={loaders.settingsLoader} /> */}
+            <Route path="info" lazy={() => import("./pages/SettingsInfo")} loader={loaders.settingsInfoLoader} />
+            <Route path="actions" lazy={() => import("./pages/SettingsActions")} loader={loaders.settingsActionsLoader} />
+          </Route>
+        </Route>
+      </Route>
+      <Route path="files/:id" lazy={() => import("./pages/FileDownload")} loader={loaders.fileDownloadLoader} />
+      <Route path="apps/:name" lazy={() => import("./pages/App")} loader={loaders.appLoader} />
+      <Route path="login" lazy={() => import("./pages/Login")} loader={loaders.loginLoader} action={loaders.loginAction} />
+      <Route path="register" lazy={() => import("./pages/Register")} loader={loaders.registerLoader} action={loaders.registerAction} />
+      <Route path="*" element={<ErrorElement content="404 Not Found" />} />
+    </Route>
+  )
+)
+
 function useMessageWebSocket() {
   const backendAddress = useStore(state => state.backendAddress!)
-  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(backendAddress)
+  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(backendAddress, {
+    shouldReconnect: ({ code }) => code != 1000 && code != 1001
+  })
   
   const queryClient = useQueryClient()
   const loginSuccess = useStore(state => state.type == LoginType.LOGIN_SUCCESS)
@@ -45,6 +74,22 @@ function useMessageWebSocket() {
   const setReady = useStore(state => state.setReady)
   const errorAlert = useStore(state => state.errorAlert)
   const changeLastMessageTime = useStore(state => state.changeLastMessageTime)
+  const tokenLogin = useStore(state => state.tokenLogin)
+  const loginType = useStore(state => state.type)
+  const firstTimeConnect = useRef(true)
+  useEffect(() => {
+    if (readyState != ReadyState.CONNECTING) return
+    console.log(1)
+    if (firstTimeConnect.current) {
+      firstTimeConnect.current = false
+      return
+    }
+    if (loginType != LoginType.LOGIN_SUCCESS) return
+    tokenLogin()
+    // This is an internal api, but we use it since this don't need it run in react router's context
+    router.revalidate()
+  }, [readyState])
+  
 
   // @ts-ignore
   window.sendJsonMessage = sendJsonMessage
@@ -142,32 +187,6 @@ function useAlert() {
     })
   }, [setErrorAlert])
 }
-
-const router = createBrowserRouter(
-  createRoutesFromElements(
-    <Route path="/" errorElement={<ErrorElement content="500 Internal Server Error" />}>
-      <Route index loader={loaders.homeLoader} />
-      <Route path="chats">
-        <Route path="invite" lazy={() => import("./pages/Invite")} loader={loaders.inviteLoader} />
-        <Route path="create" lazy={() => import("./pages/CreateChat")} loader={loaders.createChatLoader} />
-        <Route path=":id" lazy={() => import("./pages/ChatRoot")}>
-          <Route index lazy={() => import("./pages/Chat")} action={loaders.chatAction} loader={loaders.chatLoader} />
-          <Route path="settings" lazy={() => import("./pages/Settings")}>
-            <Route index loader={loaders.settingsIndexLoader} />
-            {/* <Route path="null" element={<></>} loader={loaders.settingsLoader} /> */}
-            <Route path="info" lazy={() => import("./pages/SettingsInfo")} loader={loaders.settingsInfoLoader} />
-            <Route path="actions" lazy={() => import("./pages/SettingsActions")} loader={loaders.settingsActionsLoader} />
-          </Route>
-        </Route>
-      </Route>
-      <Route path="files/:id" lazy={() => import("./pages/FileDownload")} loader={loaders.fileDownloadLoader} />
-      <Route path="apps/:name" lazy={() => import("./pages/App")} loader={loaders.appLoader} />
-      <Route path="login" lazy={() => import("./pages/Login")} loader={loaders.loginLoader} action={loaders.loginAction} />
-      <Route path="register" lazy={() => import("./pages/Register")} loader={loaders.registerLoader} action={loaders.registerAction} />
-      <Route path="*" element={<ErrorElement content="404 Not Found" />} />
-    </Route>
-  )
-)
 
 function SubRouter() {
   return (

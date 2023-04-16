@@ -65,7 +65,9 @@
     "vite-plugin-cdn-import": "^0.3.5",
     "vite-plugin-pwa": "^0.14.0",
     "vite-plugin-svgr": "^2.4.0",
-    "vite-plugin-tauri": "^3.1.0"
+    "vite-plugin-tauri": "^3.1.0",
+    "workbox-core": "^6.5.4",
+    "workbox-precaching": "^6.5.4"
   },
   "repository": "github:vcc-chat/web-vcc",
   "pnpm": {

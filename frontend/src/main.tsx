@@ -1,12 +1,13 @@
-import { render } from 'preact'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { PluginProvider } from './components/Plugin'
+import { render } from "preact"
+import { QueryClientProvider } from "@tanstack/react-query"
+import { PluginProvider } from "./components/Plugin"
 
-import App from './App'
-import { queryClient } from './tools'
+import App from "./App"
+import { queryClient } from "./tools"
+import store from "./store"
 
-import './index.css'
-import './i18n'
+import "./index.css"
+import "./i18n"
 
 if (import.meta.env.DEV) {
   await import("preact/debug" as any)
@@ -18,5 +19,5 @@ render(
       <App />
     </PluginProvider>
   </QueryClientProvider>,
-  document.getElementById('root')!
+  document.getElementById("root")!
 )

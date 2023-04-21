@@ -13,16 +13,17 @@ import models
 import peewee
 import json
 
+
 def timer(interval, func=None):
     if func == None:
         return functools.partial(timer, interval)
 
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
-        await asyncio.sleep(interval-time.time()%interval)
+        await asyncio.sleep(interval - time.time() % interval)
         while 1:
             asyncio.create_task(func(*args, **kwargs))
-            await asyncio.sleep(interval-time.time()%interval)
+            await asyncio.sleep(interval - time.time() % interval)
 
     return wrapper
 
@@ -37,33 +38,31 @@ class Record(metaclass=base.ServiceMeta):
 
     @timer(5)
     async def flush_worker(self):
-        _time=int(time.time())
-        print(_time%5)
+        _time = int(time.time())
+        print(_time % 5)
         curser = 0
         while 1:
             curser, keys = await self._redis.scan(
                 cursor=curser, match="record:*", count=1
             )
-            list(map(lambda x: asyncio.create_task(self.do_flush(x,_time)), keys))
+            list(map(lambda x: asyncio.create_task(self.do_flush(x, _time)), keys))
             if curser == 0:
                 break
-    async def do_flush(self, key,time):
 
+    async def do_flush(self, key, time):
         length = await self._redis.llen(key)  # Freeze thr length
         content_length = []
         key = key.decode()
         for i in range(length):
-            a=key.replace("d", "dl")    
+            a = key.replace("d", "dl")
             content_length.append(
-                int(
-                    await self._redis.rpop(a)
-                )
+                int(await self._redis.rpop(a))
             )  # record:x -> recordl:x
         filename = key.replace(":", "") + "-" + str(time)
         file = await self._vcc.rpc.file.new_object(
             name=filename, id=filename, bucket="record"
         )
-        header: str = ",".join(list(map( lambda x: str(x),content_length)))+"\n"
+        header: str = ",".join(list(map(lambda x: str(x), content_length))) + "\n"
 
         async def data_generator():
             yield header.encode("utf8")
@@ -75,7 +74,11 @@ class Record(metaclass=base.ServiceMeta):
             res = await session.put(
                 url=file[0],
                 data=data_generator(),
-                headers={"Content-Length": str(sum(content_length) + len(header)+len(content_length))},
+                headers={
+                    "Content-Length": str(
+                        sum(content_length) + len(header) + len(content_length)
+                    )
+                },
             )
 
     async def _ainit(self):
@@ -83,26 +86,35 @@ class Record(metaclass=base.ServiceMeta):
         await self._pubsub.psubscribe("messages")
         asyncio.get_event_loop().create_task(self.record_worker())
         return await self.flush_worker()
-    @export(async_mode=True)
-    async def query_record(self,chatid,time):
-        if time>int(globals()['time'].time()):
-            return []
-        
-        aligned_time=time-time%5
 
-        name_list: list[str] = await self._vcc.rpc.file.list_object_names(prefix=f"record{chatid}-", bucket="record")
-        records: list[tuple[str, str]] = await asyncio.gather(*[
-            asyncio.create_task(self._vcc.rpc.file.get_object_content(id=name, bucket="record"))
-            for name in name_list if int(name[name.find("-") + 1:]) > time
-        ])
+    @export(async_mode=True)
+    async def query_record(self, chatid, time):
+        if time > int(globals()["time"].time()):
+            return []
+
+        aligned_time = time - time % 5
+
+        name_list: list[str] = await self._vcc.rpc.file.list_object_names(
+            prefix=f"record{chatid}-", bucket="record"
+        )
+        records: list[tuple[str, str]] = await asyncio.gather(
+            *[
+                asyncio.create_task(
+                    self._vcc.rpc.file.get_object_content(id=name, bucket="record")
+                )
+                for name in name_list
+                if int(name[name.find("-") + 1 :]) > time
+            ]
+        )
         return [record[0].split("\n")[1:-1] for record in records]
+
     def __init__(self):
         self._vcc = vcc.RpcExchanger()
         self._redis = redis.Redis.from_url(
             os.environ.get("REDIS_URL", "redis://localhost")
         )
         self._pubsub = self._redis.pubsub()
-        #asyncio.get_event_loop().create_task(self._ainit())
+        # asyncio.get_event_loop().create_task(self._ainit())
 
 
 if __name__ == "__main__":

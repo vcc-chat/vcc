@@ -7,7 +7,8 @@ import json
 import uuid
 
 from typing import Any, Callable, cast
-#from aiohttp.http_websocket import PACK_LEN1
+
+# from aiohttp.http_websocket import PACK_LEN1
 from peewee import *
 
 import base
@@ -70,7 +71,6 @@ class Login:
     #             return None
     #         e
 
-
     def post_oauth(self, platform: str, metadata: str):
         if (
             user := User.get_or_none(
@@ -83,7 +83,6 @@ class Login:
             )
             user = User.get_or_none(User.name == username)
         return user.id
-
 
     def query_metadata(self, uid: int, key: str):
         return UserMetadata.get_or_none(
@@ -102,7 +101,6 @@ class Login:
             metadata.value = str(value(metadata.value))
         metadata.save()
 
-
     def get_name(self, id: int) -> str | None:
         user = User.get_or_none(id=id)
         if user is None:
@@ -116,7 +114,6 @@ class Login:
         if user.nickname is not None:
             return user.nickname
         return user.name
-
 
     def change_nickname(self, id: int, nickname: str) -> None:
         User.update(nickname=nickname).where(User.nickname == nickname).execute()
@@ -157,7 +154,7 @@ class Login:
 
 
 if __name__ == "__main__":
-    db.create_tables([User,UserMetadata])
+    db.create_tables([User, UserMetadata])
     server = base.RpcServiceFactory("login")
     server.register(Login())
     server.connect()

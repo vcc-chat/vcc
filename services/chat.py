@@ -37,13 +37,22 @@ all_chat_permissions = ["public"]
 
 
 class ChatService:
-
     def __init__(self):
-        self._redis: redis.Redis[bytes] = redis.Redis.from_url(os.environ.get("REDIS_URL","redis://localhost"))
+        self._redis: redis.Redis[bytes] = redis.Redis.from_url(
+            os.environ.get("REDIS_URL", "redis://localhost")
+        )
 
     async def _send_message(self, chat: int, msg: str) -> None:
         await self._redis.publish(
-            f"messages", json.dumps({"uid": SYSTEM_UID, "username": SYSTEM_USER_NAME, "msg": msg, "chat": chat})
+            f"messages",
+            json.dumps(
+                {
+                    "uid": SYSTEM_UID,
+                    "username": SYSTEM_USER_NAME,
+                    "msg": msg,
+                    "chat": chat,
+                }
+            ),
         )
 
     async def _send_event(self, chat: int, type: EventType, data: Any) -> None:
@@ -51,7 +60,6 @@ class ChatService:
             f"events", json.dumps({"type": type, "data": data, "chat": chat})
         )
 
-    
     async def create_with_user(
         self, name: str, user_id: int, parent_chat_id: int
     ) -> int | None:
@@ -70,12 +78,14 @@ class ChatService:
                     return None
                 new_chat = Chat.create(name=name, parent=parent_chat)
             ChatUser.create(
-                user=user_id, chat=new_chat, permissions=1 | 2 | 4 | 8 | 16 | 32 | 64 | 512
+                user=user_id,
+                chat=new_chat,
+                permissions=1 | 2 | 4 | 8 | 16 | 32 | 64 | 512,
             )
             return new_chat.id
         except:
             return None
-    
+
     async def get_name(self, id: int) -> str | None:
         chat = Chat.get_or_none(id=id)
         if chat is None:
@@ -86,7 +96,13 @@ class ChatService:
         # Won't return users of sub-chats
         chat_users = ChatUser.select().where(ChatUser.chat == id).execute()
         user_names = [
-            (chat_user.user.id, chat_user.user.nickname if chat_user.nickname is None else chat_user.nickname) for chat_user in chat_users
+            (
+                chat_user.user.id,
+                chat_user.user.nickname
+                if chat_user.nickname is None
+                else chat_user.nickname,
+            )
+            for chat_user in chat_users
         ]
         return user_names
 
@@ -369,16 +385,21 @@ class ChatService:
             return []
 
     async def list_sub_chats(self, id: int) -> list[tuple[int, str]]:
-        return [(i.id, i.name) for i in Chat.select().where(Chat.parent == id).execute()]
-    
-    async def change_nickname(self, chat_id: int, user_id: int, changed_user_id: int, new_name: str):
-        if (
-            changed_user_id == user_id or (
-                (chat_user := ChatUser.get_or_none(chat=chat_id, user=user_id)) is not None 
-                and chat_user.change_nickname and not chat_user.banned
-            )
+        return [
+            (i.id, i.name) for i in Chat.select().where(Chat.parent == id).execute()
+        ]
+
+    async def change_nickname(
+        self, chat_id: int, user_id: int, changed_user_id: int, new_name: str
+    ):
+        if changed_user_id == user_id or (
+            (chat_user := ChatUser.get_or_none(chat=chat_id, user=user_id)) is not None
+            and chat_user.change_nickname
+            and not chat_user.banned
         ):
-            ChatUser.update(nickname=new_name).where(ChatUser.chat == chat_id, ChatUser.user == changed_user_id).execute()
+            ChatUser.update(nickname=new_name).where(
+                ChatUser.chat == chat_id, ChatUser.user == changed_user_id
+            ).execute()
             return True
         return False
 
@@ -396,6 +417,6 @@ class ChatService:
 
 if __name__ == "__main__":
     db.create_tables([User, Chat, ChatUser])
-    server = base.RpcServiceFactory("chat",async_mode=True)
+    server = base.RpcServiceFactory("chat", async_mode=True)
     server.register(ChatService())
     server.connect()

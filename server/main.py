@@ -55,6 +55,7 @@ class RpcProtocol(LineReceiver):
             self.send({"res": "ok", "master": master})
             return
         self.send({"res": "ok"})
+
     def make_request(self, service, data, jobid):
         data = {"type": "call", "service": service, "data": data, "jobid": jobid}
         self.send(data)
@@ -66,9 +67,9 @@ class RpcProtocol(LineReceiver):
         self.send(data)
 
     def connectionLost(self, reason):
-        if self.role=="service":
+        if self.role == "service":
             self.factory.providers[self.name].remove(self)
-            self.factory.lb_seq[self.name]=0
+            self.factory.lb_seq[self.name] = 0
 
 
 class BuiltinService:
@@ -139,11 +140,14 @@ class RpcServer(protocol.Factory):
         else:
             service_name = service[0]
             providers = self.providers[service_name]
-            provider = providers[self.lb_seq.get(service_name, 0)]
+            try:
+                provider = providers[self.lb_seq.get(service_name, 0)]
+            except IndexError:
+                provider = providers[0]
             provider.make_request(service[1], data, jobid)
             self.lb_seq[service_name] = (
-                self.lb_seq.get(service_name,0)+1
-                if self.lb_seq.get(service_name,0) < len(providers) - 1
+                self.lb_seq.get(service_name, 0) + 1
+                if self.lb_seq.get(service_name, 0) < len(providers) - 1
                 else 0
             )
 

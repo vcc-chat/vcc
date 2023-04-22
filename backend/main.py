@@ -245,6 +245,9 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                 return
     except asyncio.CancelledError:
         pass
+    except Exception as e:
+        await websocket.close(1008)
+        logging.error(e, exc_info=True)
 
 async def send_loop(websocket: Websocket, client: RpcExchangerClient, request: Request) -> None:
     task_list: set[asyncio.Task[None]] = set()

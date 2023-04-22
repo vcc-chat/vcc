@@ -99,10 +99,10 @@ class RpcExchanger:
         host_env=self.get_host()
         rpc_host = host_env[0] if rpc_host is None else rpc_host
         rpc_port = host_env[1] if rpc_port is None else rpc_port
-        redis_url = getenv("REDIS_URL", "redis://localhost:6379") if redis_url is None else redis_url
+        self._redis_url = getenv("REDIS_URL", "redis://localhost:6379") if redis_url is None else redis_url
 
         self._socket_address = (rpc_host, rpc_port)
-        self._redis = redis.Redis.from_url(redis_url, retry=Retry(ExponentialBackoff(), 5), retry_on_error=[ConnectionError, TimeoutError], health_check_interval=15)
+        self._redis = redis.Redis.from_url(self._redis_url, retry=Retry(ExponentialBackoff(), 5), retry_on_error=[ConnectionError, TimeoutError], health_check_interval=15)
         self._pubsub_raw: PubSub = self._redis.pubsub(ignore_subscribe_messages=True)
         self._futures: dict[str, asyncio.Future[Any]] = {}
         self._recv_lock = asyncio.Lock()
@@ -118,47 +118,54 @@ class RpcExchanger:
 
     async def recv_task(self):
         raw_message: Any = None
-
-        async for raw_message in self.pubsub.listen():
-            if raw_message is None:
-                await asyncio.sleep(0.01)
-                continue
-            log.debug(f"{raw_message['data']=} {raw_message['channel']=}")
-            try:
-                json_content_untyped: Any = json.loads(raw_message["data"].decode())
-                if raw_message["channel"] == b"messages":
-                    json_message: RedisMessage = json_content_untyped
-                    if self.recv_hook is not None:
-                        recv_hook_return = self.recv_hook(json_message)
-                        if isinstance(recv_hook_return, Awaitable):
-                            asyncio.create_task(recv_hook_return)
-                    session: str | None = None
-                    username = json_message["username"]
-                    msg = json_message["msg"]
-                    chat = int(json_message["chat"])
-                    uid = int(json_message["uid"])
-                    if "session" in json_message:
-                        session = json_message["session"]
-                    for client in self.client_list:
-                        if chat in client._chat_list and (session is None or isinstance(client, RpcRobotExchangerClient) or (chat, session) in client._session_list):
-                            client._recv_future.set_result(("message", uid, username, msg, chat, session))
-                    if "session" in json_message:
-                        session = json_message["session"]
-                    log.debug(f"{username=} {msg=} {chat=} {session=}")
-                elif raw_message["channel"] == b"events":
-                    json_content: RedisEvent = json_content_untyped
-                    type = json_content["type"]
-                    data = json_content["data"]
-                    chat = int(json_content["chat"])
-                    for client in self.client_list:
-                        if chat in client._chat_list:
-                            client._recv_future.set_result(("event", type, data, chat))
-            except asyncio.CancelledError:
-                return
-            except Exception as e:
-                log.debug(e, exc_info=True)
-                raw_message = None
-                await asyncio.sleep(0.01)
+        try:
+            async for raw_message in self.pubsub.listen():
+                if raw_message is None:
+                    await asyncio.sleep(0.01)
+                    continue
+                log.debug(f"{raw_message['data']=} {raw_message['channel']=}")
+                try:
+                    json_content_untyped: Any = json.loads(raw_message["data"].decode())
+                    if raw_message["channel"] == b"messages":
+                        json_message: RedisMessage = json_content_untyped
+                        if self.recv_hook is not None:
+                            recv_hook_return = self.recv_hook(json_message)
+                            if isinstance(recv_hook_return, Awaitable):
+                                asyncio.create_task(recv_hook_return)
+                        session: str | None = None
+                        username = json_message["username"]
+                        msg = json_message["msg"]
+                        chat = int(json_message["chat"])
+                        uid = int(json_message["uid"])
+                        if "session" in json_message:
+                            session = json_message["session"]
+                        for client in self.client_list:
+                            if chat in client._chat_list and (session is None or isinstance(client, RpcRobotExchangerClient) or (chat, session) in client._session_list):
+                                client._recv_future.set_result(("message", uid, username, msg, chat, session))
+                        if "session" in json_message:
+                            session = json_message["session"]
+                        log.debug(f"{username=} {msg=} {chat=} {session=}")
+                    elif raw_message["channel"] == b"events":
+                        json_content: RedisEvent = json_content_untyped
+                        type = json_content["type"]
+                        data = json_content["data"]
+                        chat = int(json_content["chat"])
+                        for client in self.client_list:
+                            if chat in client._chat_list:
+                                client._recv_future.set_result(("event", type, data, chat))
+                except asyncio.CancelledError:
+                    return
+                except Exception as e:
+                    log.debug(e, exc_info=True)
+                    raw_message = None
+                    await asyncio.sleep(0.01)
+        except (redis.TimeoutError, redis.ConnectionError):
+            self._redis = redis.Redis.from_url(self._redis_url, retry=Retry(ExponentialBackoff(), 5), retry_on_error=[ConnectionError, TimeoutError], health_check_interval=15)
+            self._pubsub_raw: PubSub = self._redis.pubsub(ignore_subscribe_messages=True)
+            self.pubsub: PubSub = await self._pubsub_raw.__aenter__()
+            await self.pubsub.subscribe("messages")
+            await self.pubsub.subscribe("events")
+            await self.recv_task()
 
     async def rpc_task(self):
         while True:
@@ -186,12 +193,11 @@ class RpcExchanger:
 
     async def __aenter__(self) -> RpcExchanger:
         loop = asyncio.get_event_loop()
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._sock.bind(("0.0.0.0", 0))
-        self._sock.setblocking(False)
-        await loop.sock_connect(self._sock, self._socket_address)
-        await loop.sock_sendall(self._sock, b'{"type": "handshake","role": "client"}\r\n')
-        await loop.sock_recv(self._sock, 65536)
+        sock = self._sock
+        sock.setblocking(False)
+        await loop.sock_connect(sock, self._socket_address)
+        await loop.sock_sendall(sock, b'{"type": "handshake","role": "client"}\r\n')
+        await loop.sock_recv(sock, 65536)
         self.pubsub: PubSub = await self._pubsub_raw.__aenter__()
         await self.pubsub.subscribe("messages")
         await self.pubsub.subscribe("events")

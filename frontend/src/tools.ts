@@ -216,11 +216,22 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray
 }
 
-export async function registerServiceWorker () {
+export async function registerServiceWorker() {
+  const { makeRequest } = useStore.getState()
   if (!navigator.serviceWorker) return
   await navigator.serviceWorker.register("/sw.js", { scope: "/" })
   const registration = await navigator.serviceWorker.ready
-  let subscription = await registration.pushManager.getSubscription()
+  const subscription = await registration.pushManager.getSubscription() || await (async () => {
+    const { msg: vapidPublicKey } = await makeRequest({
+      type: "push_get_vapid_public_key",
+    })
+    const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey)
+    return await registration.pushManager.subscribe({
+      applicationServerKey: convertedVapidKey,
+      userVisibleOnly: true
+    })
+  })()
+  
 }
 
 let first = true

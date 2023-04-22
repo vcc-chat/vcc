@@ -7,6 +7,7 @@ import { type Signal, effect } from "@preact/signals"
 import type { RequestType, Request, RequestWithTime } from "./config"
 import { LoginType } from "./state/login"
 import useStore from "./store"
+import { wait } from "./loaders"
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -218,7 +219,7 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export async function registerServiceWorker() {
   const { makeRequest } = useStore.getState()
-  if (!navigator.serviceWorker) return
+  if (!navigator.serviceWorker || !window.PushManager) return
   await navigator.serviceWorker.register("/sw.js", { scope: "/" })
   const registration = await navigator.serviceWorker.ready
   const subscription = await registration.pushManager.getSubscription() || await (async () => {
@@ -231,7 +232,17 @@ export async function registerServiceWorker() {
       userVisibleOnly: true
     })
   })()
-  
+  while (useStore.getState().type != LoginType.LOGIN_SUCCESS) {
+    await wait()
+    await wait()
+    await wait()
+    await wait()
+    await wait()
+  }
+  await makeRequest({
+    type: "push_register",
+    msg: subscription.toJSON() as any
+  })
 }
 
 let first = true

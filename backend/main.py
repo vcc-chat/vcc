@@ -234,7 +234,12 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
             case "chat_change_nickname":
                 await send(uid=int(await client.chat_change_nickname(cast(int, msg), uid, username)))
             case "push_get_vapid_public_key":
-                await send(msg=vapid_public_key)
+                await send(msg=application_server_key)
+            case "push_register":
+                if client.id is None:
+                    await websocket.close(1008)
+                    return
+                push_register(client.id, msg)
             case _:
                 await websocket.close(1008)
                 return
@@ -260,6 +265,7 @@ async def send_loop(websocket: Websocket, client: RpcExchangerClient, request: R
 @app.before_server_start
 async def init_exchanger(*_):
     await app.ctx.exchanger.__aenter__()
+    register_recv_hook(app.ctx.exchanger)
 
 @app.after_server_stop
 async def destroy_exchanger(*_):

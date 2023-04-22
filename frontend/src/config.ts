@@ -9,6 +9,7 @@ export type RequestType =
   | "file_upload" | "file_download" | "request_oauth"
   | "login_oauth" | "record_query" | "chat_get_nickname"
   | "chat_change_nickname" | "push_get_vapid_public_key"
+  | "push_register"
 
 export type Request = {
   type: RequestType

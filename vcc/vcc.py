@@ -11,6 +11,12 @@ import os
 
 from functools import wraps
 from redis.asyncio.client import PubSub
+from redis.backoff import ExponentialBackoff
+from redis.asyncio.retry import Retry
+from redis.exceptions import (
+    ConnectionError,
+    TimeoutError
+)
 from typing import Any, Awaitable, Callable, cast, TypedDict, Literal, overload, no_type_check_decorator
 from os import getenv
 
@@ -39,6 +45,7 @@ class NotAuthorizedError(RpcException):
 
 class PermissionDeniedError(RpcException):
     pass
+
 class ProviderNotFoundError(RpcException):
     pass
 
@@ -94,7 +101,8 @@ class RpcExchanger:
         redis_url = getenv("REDIS_URL", "redis://localhost:6379") if redis_url is None else redis_url
 
         self._socket_address = (rpc_host, rpc_port)
-        self._redis = redis.Redis.from_url(cast(Any, redis_url))
+        self._redis_pool = redis.ConnectionPool.from_url(redis_url, retry=Retry(ExponentialBackoff(), 5), retry_on_error=[ConnectionError, TimeoutError], health_check_interval=15)
+        self._redis = redis.Redis(connection_pool=self._redis_pool)
         self._pubsub_raw: PubSub = self._redis.pubsub(ignore_subscribe_messages=True)
         self._futures: dict[str, asyncio.Future[Any]] = {}
         self._recv_lock = asyncio.Lock()

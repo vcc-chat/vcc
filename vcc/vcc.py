@@ -89,6 +89,7 @@ class RpcExchanger:
     """Low-level api which is hard to use"""
     _sock: socket.socket
     _redis: redis.Redis[bytes]
+    recv_hook: Callable[[RedisMessage], None | Awaitable[None]] | None
     
     def __init__(self, *, rpc_host: str | None=None, rpc_port: int | None=None, redis_url: str | None=None) -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -128,6 +129,10 @@ class RpcExchanger:
                 json_content_untyped: Any = json.loads(raw_message["data"].decode())
                 if raw_message["channel"] == b"messages":
                     json_message: RedisMessage = json_content_untyped
+                    if self.recv_hook is not None:
+                        recv_hook_return = self.recv_hook(json_message)
+                        if isinstance(recv_hook_return, Awaitable):
+                            asyncio.create_task(recv_hook_return)
                     session: str | None = None
                     username = json_message["username"]
                     msg = json_message["msg"]

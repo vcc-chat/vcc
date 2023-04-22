@@ -3,16 +3,15 @@ import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
 
-export function notify(title: string, body: string) {
-  if (window.Notification.permission !== "granted")
-    return
-  if (document.hidden) {
-    new window.Notification(title, {
-      body
-    })
-  }
-    
-}
+// export function notify(title: string, body: string) {
+//   if (window.Notification.permission !== "granted")
+//     return
+//   if (document.hidden) {
+//     new window.Notification(title, {
+//       body
+//     })
+//   }
+// }
 
 export function Notification(props: {}) {
   const [open, setOpen] = useState(false)

@@ -50,7 +50,7 @@ def register_recv_hook(exchanger: vcc.RpcExchanger):
                 "username": send_nickname,
                 "chat": msg["chat"],
                 "msg": msg["msg"],
-                "session": msg["session"]
+                "session": msg.get("session")
             }), vapid_private_key=vapid_private_key, vapid_claims={
                 "sub": "mailto:example@example.org"
             })

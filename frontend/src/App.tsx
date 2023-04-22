@@ -18,7 +18,7 @@ import ErrorIcon from "@material-design-icons/svg/outlined/error_outline.svg"
 
 
 import type { Request } from "./config"
-import { Notification, notify } from "./components/Notification"
+import { Notification } from "./components/Notification"
 import { responseToChatList, useChatList } from "./tools"
 import { LoginType } from "./state/login"
 import useStore from "./store"
@@ -125,7 +125,7 @@ function useMessageWebSocket() {
           const request = newMessage.req
           if (request == null) return
           addMessage(newMessage)
-          notify(chatNames[chatValues.indexOf(request.uid)], `${request.usrname}: ${request.msg}`)
+          // notify(chatNames[chatValues.indexOf(request.uid)], `${request.usrname}: ${request.msg}`)
           if (request.usrname == "system" && (
             request.msg.includes("join") 
             || request.msg.includes("quit") 

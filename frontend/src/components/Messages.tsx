@@ -5,15 +5,15 @@ import { Link } from "react-router-dom"
 import { stringToColor } from "../tools"
 
 export function MessageAvatar({ name }: {
-  name: string
+  name?: string
 }) {
-  const characters = name.split(" ")
+  const characters = name?.split?.(" ") ?? ""
   const letter1 = (characters[0]?.[0] ?? "").toUpperCase()
   const letter2 = (characters[1]?.[0] ?? "").toUpperCase()
   return (
     <div className="chat-image avatar placeholder">
       <div className="rounded-full w-9 h-9" style={{
-        backgroundColor: stringToColor(name)
+        backgroundColor: name ? stringToColor(name) : "black"
       }}>
         <span className="text-white">
           {letter1}{letter2}

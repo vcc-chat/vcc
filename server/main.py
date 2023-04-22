@@ -69,6 +69,9 @@ class RpcProtocol(LineReceiver):
     def connectionLost(self, reason):
         if self.role == "service":
             self.factory.providers[self.name].remove(self)
+            if self.factory.providers[self.name]==[]:
+                del self.factory.providers[self.name]
+                return
             self.factory.lb_seq[self.name] = 0
 
 
@@ -82,7 +85,6 @@ class BuiltinService:
     def make_request(self, service, data, jobid):
         self.factory.make_respond(jobid, self.functions[service](**data))
 
-
 class RpcServer(protocol.Factory):
     services = {}  # map providers to services
     providers = {}  # map service name to actual instance
@@ -90,6 +92,7 @@ class RpcServer(protocol.Factory):
     lb_seq = {}  # map service name to load balence seq
 
     def list_providers(self) -> list:
+
         return list(self.providers.keys())
 
     def list_services(self, name) -> list:

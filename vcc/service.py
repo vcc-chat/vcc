@@ -7,6 +7,7 @@ import threading
 import traceback
 import inspect
 
+import tools
 # from twisted.internet import task ### No more twisted
 # from twisted.internet.defer import Deferred
 # from twisted.internet.protocol import ClientFactory
@@ -199,20 +200,14 @@ class RpcServiceFactory:
         self.services.update(annotations)
         self.funcs.update(services)
 
-    def get_host(self) -> tuple[str, int]:
-        if "RPCHOST" in os.environ:
-            host = os.environ["RPCHOST"].split(":")
-            return host[0], int(host[1])
-        else:
-            return ("localhost", 2474)
-
-    async def aconnect(self):
+    async def aconnect(self,host=tools.get_host(),retry=0):
         loop = asyncio.get_running_loop()
         self.on_con_lost = loop.create_future()
         transport, protocol = await loop.create_connection(
-            self.buildProtocol, *self.get_host()
+            self.buildProtocol, *host
         )
         await self.on_con_lost
-
+        asyncio.sleep(2)
+        return await self.aconnect(self,host,retry+1)
     def connect(self, *args, **kwargs):
         asyncio.run(self.aconnect(*args, **kwargs))

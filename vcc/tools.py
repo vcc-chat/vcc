@@ -47,3 +47,10 @@ def rpc_request(service: str | None=None, *, id_arg: str | None=None):
             return self._exchanger.rpc_request(_service, arguments)
         return wrapper # type: ignore
     return decorator
+
+def get_host(self) -> tuple[str, int]:
+    if "RPCHOST" in os.environ:
+        host = os.environ["RPCHOST"].split(":")
+        return host[0], int(host[1])
+    else:
+        return ("localhost", 2474)

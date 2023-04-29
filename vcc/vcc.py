@@ -9,7 +9,6 @@ import warnings
 import uuid
 import os
 
-from functools import wraps
 from redis.asyncio.client import PubSub
 from redis.backoff import ExponentialBackoff
 from redis.asyncio.retry import Retry
@@ -17,37 +16,14 @@ from redis.exceptions import (
     ConnectionError,
     TimeoutError
 )
-from typing import Any, Awaitable, Callable, cast, TypedDict, Literal, overload, no_type_check_decorator
+from typing import *
 from os import getenv
 
-from .tools import check, rpc_request
-
-log = logging.getLogger("vcc")
-log.addHandler(logging.NullHandler())
+from .tools import *
+from .protocol import build_protocol
 
 ChatUserPermissionName = Literal["kick", "rename", "invite", "modify_permission", "send"]
 ChatPermissionName = Literal["public"]
-
-class RpcException(Exception):
-    pass
-
-class ChatAlreadyJoinedError(RpcException):
-    pass
-
-class ChatNotJoinedError(RpcException):
-    pass
-
-class UnknownError(RpcException):
-    pass
-
-class NotAuthorizedError(RpcException):
-    pass
-
-class PermissionDeniedError(RpcException):
-    pass
-
-class ProviderNotFoundError(RpcException):
-    pass
 
 class RpcExchangerRpcHandler2:
     def __init__(self, exchanger: RpcExchanger,  provider: str) -> None:
@@ -130,7 +106,7 @@ class RpcExchanger:
                         json_message: RedisMessage = json_content_untyped
                         if self.recv_hook is not None:
                             recv_hook_return = self.recv_hook(json_message)
-                            if isinstance(recv_hook_return, Awaitable):
+                            if isinstance(recv_hook_return, Coroutine):
                                 asyncio.create_task(recv_hook_return)
                         session: str | None = None
                         username = json_message["username"]
@@ -167,30 +143,6 @@ class RpcExchanger:
             await self.pubsub.subscribe("events")
             await self.recv_task()
 
-    async def rpc_task(self):
-        while True:
-            try:
-                json_res = json.loads(await self.sock_recvline())
-                if "jobid" not in json_res:
-                    logging.debug(f"{json_res=}")
-                    raise RpcException("packets so fast")
-                future = self._futures[json_res["jobid"]]
-                if "error" in json_res:
-                    match json_res["error"]:
-                        case "no such service":
-                            future.set_exception(RpcException("no such service"))
-                        case "invalid request data type":
-                            future.set_exception(TypeError("invalid request data type"))
-                        case "wrong format":
-                            future.set_exception(TypeError("wrong format"))
-                        case _:
-                            future.set_exception(UnknownError)
-                else:
-                    future.set_result(json_res["data"])
-                del self._futures[json_res["jobid"]]
-            except (BrokenPipeError, socket.error):
-                await self.rpc_reconnect()
-
     async def __aenter__(self) -> RpcExchanger:
         loop = asyncio.get_event_loop()
         sock = self._sock
@@ -201,14 +153,12 @@ class RpcExchanger:
         self.pubsub: PubSub = await self._pubsub_raw.__aenter__()
         await self.pubsub.subscribe("messages")
         await self.pubsub.subscribe("events")
-            
+        self._protocol = await build_protocol()
         self._recv_task = asyncio.create_task(self.recv_task())
-        self._rpc_task = asyncio.create_task(self.rpc_task())
         return self
 
     async def __aexit__(self, *args: Any) -> None:
         self._recv_task.cancel()
-        self._rpc_task.cancel()
         await self.pubsub.unsubscribe("messages")
         await self.pubsub.unsubscribe("events")
         await self._pubsub_raw.__aexit__(*args)
@@ -249,35 +199,7 @@ class RpcExchanger:
                     await asyncio.shield(loop.sock_recv(self._sock,1)) # \n
                     return data.decode()
     async def rpc_request(self, service: str, data: dict[str, Any]) -> Any:
-        log.debug(f"{service=} {data=}")
-        loop = asyncio.get_event_loop()
-        new_uuid = str(uuid.uuid4())
-        try:
-            await asyncio.shield(loop.sock_sendall(self._sock, json.dumps({
-                "type": "request",
-                "service": service,
-                "data": data,
-                "jobid": new_uuid
-            }).encode() + b"\r\n"))
-        except (BrokenPipeError, socket.error):
-            await self.rpc_reconnect()
-        logging.debug(f"{service=}{data=}")
-        future = asyncio.Future[Any]()
-        self._futures[new_uuid] = future
-        result = await future
-        log.debug(f"{result=}")
-        return result
-    
-    async def rpc_reconnect(self) -> None:
-        async with self._recv_lock:
-            loop = asyncio.get_event_loop()
-            self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._sock.bind(("0.0.0.0", 0))
-            self._sock.setblocking(False)
-            await loop.sock_connect(self._sock, self._socket_address)
-            await loop.sock_sendall(self._sock, b'{"type": "handshake","role": "client"}\r\n')
-            await loop.sock_recv(self._sock, 65536)
-
+        return await self._protocol.rpc_request(service, data)
 
     def get_redis_instance(self) -> redis.Redis[bytes]:
         return self._redis

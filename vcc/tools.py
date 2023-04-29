@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import logging
+import os
 
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, TypeVar
@@ -12,6 +13,7 @@ if TYPE_CHECKING:
 T = TypeVar("T", bound=Callable)
 
 log = logging.getLogger("vcc")
+log.addHandler(logging.NullHandler())
 
 def check(*, auth: bool=True, joined: str | None=None, not_joined: str | None=None):
     def decorator(func: T) -> T:
@@ -54,3 +56,38 @@ def get_host(self) -> tuple[str, int]:
         return host[0], int(host[1])
     else:
         return ("localhost", 2474)
+
+class RpcException(Exception):
+    pass
+
+class ChatAlreadyJoinedError(RpcException):
+    pass
+
+class ChatNotJoinedError(RpcException):
+    pass
+
+class UnknownError(RpcException):
+    pass
+
+class NotAuthorizedError(RpcException):
+    pass
+
+class PermissionDeniedError(RpcException):
+    pass
+
+class ProviderNotFoundError(RpcException):
+    pass
+
+__all__ = [
+    "check", 
+    "rpc_request", 
+    "get_host",
+    "RpcException",
+    "ChatAlreadyJoinedError", 
+    "ChatNotJoinedError",
+    "UnknownError",
+    "NotAuthorizedError",
+    "PermissionDeniedError",
+    "ProviderNotFoundError",
+    "log"
+]

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import redis.asyncio as redis
-import socket
 import logging
 import json
 import warnings
@@ -63,21 +62,16 @@ class RedisEvent(TypedDict):
 
 class RpcExchanger:
     """Low-level api which is hard to use"""
-    _sock: socket.socket
     _redis: redis.Redis[bytes]
     recv_hook: Callable[[RedisMessage], None | Awaitable[None]] | None
     
     def __init__(self, *, rpc_host: str | None=None, rpc_port: int | None=None, redis_url: str | None=None) -> None:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(("0.0.0.0", 0))
-        self._sock = sock
 
         host_env=self.get_host()
         rpc_host = host_env[0] if rpc_host is None else rpc_host
         rpc_port = host_env[1] if rpc_port is None else rpc_port
         self._redis_url = getenv("REDIS_URL", "redis://localhost:6379") if redis_url is None else redis_url
 
-        self._socket_address = (rpc_host, rpc_port)
         self._redis = redis.Redis.from_url(self._redis_url, retry=Retry(ExponentialBackoff(), 5), retry_on_error=[ConnectionError, TimeoutError], health_check_interval=15)
         self._pubsub_raw: PubSub = self._redis.pubsub(ignore_subscribe_messages=True)
         self._futures: dict[str, asyncio.Future[Any]] = {}
@@ -144,12 +138,6 @@ class RpcExchanger:
             await self.recv_task()
 
     async def __aenter__(self) -> RpcExchanger:
-        loop = asyncio.get_event_loop()
-        sock = self._sock
-        sock.setblocking(False)
-        await loop.sock_connect(sock, self._socket_address)
-        await loop.sock_sendall(sock, b'{"type": "handshake","role": "client"}\r\n')
-        await loop.sock_recv(sock, 65536)
         self.pubsub: PubSub = await self._pubsub_raw.__aenter__()
         await self.pubsub.subscribe("messages")
         await self.pubsub.subscribe("events")
@@ -163,8 +151,6 @@ class RpcExchanger:
         await self.pubsub.unsubscribe("events")
         await self._pubsub_raw.__aexit__(*args)
         await self._redis.close()
-        self._sock.shutdown(socket.SHUT_RDWR)
-        self._sock.close()
 
     async def send_msg(self, uid: int, username: str, msg: str, chat: int, session: str | None=None) -> None:
         log.debug(f"messages")
@@ -185,19 +171,6 @@ class RpcExchanger:
             **({} if session is None else {"session": session})
         }))
         log.debug(f"{type=} {chat=}")
-
-    async def sock_recvline(self) -> str:
-        loop = asyncio.get_event_loop()
-        data=b""
-        async with self._recv_lock:
-            while True:
-                recv=await asyncio.shield(loop.sock_recv(self._sock,1))
-
-                if recv!=b'\r':
-                    data+=recv
-                else:
-                    await asyncio.shield(loop.sock_recv(self._sock,1)) # \n
-                    return data.decode()
     async def rpc_request(self, service: str, data: dict[str, Any]) -> Any:
         return await self._protocol.rpc_request(service, data)
 

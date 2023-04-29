@@ -7,7 +7,7 @@ import useStore from "../store"
 import classNames from "classnames"
 
 
-export function Component(props: {}) {
+export function Component() {
   const { makeRequest, successAlert, errorAlert } = useNetwork()
   const ready = useStore(state => state.ready)
   const { chat, token } = useLoaderData() as { chat: number, token: string }

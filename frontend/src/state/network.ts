@@ -11,12 +11,7 @@ interface NetworkState {
   sendJsonMessageRaw: ((request: Request) => void) | null
   setSendJsonMessageRaw: (func: (request: Request) => void) => void
   sendJsonMessage: (request: Request) => Promise<void>
-  makeRequest: (request: {
-    type: RequestType,
-    uid?: number,
-    usrname?: string,
-    msg?: string
-  }) => Promise<Request>
+  makeRequest: (request: { type: RequestType; uid?: number; usrname?: string; msg?: string }) => Promise<Request>
 }
 
 const createNetworkSlice: StateCreator<NetworkState> = (set, get) => ({
@@ -44,7 +39,7 @@ const createNetworkSlice: StateCreator<NetworkState> = (set, get) => ({
   },
   async makeRequest(request) {
     const { sendJsonMessage } = get()
-    const uuid = URL.createObjectURL(new Blob).slice(-36)
+    const uuid = URL.createObjectURL(new Blob()).slice(-36)
     sendJsonMessage({
       type: request.type,
       uid: request.uid ?? 0,

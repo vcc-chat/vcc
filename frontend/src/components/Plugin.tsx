@@ -10,15 +10,17 @@ async function getMetaInfo(urlString: string) {
   if (!response.ok) {
     throw new Error("Invalid url")
   }
-  const data = (await response.json()) as {
-    entry: string
-    name: string,
-    type: "entry"
-  } | {
-    script: string
-    name: string,
-    type: "script"
-  }
+  const data = (await response.json()) as
+    | {
+        entry: string
+        name: string
+        type: "entry"
+      }
+    | {
+        script: string
+        name: string
+        type: "script"
+      }
   if (data.type == "script") {
     return { content: data.script, name: data.name }
   }
@@ -33,87 +35,105 @@ const nonce = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16)
 const csp = `default-src 'none'; worker-src blob:; script-src 'nonce-${nonce}';`
 
 const workerInitCode = `(${function () {
-  const receiveHooks: ((message: Request) => (Request | null))[] = []
-  const sendHooks: ((message: Request) => (Request | null))[] = []
-  const commandHooks: Record<string, ((args: string[]) => Request | null)> = {}
-  const appHooks: Record<string, (() => {
-    html: string
-  })> = {}
-  self.addEventListener("message", function (ev: MessageEvent<{
-    type: "message"
-    msg: Request | null
-    id: string
-  } | {
-    type: "send-message"
-    msg: Request | null
-    id: string
-  } | {
-    type: "command"
-    command: string
-    arguments: string[]
-    id: string
-  } | {
-    type: "app"
-    name: string
-    id: string
-  }>) {
-    const data = ev.data
-    const { id } = data
-    if (data.type == "message") {
-      let { msg } = data
-      for (const receiveHook of receiveHooks) {
-        if (msg == null) break
-        msg = receiveHook(msg)
-      }
-      self.postMessage({
-        msg,
-        id
-      })
-      return
+  const receiveHooks: ((message: Request) => Request | null)[] = []
+  const sendHooks: ((message: Request) => Request | null)[] = []
+  const commandHooks: Record<string, (args: string[]) => Request | null> = {}
+  const appHooks: Record<
+    string,
+    () => {
+      html: string
     }
-    if (data.type == "send-message") {
-      let { msg } = data
-      for (const sendHook of sendHooks) {
-        if (msg == null) break
-        msg = sendHook(msg)
-      }
-      self.postMessage({
-        msg,
-        id
-      })
-      return
-    }
-    if (data.type == "command") {
-      const { command, arguments: args } = data
-      let msg: Request | null = null
-      if (command in commandHooks) {
-        msg = commandHooks[command](args)
-      }
-      self.postMessage({
-        msg,
-        id
-      })
-      return
-    }
-    if (data.type == "app") {
-      const { name } = data
-      if (name in appHooks) {
+  > = {}
+  self.addEventListener(
+    "message",
+    function (
+      ev: MessageEvent<
+        | {
+            type: "message"
+            msg: Request | null
+            id: string
+          }
+        | {
+            type: "send-message"
+            msg: Request | null
+            id: string
+          }
+        | {
+            type: "command"
+            command: string
+            arguments: string[]
+            id: string
+          }
+        | {
+            type: "app"
+            name: string
+            id: string
+          }
+      >
+    ) {
+      const data = ev.data
+      const { id } = data
+      if (data.type == "message") {
+        let { msg } = data
+        for (const receiveHook of receiveHooks) {
+          if (msg == null) break
+          msg = receiveHook(msg)
+        }
         self.postMessage({
-          msg: appHooks[name](),
+          msg,
           id
         })
-      } else {
+        return
+      }
+      if (data.type == "send-message") {
+        let { msg } = data
+        for (const sendHook of sendHooks) {
+          if (msg == null) break
+          msg = sendHook(msg)
+        }
         self.postMessage({
-          msg: null,
+          msg,
           id
         })
+        return
+      }
+      if (data.type == "command") {
+        const { command, arguments: args } = data
+        let msg: Request | null = null
+        if (command in commandHooks) {
+          msg = commandHooks[command](args)
+        }
+        self.postMessage({
+          msg,
+          id
+        })
+        return
+      }
+      if (data.type == "app") {
+        const { name } = data
+        if (name in appHooks) {
+          self.postMessage({
+            msg: appHooks[name](),
+            id
+          })
+        } else {
+          self.postMessage({
+            msg: null,
+            id
+          })
+        }
       }
     }
-  })
+  )
 
-  self.URL.createObjectURL = () => { throw new Error("createObjectURL is not allowed") }
+  self.URL.createObjectURL = () => {
+    throw new Error("createObjectURL is not allowed")
+  }
 
-  function on(event: "receive" | "send" | `command:${string}` | `app:${string}`, func: (...args: any) => Request | null) {
+  function on(
+    event: "receive" | "send" | `command:${string}` | `app:${string}`,
+    func: (...args: any) => Request | null
+  ) {
     if (event == "receive") {
       receiveHooks.push(func)
     } else if (event == "send") {
@@ -155,8 +175,9 @@ const workerInitCode = `(${function () {
     freeze(obj)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   const proxyFunction = () => {}
-  
+
   function readOnly(obj: any): any {
     if ((typeof obj != "object" && typeof obj != "function") || obj == null) return obj
     const cachedResult = readOnlyMap.get(obj)
@@ -178,8 +199,12 @@ const workerInitCode = `(${function () {
         }
         return result
       },
-      defineProperty() { return false },
-      deleteProperty() { return false },
+      defineProperty() {
+        return false
+      },
+      deleteProperty() {
+        return false
+      },
       get(_, key) {
         return readOnly(obj[key])
       },
@@ -196,40 +221,52 @@ const workerInitCode = `(${function () {
       has(_, key) {
         return Reflect.has(obj, key)
       },
-      isExtensible(_) { return false },
-      ownKeys(_) { return Reflect.ownKeys(obj) },
-      preventExtensions() { return true },
-      set() { return false },
-      setPrototypeOf() { return false }
+      isExtensible(_) {
+        return false
+      },
+      ownKeys(_) {
+        return Reflect.ownKeys(obj)
+      },
+      preventExtensions() {
+        return true
+      },
+      set() {
+        return false
+      },
+      setPrototypeOf() {
+        return false
+      }
     })
     readOnlySet.add(proxy)
     readOnlyMap.set(obj, proxy)
     return proxy
   }
 
-  (self as any).readOnly = readOnly
+  ;(self as any).readOnly = readOnly
   ;(self as any).toReadOnly = toReadOnly
-
   ;(self as any).createGlobal = function () {
-    const proxy = new Proxy({
-      on: readOnly(on)
-    } as any, {
-      get(target, key) {
-        if (key == Symbol.unscopables) {
-          return undefined
+    const proxy = new Proxy(
+      {
+        on: readOnly(on)
+      } as any,
+      {
+        get(target, key) {
+          if (key == Symbol.unscopables) {
+            return undefined
+          }
+          return target[key] ?? readOnly(self[key as any])
+        },
+        has() {
+          return true
         }
-        return target[key] ?? readOnly(self[key as any])
-      },
-      has() {
-        return true
       }
-    })
+    )
     return proxy
   } as unknown as {
     on: typeof on
   } & typeof self
 
-  for (let i of [Number, String, Function, Object, RegExp, Promise, Array, Symbol, BigInt]) {
+  for (const i of [Number, String, Function, Object, RegExp, Promise, Array, Symbol, BigInt]) {
     toReadOnly(i as any)
     toReadOnly((i as any).prototype)
   }
@@ -242,7 +279,7 @@ const workerInitCode = `(${function () {
 
 function generateUUID() {
   if (location.protocol == "https:") return crypto.randomUUID()
-  return URL.createObjectURL(new Blob).slice(-36)
+  return URL.createObjectURL(new Blob()).slice(-36)
 }
 
 function createIframeSrc(originalScripts: string[]) {
@@ -264,7 +301,9 @@ function createIframeSrc(originalScripts: string[]) {
       console.error(new SyntaxError("The plugin is broken, it will not be load"))
     }
   }
-  return "data:text/html;charset=utf-8," + encodeURIComponent(`
+  return (
+    "data:text/html;charset=utf-8," +
+    encodeURIComponent(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -290,13 +329,12 @@ function createIframeSrc(originalScripts: string[]) {
       <body></body>
     </html>
   `)
+  )
 }
 
-export function PluginProvider({ children }: {
-  children: ComponentChildren
-}) {
+export function PluginProvider({ children }: { children: ComponentChildren }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
-  const callbacksRef = useRef<Record<string, ((ev: MessageEvent<{ id: string, msg: any }>) => void)>>({})
+  const callbacksRef = useRef<Record<string, (ev: MessageEvent<{ id: string; msg: any }>) => void>>({})
 
   const setReceiveHook = useStore(state => state.setReceiveHook)
   const setSendHook = useStore(state => state.setSendHook)
@@ -313,14 +351,11 @@ export function PluginProvider({ children }: {
     }))
   })
 
-  const complete = useMemo(() => (
-    codeQueries.reduce((a, b) => a && (b.isError || b.isSuccess), true)
-  ), [codeQueries])
-
+  const complete = useMemo(() => codeQueries.reduce((a, b) => a && (b.isError || b.isSuccess), true), [codeQueries])
 
   useEffect(() => {
     const callbacks = callbacksRef.current
-    function callback(ev: MessageEvent<{ id: string, msg: Request }>) {
+    function callback(ev: MessageEvent<{ id: string; msg: Request }>) {
       if (ev.source !== iframeRef.current?.contentWindow) return
       if (ev.data.msg == undefined) return
       callbacks[ev.data.id]?.(ev)
@@ -328,26 +363,23 @@ export function PluginProvider({ children }: {
     }
 
     window.addEventListener("message", callback, true)
-
     ;(window as any).testPlugin = function (code: string[]) {
       useStore.setState({
         pluginLinks: code
       })
     }
     ;(window as any).testPluginScript = function (scripts: string[]) {
-      (window as any).testPlugin(
+      ;(window as any).testPlugin(
         scripts.map(
-          script => (
-            "data:application/json;base64," + btoa(
-              JSON.stringify(
-                {
-                  name: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16),
-                  type: "script",
-                  script: script
-                }
-              )
+          script =>
+            "data:application/json;base64," +
+            btoa(
+              JSON.stringify({
+                name: Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16),
+                type: "script",
+                script: script
+              })
             )
-          )
         )
       )
     }
@@ -360,16 +392,21 @@ export function PluginProvider({ children }: {
   const onLoadHandler = useCallback(() => {
     setReceiveHook(async (req: Request) => {
       const id = generateUUID()
-      iframeRef.current!.contentWindow!.postMessage({
-        type: "message",
-        msg: req,
-        id
-      }, "*")
+      iframeRef.current!.contentWindow!.postMessage(
+        {
+          type: "message",
+          msg: req,
+          id
+        },
+        "*"
+      )
 
       return await new Promise<Request>(res => {
-        function callback(ev: MessageEvent<{
-          msg: Request
-        }>) {
+        function callback(
+          ev: MessageEvent<{
+            msg: Request
+          }>
+        ) {
           console.log("parent received", ev.data.msg)
           res(ev.data.msg)
         }
@@ -378,15 +415,20 @@ export function PluginProvider({ children }: {
     })
     setSendHook(async (req: Request) => {
       const id = generateUUID()
-      iframeRef.current!.contentWindow!.postMessage({
-        type: "send-message",
-        msg: req,
-        id
-      }, "*")
+      iframeRef.current!.contentWindow!.postMessage(
+        {
+          type: "send-message",
+          msg: req,
+          id
+        },
+        "*"
+      )
       return await new Promise<Request>(res => {
-        function callback(ev: MessageEvent<{
-          msg: Request
-        }>) {
+        function callback(
+          ev: MessageEvent<{
+            msg: Request
+          }>
+        ) {
           res(ev.data.msg)
         }
         callbacksRef.current[id] = callback
@@ -394,36 +436,45 @@ export function PluginProvider({ children }: {
     })
     setAppHook(async (name: string) => {
       const id = generateUUID()
-      iframeRef.current!.contentWindow!.postMessage({
-        type: "app",
-        name,
-        id
-      }, "*")
+      iframeRef.current!.contentWindow!.postMessage(
+        {
+          type: "app",
+          name,
+          id
+        },
+        "*"
+      )
 
       return await new Promise<{
         html: string
       } | null>(res => {
-        function callback(ev: MessageEvent<{
-          msg: {
-            html: string
-          } | null
-        }>) {
+        function callback(
+          ev: MessageEvent<{
+            msg: {
+              html: string
+            } | null
+          }>
+        ) {
           res(ev.data.msg)
         }
         callbacksRef.current[id] = callback
       })
     })
-    
   }, [])
 
   return (
     <>
-      <iframe sandbox="allow-scripts" ref={iframeRef} src={createIframeSrc(complete ? codeQueries.map(
-        query => (query.isSuccess ? query.data.content : "")
-      ) : [])} className="hidden" onLoad={onLoadHandler} {...{
-        credentialless: "credentialless",
-        csp
-      }} />
+      <iframe
+        sandbox="allow-scripts"
+        ref={iframeRef}
+        src={createIframeSrc(complete ? codeQueries.map(query => (query.isSuccess ? query.data.content : "")) : [])}
+        className="hidden"
+        onLoad={onLoadHandler}
+        {...{
+          credentialless: "credentialless",
+          csp
+        }}
+      />
       {children}
     </>
   )

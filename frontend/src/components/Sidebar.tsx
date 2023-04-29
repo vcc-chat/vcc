@@ -1,11 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useId } from "preact/hooks"
 import type { ComponentChildren } from "preact"
-import { useNavigate, useFetcher, FetcherWithComponents } from "react-router-dom"
+import { useNavigate, type FetcherWithComponents } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import classNames from "classnames"
-
-import GroupAddIcon from "@material-design-icons/svg/outlined/group_add.svg"
-import AddCircleIcon from "@material-design-icons/svg/outlined/add_circle_outline.svg"
 import AccountCircle from "@material-design-icons/svg/filled/account_circle.svg"
 import MenuIcon from "@material-design-icons/svg/outlined/menu.svg"
 import TuneIcon from "@material-design-icons/svg/outlined/tune.svg"
@@ -15,8 +12,8 @@ import MoreHorizIcon from "@material-design-icons/svg/outlined/more_horiz.svg"
 import PeopleIcon from "@material-design-icons/svg/outlined/people.svg"
 import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
 
-import { MESSAGE_MIME_TYPE, Request } from "../config"
-import { ChangeNickname, JoinDialog, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
+import { MESSAGE_MIME_TYPE, } from "../config"
+import { ChangeNickname, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
 import { stringToColor, useChatList, useNetwork } from "../tools"
 import useStore from "../store"
 import { useTranslation } from "react-i18next"
@@ -66,19 +63,6 @@ function sendMessage(fetcher: FetcherWithComponents<any>, chat: number, msg: str
     method: "post",
     action: `/chats/${chat}/?index`
   })
-}
-
-function dragOverHandler(ev: DragEvent) {
-  ev.preventDefault()
-  ev.dataTransfer!.dropEffect = "copy"
-}
-
-function dropHandler(fetcher: FetcherWithComponents<any>, chat: number, session: string | null) {
-  return function (ev: DragEvent) {
-    ev.preventDefault()
-    const { msg } = JSON.parse(ev.dataTransfer!.getData(MESSAGE_MIME_TYPE))
-    sendMessage(fetcher, chat, msg, session)
-  }
 }
 
 function SubChatSidebarItem({ chat, clickHandler, settingsClickHandler, setOpen }: {

@@ -10,7 +10,7 @@ interface MessageState {
   changeLastMessageTime: () => void
 }
 
-const createMessageSlice: StateCreator<MessageState> = (set) => ({
+const createMessageSlice: StateCreator<MessageState> = set => ({
   messages: {},
   markdownToHTML: {},
   lastMessageTime: Infinity,

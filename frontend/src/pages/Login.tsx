@@ -1,6 +1,5 @@
-
 import type { TargetedEvent } from "preact/compat"
-import { useCallback, useEffect, useState } from "preact/hooks"
+import { useCallback, useEffect } from "preact/hooks"
 import { useNavigate, Form } from "react-router-dom"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
@@ -11,7 +10,7 @@ import { useLoginActionData } from "../loaders"
 import { useNetwork, useTitle } from "../tools"
 import ChooseBackend, { initBackend } from "../components/ChooseBackend"
 
-export function Component(props: {}) {
+export function Component() {
   const username = useStore(state => state.username)
   const changeUsername = useStore(state => state.changeUsername)
   const navigate = useNavigate()
@@ -48,7 +47,11 @@ export function Component(props: {}) {
       msg: "github"
     })
     window.open(url, "_blank", "noopener,noreferrer")
-    const { uid, usrname: username, msg: token } = await makeRequest({
+    const {
+      uid,
+      usrname: username,
+      msg: token
+    } = await makeRequest({
       type: "login_oauth",
       usrname: "github",
       msg: requestID
@@ -63,12 +66,18 @@ export function Component(props: {}) {
 
   return (
     <>
-      <div className={classNames("hero min-h-screen bg-base-200", {
-        "hidden": loginStatus != LoginType.NOT_LOGIN
-      })}>
-        <Form method="post" className="hero-content flex-col lg:flex-row-reverse" onSubmit={() => {
-          startGet()
-        }}>
+      <div
+        className={classNames("hero min-h-screen bg-base-200", {
+          hidden: loginStatus != LoginType.NOT_LOGIN
+        })}
+      >
+        <Form
+          method="post"
+          className="hero-content flex-col lg:flex-row-reverse"
+          onSubmit={() => {
+            startGet()
+          }}
+        >
           <div className="text-center lg:text-left">
             <h1 className="text-5xl font-bold">{t("Login now!")}</h1>
             <p className="py-6">{t("To send messages, you need to login first.")}</p>
@@ -83,7 +92,7 @@ export function Component(props: {}) {
                   type="text"
                   placeholder={t("Username") ?? undefined}
                   className="input input-bordered"
-                  name="username" 
+                  name="username"
                   value={username}
                   onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
                     changeUsername(ev.currentTarget.value)
@@ -94,14 +103,27 @@ export function Component(props: {}) {
                 <label className="label">
                   <span className="label-text">{t("Password")}</span>
                 </label>
-                <input type="password" placeholder={t("Password") ?? undefined} className="input input-bordered" name="password" />
+                <input
+                  type="password"
+                  placeholder={t("Password") ?? undefined}
+                  className="input input-bordered"
+                  name="password"
+                />
               </div>
               <div className="form-control mt-6 flex space-y-2">
                 <div className="flex w-full btn-group">
-                  <button className="btn btn-ghost" onClick={() => {
-                    navigate("/register")
-                  }} type="button">{t("Register")}</button>
-                  <button className="flex-1 btn btn-primary" type="submit">{t("Login")}</button>
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      navigate("/register")
+                    }}
+                    type="button"
+                  >
+                    {t("Register")}
+                  </button>
+                  <button className="flex-1 btn btn-primary" type="submit">
+                    {t("Login")}
+                  </button>
                 </div>
                 <button className="btn" onClick={githubOauthHandler} type="button">
                   {t("Continue with Github")}

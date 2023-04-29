@@ -1,13 +1,13 @@
 import { StateCreator } from "zustand"
 
 interface ChatState {
-  chat: number | null,
-  chatName: string | null,
-  sessions: [number, string][],
-  session: string | null,
-  changeChatName(name: string): void,
-  changeChat(value: number | null): void,
-  changeAllChat(chats: number[], chatNames: string[]): void,
+  chat: number | null
+  chatName: string | null
+  sessions: [number, string][]
+  session: string | null
+  changeChatName(name: string): void
+  changeChat(value: number | null): void
+  changeAllChat(chats: number[], chatNames: string[]): void
   changeSession(session: string | null): void
   addSession(chat: number, session: string): void
 }

@@ -16,8 +16,8 @@ interface LoginState {
   failed: () => void
   startGet: () => void
   reset: () => void
-  tokenLogin: () => void,
-  setToken: (token: string | null) => void,
+  tokenLogin: () => void
+  setToken: (token: string | null) => void
   changeUsername: (username: string) => void
 }
 

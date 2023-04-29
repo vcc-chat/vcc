@@ -7,7 +7,7 @@ import useStore from "../store"
 import { useChatList, useNetwork } from "../tools"
 import { useSettingsActionsLoaderData } from "../loaders"
 
-export const Component = memo(function SettingsActions(props: {}) {
+export const Component = memo(function SettingsActions() {
   const chat = useStore(state => state.chat)
   const chatName = useStore(state => state.chatName)
   const { refresh: refreshChats } = useChatList()
@@ -41,9 +41,7 @@ export const Component = memo(function SettingsActions(props: {}) {
     refreshChats()
   }
   if (chat == null || chatName == null) {
-    return (
-      <div />
-    )
+    return <div />
   }
 
   async function modifyPublic() {
@@ -66,22 +64,39 @@ export const Component = memo(function SettingsActions(props: {}) {
       <label className="label">
         <span className="label-text">{t("Chat name")}</span>
       </label>
-      <input type="text" placeholder={t("Rename") ?? ""} className="input mr-auto" value={renameValue} onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
-        setRenameValue(ev.currentTarget.value)
-      }} />
+      <input
+        type="text"
+        placeholder={t("Rename") ?? ""}
+        className="input mr-auto"
+        value={renameValue}
+        onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
+          setRenameValue(ev.currentTarget.value)
+        }}
+      />
       {/* <FormControlLabel className="ml-4" label="Public" control={<Switch checked={publicValue} onChange={ev => setPublic(ev.target.checked)} />} /> */}
       <label className="label cursor-pointer mr-auto">
-        <span className="label-text mr-4">{t("Public")}</span> 
-        <input type="checkbox" className="toggle" checked={publicValue} onClick={(ev: TargetedEvent<HTMLInputElement, Event>) => setPublic(ev.currentTarget.checked)} />
+        <span className="label-text mr-4">{t("Public")}</span>
+        <input
+          type="checkbox"
+          className="toggle"
+          checked={publicValue}
+          onClick={(ev: TargetedEvent<HTMLInputElement, Event>) => setPublic(ev.currentTarget.checked)}
+        />
       </label>
-      <button className="btn mr-auto" disabled={publicRaw == publicValue && renameValue == chatName} onClick={() => {
-        if (renameValue != chatName) {
-          rename()
-        }
-        if (publicRaw != publicValue) {
-          modifyPublic()
-        }
-      }}>{t("Apply")}</button>
+      <button
+        className="btn mr-auto"
+        disabled={publicRaw == publicValue && renameValue == chatName}
+        onClick={() => {
+          if (renameValue != chatName) {
+            rename()
+          }
+          if (publicRaw != publicValue) {
+            modifyPublic()
+          }
+        }}
+      >
+        {t("Apply")}
+      </button>
     </div>
   )
 })

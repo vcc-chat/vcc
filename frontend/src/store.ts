@@ -9,25 +9,23 @@ import createNetworkSlice from "./state/network"
 import createAlertSlice from "./state/alert"
 
 const useStore = create<
-  ReturnType<typeof createMessageSlice>
-  & ReturnType<typeof createChatSlice>
-  & ReturnType<typeof createLoginSlice>
-  & ReturnType<typeof createPluginSlice>
-  & ReturnType<typeof createNetworkSlice>
-  & ReturnType<typeof createAlertSlice>
+  ReturnType<typeof createMessageSlice> &
+    ReturnType<typeof createChatSlice> &
+    ReturnType<typeof createLoginSlice> &
+    ReturnType<typeof createPluginSlice> &
+    ReturnType<typeof createNetworkSlice> &
+    ReturnType<typeof createAlertSlice>
 >()(
   devtools(
     persist(
-      subscribeWithSelector(
-        (...a) => ({
-          ...createMessageSlice(...a),
-          ...createChatSlice(...a),
-          ...createLoginSlice(...a),
-          ...createPluginSlice(...a),
-          ...createNetworkSlice(...a),
-          ...createAlertSlice(...a)
-        })
-      ),
+      subscribeWithSelector((...a) => ({
+        ...createMessageSlice(...a),
+        ...createChatSlice(...a),
+        ...createLoginSlice(...a),
+        ...createPluginSlice(...a),
+        ...createNetworkSlice(...a),
+        ...createAlertSlice(...a)
+      })),
       {
         name: "zustand-store",
         partialize: state => ({

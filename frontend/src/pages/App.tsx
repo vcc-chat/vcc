@@ -9,10 +9,11 @@ class AppContainer extends HTMLElement {
     const root = this.attachShadow({ mode: "open" })
     root.innerHTML = this.getAttribute("html")!
   }
-  static get observedAttributes() { return ["html"] }
+  static get observedAttributes() {
+    return ["html"]
+  }
   attributeChangedCallback(_: unknown, _2: unknown, newValue: string) {
-    if (this.shadowRoot)
-      this.shadowRoot.innerHTML = newValue
+    if (this.shadowRoot) this.shadowRoot.innerHTML = newValue
   }
 }
 
@@ -30,19 +31,23 @@ const AppContainerElement = "app-container" as any
 
 export function Component() {
   const [html, setHtml] = useState<string | null>(null)
-  // <wbr> is for fixing a bug of sanitizing <style /> 
-  const sanitizedHtml = useMemo(() => (html ? DOMPurify.sanitize("<wbr>" + html, {
-    ADD_TAGS: ["style"]
-  }) : ""), [html])
+  // <wbr> is for fixing a bug of sanitizing <style />
+  const sanitizedHtml = useMemo(
+    () =>
+      html
+        ? DOMPurify.sanitize("<wbr>" + html, {
+            ADD_TAGS: ["style"]
+          })
+        : "",
+    [html]
+  )
   const appHook = useStore(state => state.appHook)
   const { name } = useParams()
   useEffect(() => {
     if (appHook === null) return
-    (async () => {
+    ;(async () => {
       setHtml((await appHook(name!))?.html ?? null)
     })()
   }, [appHook, name])
-  return (
-    <AppContainerElement html={sanitizedHtml} />
-  )
+  return <AppContainerElement html={sanitizedHtml} />
 }

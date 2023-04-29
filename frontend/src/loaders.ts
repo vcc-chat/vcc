@@ -1,9 +1,9 @@
 import {
   redirect,
   json,
-  LoaderFunctionArgs,
+  type LoaderFunctionArgs,
   useActionData,
-  ActionFunctionArgs,
+  type ActionFunctionArgs,
   useLoaderData
 } from "react-router-dom"
 
@@ -19,7 +19,7 @@ export function wait() {
   return new Promise<void>(res => setTimeout(res, 0))
 }
 
-async function authLoader(jumpToLogin: boolean = true) {
+async function authLoader(jumpToLogin = true) {
   const { makeRequest } = store.getState()
   const loginStatus = store.getState().type
   if (loginStatus == LoginType.LOGIN_SUCCESS) {

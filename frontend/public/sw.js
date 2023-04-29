@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 // @ts-check
 /// <reference no-default-lib="true" />
 /// <reference lib="webworker" />

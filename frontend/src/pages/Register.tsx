@@ -7,9 +7,9 @@ import { useNetwork, useTitle } from "../tools"
 import { useRegisterActionData } from "../loaders"
 import { LoginType } from "../state/login"
 import useStore from "../store"
-import ChooseBackend, { initBackend } from "../components/ChooseBackend"
+import { initBackend } from "../components/ChooseBackend"
 
-export function Component(props: {}) {
+export function Component() {
   const loginStatus = useStore(state => state.type)
   const navigate = useNavigate()
   const { successAlert, errorAlert } = useNetwork()
@@ -23,9 +23,12 @@ export function Component(props: {}) {
     }
   }, [loginStatus])
 
-  const loginCallback = useCallback(function () {
-    navigate("/login")
-  }, [navigate])
+  const loginCallback = useCallback(
+    function () {
+      navigate("/login")
+    },
+    [navigate]
+  )
   useEffect(() => {
     initBackend()
     ;(async () => {
@@ -45,9 +48,11 @@ export function Component(props: {}) {
 
   return (
     <>
-      <div className={classNames("hero min-h-screen bg-base-200", {
-        "hidden": loginStatus != LoginType.NOT_LOGIN
-      })}>
+      <div
+        className={classNames("hero min-h-screen bg-base-200", {
+          hidden: loginStatus != LoginType.NOT_LOGIN
+        })}
+      >
         <Form method="post" className="hero-content flex-col lg:flex-row-reverse">
           <div className="text-center lg:text-left">
             <h1 className="text-5xl font-bold">{t("Register now!")}</h1>
@@ -70,14 +75,21 @@ export function Component(props: {}) {
                 <label className="label">
                   <span className="label-text">{t("Password")}</span>
                 </label>
-                <input type="password" placeholder={t("Password") ?? undefined} className="input input-bordered" name="password" />
+                <input
+                  type="password"
+                  placeholder={t("Password") ?? undefined}
+                  className="input input-bordered"
+                  name="password"
+                />
               </div>
               <div className="form-control mt-6">
                 <div className="flex w-full btn-group">
                   <button className="btn btn-ghost" onClick={loginCallback} type="button">
                     {t("Login")}
                   </button>
-                  <button className="flex-1 btn btn-primary" type="submit">{t("Register")}</button>
+                  <button className="flex-1 btn btn-primary" type="submit">
+                    {t("Register")}
+                  </button>
                 </div>
               </div>
             </div>

@@ -5,8 +5,7 @@ import { useTranslation } from "react-i18next"
 import { useTitle } from "../tools"
 import useStore from "../store"
 
-
-export const Component = memo(function Settings(props: {}) {
+export const Component = memo(function Settings() {
   const matches = useMatches()
   const showSettings = matches[4].pathname.split("/").at(-1)!
   const navigate = useNavigate()
@@ -24,16 +23,26 @@ export const Component = memo(function Settings(props: {}) {
   return (
     <div className="p-8 flex flex-col">
       <div className="tabs mb-4">
-        <a className={classNames("tab tab-bordered", {
-          "tab-active": showSettings == "info"
-        })} onClick={() => {
-          setShowSettings("info")
-        }}>{t("Basic Information")}</a> 
-        <a className={classNames("tab tab-bordered", {
-          "tab-active": showSettings == "actions"
-        })} onClick={() => {
-          setShowSettings("actions")
-        }}>{t("Actions")}</a> 
+        <a
+          className={classNames("tab tab-bordered", {
+            "tab-active": showSettings == "info"
+          })}
+          onClick={() => {
+            setShowSettings("info")
+          }}
+        >
+          {t("Basic Information")}
+        </a>
+        <a
+          className={classNames("tab tab-bordered", {
+            "tab-active": showSettings == "actions"
+          })}
+          onClick={() => {
+            setShowSettings("actions")
+          }}
+        >
+          {t("Actions")}
+        </a>
       </div>
       {showSettings != "null" && <Outlet />}
     </div>

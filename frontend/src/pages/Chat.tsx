@@ -6,15 +6,15 @@ import { useParams, useFetcher, Link, useBeforeUnload } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import remarkGithub, { Options as RemarkGithubOptions } from "remark-github"
+import remarkGithub, { type Options as RemarkGithubOptions } from "remark-github"
 import remarkDirective from "remark-directive"
+// eslint-disable-next-line import/no-unresolved
 import remarkDirectiveRehype from "remark-directive-rehype"
 // import { PrismAsyncLight as SyntaxHighlighter } from "react-syntax-highlighter"
 import classNames from "classnames"
 // import { materialLight } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN, zhTW, enUS as en } from "date-fns/locale"
-import { useQuery } from "@tanstack/react-query"
 import FileUploadIcon from "@material-design-icons/svg/outlined/file_upload.svg"
 import InfoIcon from "@material-design-icons/svg/outlined/info.svg"
 import SendIcon from "@material-design-icons/svg/filled/send.svg"
@@ -89,7 +89,6 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: {
         "chat-bubble-error"
       ][stringToNumber(req.usrname) % 6])}>
         {(!!markdownChildren || !!html) && <ReactMarkdown
-          children={markdownChildren}
           allowedElements={[
             "a", "blockquote", "br",
             "code", "del", "em",
@@ -125,13 +124,13 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: {
               href?: any,
               children: ComponentChildren
             }) => (
-              <MessageLink link={href!} children={children} />
+              <MessageLink link={href!}>{children}</MessageLink>
             ),
             ["file" as any]: ({ id }: { id: string }) => (
               <Link className="link" to={`/files/${encodeURIComponent(id)}`} replace>{t("Download File")}</Link>
             )
           }}
-        />}
+        >{markdownChildren}</ReactMarkdown>}
       </div>
     </li>
   )

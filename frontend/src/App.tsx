@@ -3,19 +3,12 @@ import { signal } from "@preact/signals"
 import { lazy, Suspense, memo } from "preact/compat"
 
 import useWebSocket, { ReadyState } from "react-use-websocket"
-import {
-  Route,
-  createBrowserRouter,
-  createRoutesFromElements,
-  RouterProvider,
-  useNavigate
-} from "react-router-dom"
+import { Route, createBrowserRouter, createRoutesFromElements, RouterProvider } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import classNames from "classnames"
 import { useTranslation } from "react-i18next"
 import DoneIcon from "@material-design-icons/svg/outlined/done.svg"
 import ErrorIcon from "@material-design-icons/svg/outlined/error_outline.svg"
-
 
 import type { Request } from "./config"
 import { Notification } from "./components/Notification"
@@ -27,9 +20,7 @@ import * as loaders from "./loaders"
 const ErrorElement = lazy(() => import("./pages/ErrorElement"))
 
 const Loading = memo(() => {
-  return (
-    <div className="radial-progress m-auto animate-spin" style={{"--value": 60, "--size": "3rem"} as any} />
-  )
+  return <div className="radial-progress m-auto animate-spin" style={{ "--value": 60, "--size": "3rem" } as any} />
 })
 
 const router = createBrowserRouter(
@@ -45,14 +36,28 @@ const router = createBrowserRouter(
             <Route index loader={loaders.settingsIndexLoader} />
             {/* <Route path="null" element={<></>} loader={loaders.settingsLoader} /> */}
             <Route path="info" lazy={() => import("./pages/SettingsInfo")} loader={loaders.settingsInfoLoader} />
-            <Route path="actions" lazy={() => import("./pages/SettingsActions")} loader={loaders.settingsActionsLoader} />
+            <Route
+              path="actions"
+              lazy={() => import("./pages/SettingsActions")}
+              loader={loaders.settingsActionsLoader}
+            />
           </Route>
         </Route>
       </Route>
       <Route path="files/:id" lazy={() => import("./pages/FileDownload")} loader={loaders.fileDownloadLoader} />
       <Route path="apps/:name" lazy={() => import("./pages/App")} loader={loaders.appLoader} />
-      <Route path="login" lazy={() => import("./pages/Login")} loader={loaders.loginLoader} action={loaders.loginAction} />
-      <Route path="register" lazy={() => import("./pages/Register")} loader={loaders.registerLoader} action={loaders.registerAction} />
+      <Route
+        path="login"
+        lazy={() => import("./pages/Login")}
+        loader={loaders.loginLoader}
+        action={loaders.loginAction}
+      />
+      <Route
+        path="register"
+        lazy={() => import("./pages/Register")}
+        loader={loaders.registerLoader}
+        action={loaders.registerAction}
+      />
       <Route path="*" element={<ErrorElement content="404 Not Found" />} />
     </Route>
   )
@@ -63,7 +68,7 @@ function useMessageWebSocket() {
   const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(backendAddress, {
     shouldReconnect: ({ code }) => code != 1000 && code != 1001
   })
-  
+
   const queryClient = useQueryClient()
   const loginSuccess = useStore(state => state.type == LoginType.LOGIN_SUCCESS)
   const receiveHook = useStore(state => state.receiveHook)
@@ -89,10 +94,7 @@ function useMessageWebSocket() {
     // This is an internal api, but we use it since this don't need it run in react router's context
     router.revalidate()
   }, [readyState])
-  
-
-  // @ts-ignore
-  window.sendJsonMessage = sendJsonMessage
+  ;(window as any).sendJsonMessage = sendJsonMessage
 
   useEffect(() => {
     setSendJsonMessageRaw(sendJsonMessage)
@@ -105,7 +107,7 @@ function useMessageWebSocket() {
   const handleFunctionList = useStore(state => state.handleFunctionList)
 
   useEffect(() => {
-    const message = lastJsonMessage
+    const message: Request = lastJsonMessage
     if (message == null) return
     const func = handleFunctionList[message.uuid!]
     if (func != undefined) {
@@ -115,22 +117,21 @@ function useMessageWebSocket() {
     switch (message.type) {
       case "message":
         if (!loginSuccess) break
-        (async () => {
+        ;(async () => {
           changeLastMessageTime()
           if (message.msg == "") return
           const newMessage = {
             req: receiveHook ? await receiveHook(message) : message,
-            time: +new Date
+            time: +new Date()
           }
           const request = newMessage.req
           if (request == null) return
           addMessage(newMessage)
           // notify(chatNames[chatValues.indexOf(request.uid)], `${request.usrname}: ${request.msg}`)
-          if (request.usrname == "system" && (
-            request.msg.includes("join") 
-            || request.msg.includes("quit") 
-            || request.msg.includes("kick")
-          )) {
+          if (
+            request.usrname == "system" &&
+            (request.msg.includes("join") || request.msg.includes("quit") || request.msg.includes("kick"))
+          ) {
             queryClient.invalidateQueries({
               queryKey: ["user-list", request.uid]
             })
@@ -189,9 +190,7 @@ function useAlert() {
 }
 
 function SubRouter() {
-  return (
-    <RouterProvider router={router} fallbackElement={<Loading />} />
-  )
+  return <RouterProvider router={router} fallbackElement={<Loading />} />
 }
 
 function Alert() {
@@ -199,16 +198,30 @@ function Alert() {
   useAlert()
   return (
     <>
-      <div className={classNames("alert alert-success shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", successAlertOpen.value || "hidden")}>
+      <div
+        className={classNames(
+          "alert alert-success shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50",
+          successAlertOpen.value || "hidden"
+        )}
+      >
         <div>
           <DoneIcon />
-          <span>{t("Success")}: {alertContent}</span>
+          <span>
+            {t("Success")}: {alertContent}
+          </span>
         </div>
       </div>
-      <div className={classNames("alert alert-error shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50", errorAlertOpen.value || "hidden")}>
+      <div
+        className={classNames(
+          "alert alert-error shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50",
+          errorAlertOpen.value || "hidden"
+        )}
+      >
         <div>
           <ErrorIcon />
-          <span>{t("Error")}! {alertContent}</span>
+          <span>
+            {t("Error")}! {alertContent}
+          </span>
         </div>
       </div>
     </>
@@ -220,7 +233,7 @@ function WebSocket() {
   return null
 }
 
-export default function () {
+export default function RootApp() {
   const backendAddress = useStore(state => state.backendAddress)
   return (
     <div className="flex-1 flex flex-col overflow-hidden">

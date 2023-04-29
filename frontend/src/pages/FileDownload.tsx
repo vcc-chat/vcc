@@ -12,7 +12,7 @@ export function Component() {
   useTitle(fileName ? `Downloading "${fileName}"` : "Downloading file")
 
   useEffect(() => {
-    (async () => {
+    ;(async () => {
       const { usrname: name, msg: url } = await makeRequest({
         type: "file_download",
         msg: id
@@ -34,4 +34,3 @@ export function Component() {
   }, [])
   return null
 }
-

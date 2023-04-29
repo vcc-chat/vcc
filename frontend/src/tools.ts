@@ -43,32 +43,32 @@ export function useNetwork() {
 }
 
 export function stringToColor(str: string) {
-  let hash = 0;
-  let i;
+  let hash = 0
+  let i
 
   for (i = 0; i < str.length; i += 1) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
   }
 
-  let color = '#';
+  let color = "#"
 
   for (i = 0; i < 3; i += 1) {
-    const value = (hash >> (i * 8)) & 0xff;
-    color += `00${value.toString(16)}`.slice(-2);
+    const value = (hash >> (i * 8)) & 0xff
+    color += `00${value.toString(16)}`.slice(-2)
   }
 
-  return color;
+  return color
 }
 
 export function stringToNumber(str: string) {
-  let hash = 0;
-  let i;
+  let hash = 0
+  let i
 
   for (i = 0; i < str.length; i += 1) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
   }
 
-  return hash;
+  return hash
 }
 
 export function responseToChatList(data: [number, string, number | null][]) {
@@ -78,19 +78,20 @@ export function responseToChatList(data: [number, string, number | null][]) {
     data
       .map<[number, number]>(([a, b, c]) => [c ?? -1, a])
       .sort(([a, b], [c, d]) => +(a > c))
-      .reduce((a, [b, d]) => (
-        a.length ? (
-          c => c[0] == b ? (
-            a.slice(0, -1).concat([[b, c[1].concat(d)]])
-          ) : a.concat([[b, [d]]])
-        )(a.at(-1)!) : [[b, [d]]]
-      ) as [number, number[]][], [] as [number, number[]][])
-      .map<[number, number[]]>(([a, b], i, arr) => (
+      .reduce(
+        (a, [b, d]) =>
+          (a.length
+            ? (c => (c[0] == b ? a.slice(0, -1).concat([[b, c[1].concat(d)]]) : a.concat([[b, [d]]])))(a.at(-1)!)
+            : [[b, [d]]]) as [number, number[]][],
+        [] as [number, number[]][]
+      )
+      .map<[number, number[]]>(([a, b], i, arr) =>
         a == -1 ? [a, b.filter(a => !arr.map(([a, b]) => a).includes(a))] : [a, b]
-      ))
-      .reduce((a, b) => [
-        ...a, ...(b[0] == -1 ? b[1].map(a => [a, []] as [number, number[]]) : [b])
-      ], [] as [number, number[]][])
+      )
+      .reduce(
+        (a, b) => [...a, ...(b[0] == -1 ? b[1].map(a => [a, []] as [number, number[]]) : [b])],
+        [] as [number, number[]][]
+      )
   ) as Record<number, number[]>
   return { values, names, parentChats }
 }
@@ -125,40 +126,54 @@ export function useChatList() {
     enabled
   })
   const queryClient = useQueryClient()
-  return Object.assign({
-    isLoading,
-    isFetching,
-    refresh: useCallback(() => {
-      queryClient.invalidateQueries({
-        queryKey: ["chat-list"]
-      })
-    }, [queryClient]),
-    refetch: useCallback(() => {
-      return queryClient.refetchQueries({
-        queryKey: ["chat-list"]
-      })
-    }, [queryClient])
-  }, data!)
+  return Object.assign(
+    {
+      isLoading,
+      isFetching,
+      refresh: useCallback(() => {
+        queryClient.invalidateQueries({
+          queryKey: ["chat-list"]
+        })
+      }, [queryClient]),
+      refetch: useCallback(() => {
+        return queryClient.refetchQueries({
+          queryKey: ["chat-list"]
+        })
+      }, [queryClient])
+    },
+    data!
+  )
 }
 
-export function useNickname(chat: number, uid: number, { enabled = true, initialData }: {
-  enabled?: boolean
-  initialData?: string
-} = {}) {
+export function useNickname(
+  chat: number,
+  uid: number,
+  {
+    enabled = true,
+    initialData
+  }: {
+    enabled?: boolean
+    initialData?: string
+  } = {}
+) {
   const { makeRequest } = useNetwork()
   const { data } = useQuery({
     queryKey: ["get-nickname", chat, uid],
     queryFn: async () => {
-      return (await makeRequest({
-        type: "chat_get_nickname",
-        uid,
-        usrname: chat as unknown as string
-      })).usrname
+      return (
+        await makeRequest({
+          type: "chat_get_nickname",
+          uid,
+          usrname: chat as unknown as string
+        })
+      ).usrname
     },
     enabled: enabled,
-    ...(initialData == undefined ? {} : {
-      initialData: initialData
-    })
+    ...(initialData == undefined
+      ? {}
+      : {
+          initialData: initialData
+        })
   })
   return data
 }
@@ -203,15 +218,13 @@ async function getChatRecord(chat: number) {
 }
 
 function urlBase64ToUint8Array(base64String: string) {
-  var padding = "=".repeat((4 - base64String.length % 4) % 4)
-  var base64 = (base64String + padding)
-    .replace(/\-/g, "+")
-    .replace(/_/g, "/")
- 
-  var rawData = window.atob(base64)
-  var outputArray = new Uint8Array(rawData.length)
- 
-  for (var i = 0; i < rawData.length; ++i) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/")
+
+  const rawData = window.atob(base64)
+  const outputArray = new Uint8Array(rawData.length)
+
+  for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i)
   }
   return outputArray
@@ -222,16 +235,18 @@ export async function registerServiceWorker() {
   if (!navigator.serviceWorker || !window.PushManager) return
   await navigator.serviceWorker.register("/sw.js", { scope: "/" })
   const registration = await navigator.serviceWorker.ready
-  const subscription = await registration.pushManager.getSubscription() || await (async () => {
-    const { msg: vapidPublicKey } = await makeRequest({
-      type: "push_get_vapid_public_key",
-    })
-    const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey)
-    return await registration.pushManager.subscribe({
-      applicationServerKey: convertedVapidKey,
-      userVisibleOnly: true
-    })
-  })()
+  const subscription =
+    (await registration.pushManager.getSubscription()) ||
+    (await (async () => {
+      const { msg: vapidPublicKey } = await makeRequest({
+        type: "push_get_vapid_public_key"
+      })
+      const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey)
+      return await registration.pushManager.subscribe({
+        applicationServerKey: convertedVapidKey,
+        userVisibleOnly: true
+      })
+    })())
   while (useStore.getState().type != LoginType.LOGIN_SUCCESS) {
     await wait()
     await wait()
@@ -256,7 +271,10 @@ export async function syncMessages() {
   })
   const records = (await Promise.all(chats.map(getChatRecord))).flat()
   const addMessage = useStore.getState().addMessage
-  console.debug("records: ", records.map(a => a.req))
+  console.debug(
+    "records: ",
+    records.map(a => a.req)
+  )
   for (const record of records) {
     addMessage(record)
   }

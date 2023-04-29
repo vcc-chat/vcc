@@ -6,16 +6,10 @@ import { useNavigate } from "react-router-dom"
 import useStore from "../store"
 import { Request, RequestType } from "../config"
 import { useChatList, useNetwork } from "../tools"
-import {
-  SettingsEditItem,
-  allPermissions,
-  PermissionKey
-} from "./Settings"
+import { SettingsEditItem, allPermissions, PermissionKey } from "./Settings"
 import { Trans, useTranslation } from "react-i18next"
 
-export function JoinDialog({ id }: {
-  id: string
-}) {
+export function JoinDialog({ id }: { id: string }) {
   const [dialogValue, setDialogValue] = useState("")
   const { makeRequest } = useNetwork()
   const { t } = useTranslation()
@@ -46,28 +40,36 @@ export function JoinDialog({ id }: {
       errorAlert(t("No such chat. "))
     }
   }, [successAlert, errorAlert, refetch, dialogValue])
-  return createPortal((
+  return createPortal(
     <>
       <input type="checkbox" id={id} className="modal-toggle" />
       <div className="modal">
         <div className="modal-box">
           <h3 className="font-bold text-lg">{t("Join chat")}</h3>
           <p className="py-4">{t("Enter the chat number you want to join.")}</p>
-          <input className="input" autoFocus placeholder={t("Chat id") ?? ""} value={dialogValue} onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => setDialogValue(ev.currentTarget.value)} />
+          <input
+            className="input"
+            autoFocus
+            placeholder={t("Chat id") ?? ""}
+            value={dialogValue}
+            onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => setDialogValue(ev.currentTarget.value)}
+          />
           <div className="modal-action">
-            <label htmlFor={id} className="btn">{t("Close")}</label>
-            <button className="btn" onClick={joinHandler}>{t("Join")}</button>
+            <label htmlFor={id} className="btn">
+              {t("Close")}
+            </label>
+            <button className="btn" onClick={joinHandler}>
+              {t("Join")}
+            </button>
           </div>
         </div>
       </div>
-    </>
-  ), document.body)
+    </>,
+    document.body
+  )
 }
 
-export function ChangeNickname({ id, uid }: {
-  id: string,
-  uid: number
-}) {
+export function ChangeNickname({ id, uid }: { id: string; uid: number }) {
   const [dialogValue, setDialogValue] = useState("")
   const { makeRequest } = useNetwork()
   const { t } = useTranslation()
@@ -93,27 +95,42 @@ export function ChangeNickname({ id, uid }: {
       errorAlert(t("Permission denied. "))
     }
   }, [successAlert, errorAlert, dialogValue])
-  return createPortal((
+  return createPortal(
     <>
       <input type="checkbox" id={id} className="modal-toggle" />
       <div className="modal">
         <div className="modal-box">
           <h3 className="font-bold text-lg">{t("Change nickname")}</h3>
           <p className="py-4">{t("Enter the new nickname you want to change.")}</p>
-          <input className="input" autoFocus placeholder={t("New nickname") ?? ""} value={dialogValue} onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => setDialogValue(ev.currentTarget.value)} />
+          <input
+            className="input"
+            autoFocus
+            placeholder={t("New nickname") ?? ""}
+            value={dialogValue}
+            onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => setDialogValue(ev.currentTarget.value)}
+          />
           <div className="modal-action">
-            <label htmlFor={id} className="btn">{t("Close")}</label>
-            <button className="btn" onClick={changeHandler}>{t("Change")}</button>
+            <label htmlFor={id} className="btn">
+              {t("Close")}
+            </label>
+            <button className="btn" onClick={changeHandler}>
+              {t("Change")}
+            </button>
           </div>
         </div>
       </div>
-    </>
-  ), document.body)
+    </>,
+    document.body
+  )
 }
 
-export function EditPermissionDialog({ uid, username, modifyPermissionDialogID }: {
-  uid: number,
-  username: string,
+export function EditPermissionDialog({
+  uid,
+  username,
+  modifyPermissionDialogID
+}: {
+  uid: number
+  username: string
   modifyPermissionDialogID: string
 }) {
   const { makeRequest, successAlert, errorAlert } = useNetwork()
@@ -134,22 +151,25 @@ export function EditPermissionDialog({ uid, username, modifyPermissionDialogID }
   })
   const permissionOriginal = permissionRawData?.[uid]
   const queryClient = useQueryClient()
-  const [permissions, setPermissions] = useReducer((state, { key, value }: { key: PermissionKey, value: boolean }) => {
-    return {
-      ...state,
-      [key]: value
+  const [permissions, setPermissions] = useReducer(
+    (state, { key, value }: { key: PermissionKey; value: boolean }) => {
+      return {
+        ...state,
+        [key]: value
+      }
+    },
+    {
+      kick: false,
+      rename: false,
+      invite: false,
+      modify_permission: false,
+      send: true,
+      create_sub_chat: false,
+      create_session: true,
+      banned: false,
+      change_nickname: false
     }
-  }, {
-    kick: false,
-    rename: false,
-    invite: false,
-    modify_permission: false,
-    send: true,
-    create_sub_chat: false,
-    create_session: true,
-    banned: false,
-    change_nickname: false
-  })
+  )
   const { t } = useTranslation()
   function makeModifyPermissionRequest(name: PermissionKey) {
     const value = permissions[name]
@@ -164,10 +184,10 @@ export function EditPermissionDialog({ uid, username, modifyPermissionDialogID }
     const request = makeRequest({
       type: "chat_modify_user_permission" as const,
       msg: {
-        "chat_id": chat,
-        "modified_user_id": uid,
-        "name": name,
-        "value": value
+        chat_id: chat,
+        modified_user_id: uid,
+        name: name,
+        value: value
       } as any
     })
     return request
@@ -185,7 +205,7 @@ export function EditPermissionDialog({ uid, username, modifyPermissionDialogID }
             <div className="modal-box">
               <h3 className="font-bold text-lg">{t("Modify permission")}</h3>
               <p className="py-4">
-                <Trans i18nKey="modify-permission-dialog-description">Modify permission of {{username}}.</Trans>
+                <Trans i18nKey="modify-permission-dialog-description">Modify permission of {{ username }}.</Trans>
               </p>
               <div className="flex flex-col">
                 {allPermissions.map(key => (
@@ -198,29 +218,30 @@ export function EditPermissionDialog({ uid, username, modifyPermissionDialogID }
                 ))}
               </div>
               <div className="modal-action">
-                <label htmlFor={modifyPermissionDialogID} className="btn">{t("Close")}</label>
-                <button className="btn" onClick={async () => {
-                  const result = await Promise.all(
-                    allPermissions.map(makeModifyPermissionRequest)
-                  )
-                  queryClient.invalidateQueries({
-                    queryKey: ["user-permission", chat]
-                  })
-                  const success = result
-                    .map(req => !!req.uid)
-                    .reduce((a, b) => a && b)
-                  if (success) {
-                    successAlert(t("Permission has successfully been modified."))
-                  } else {
-                    errorAlert(t("Permission denied."))
+                <label htmlFor={modifyPermissionDialogID} className="btn">
+                  {t("Close")}
+                </label>
+                <button
+                  className="btn"
+                  onClick={async () => {
+                    const result = await Promise.all(allPermissions.map(makeModifyPermissionRequest))
+                    queryClient.invalidateQueries({
+                      queryKey: ["user-permission", chat]
+                    })
+                    const success = result.map(req => !!req.uid).reduce((a, b) => a && b)
+                    if (success) {
+                      successAlert(t("Permission has successfully been modified."))
+                    } else {
+                      errorAlert(t("Permission denied."))
+                    }
+                  }}
+                  disabled={
+                    permissionOriginal == undefined ||
+                    allPermissions.map(a => permissionOriginal[a] == permissions[a]).reduce((a, b) => a && b)
                   }
-                }} disabled={
-                  permissionOriginal == undefined || (
-                    allPermissions
-                      .map((a) => permissionOriginal[a] == permissions[a])
-                      .reduce((a,b) => a && b)
-                  )
-                }>{t("Apply")}</button>
+                >
+                  {t("Apply")}
+                </button>
               </div>
             </div>
           </div>
@@ -229,5 +250,4 @@ export function EditPermissionDialog({ uid, username, modifyPermissionDialogID }
       )}
     </>
   )
-
 }

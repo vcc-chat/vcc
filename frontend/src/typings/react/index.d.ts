@@ -1,3 +1,4 @@
+/* eslint-disable */
 export * from "preact/compat"
 export {
   Attributes,

@@ -57,7 +57,11 @@ class RemoteExport:
         self.service = service
 
     def __getitem__(self, name):
-        return functools.partial(self.service.call, self.namespace, name)
+        return lambda **x:self.service.call(self.namespace, name,x)
+
+
+class SuperService:
+    pass
 
 
 _annotation = typing.TypeVar("annotation", bound=dict)
@@ -115,7 +119,7 @@ class Service(lineReceiver):
         if self.role == RpcServiceRole.CLIENT:
             self.factory.on_con_lost.set_result(True)
 
-    async def call(self, namespace, service, **kwargs):
+    async def call(self, namespace, service, kwargs):
         jobid = str(uuid.uuid4())
         future = asyncio.Future()
         self.jobs[jobid] = future
@@ -127,7 +131,7 @@ class Service(lineReceiver):
     async def a_do_request(self, data):
         service = data["service"]
         namespace = data["namespace"]
-        func = self.factory.services[namespace][service][1]
+        func = self.factory.services[namespace][service]
         request.Service = self
         # FIXME:Dont do the fucking param check and the code will work
         # if len(param.keys())!=getattr(func,"__code__",func).co_argcount-1:
@@ -163,16 +167,66 @@ class Service(lineReceiver):
             case "connect":
                 if self.role == RpcServiceRole.CLIENT:
                     if data["superservice"]:
-                        pass
+                        self.factory.superservice=self
+                        asyncio.get_running_loop().create_task(self.factory.services.rpc.register(namespace="hello"))
             case "respond":
                 self.make_respond(data["jobid"], data["data"])
 
+
+class ServiceTable(dict):
+    def __init__(self, factory):
+        self.factory = factory
+    
+    def __getitem__(self, name):
+        print(name)
+        if name in self:
+            print(self)
+            return self.get(name)
+        if self.factory.superservice:
+            superservice: Service = self.factory.superservice
+            return type(
+                name,
+                (),
+                {
+                    "__getitem__": lambda self, n: functools.partial(
+                        superservice.send, name, n
+                    )
+                },
+            )()
+
+    def __setitem__(self, name, value):
+        dict.__setitem__(self,name,value)
+
+    def __getattr__(self, name):
+        if name in dir(self):
+            return object.__getattr(self,name)
+        if name in self:
+            obj=self.get(name)
+            return type(
+                name,
+                (),
+                {
+                    "__getattr__": lambda self, n: obj[n] 
+                    
+                },
+            )()
+        if self.factory.superservice:
+            superservice: Service = self.factory.superservice
+            return type(
+                name,
+                (),
+                {
+                    "__getattr__": lambda self, n: lambda **x :superservice.call(name,n,x)
+                },
+            )()
+    
 
 class RpcServiceFactory:
     def __init__(self, name, async_mode=False):
         self.name = name
         self.async_mode = async_mode
-        self.services = {}
+        self.services = ServiceTable(self)
+        self.superservice = None
         # service={<namespace>:{<service>:[<annoations>,<ServiceExport>/<RemoteExport>]}}
 
     def buildProtocol(self, *args, **kwargs):
@@ -212,12 +266,12 @@ class RpcServiceFactory:
             }
             for key1, value1 in func.items()
         }
-        services = {x: [annotations[x], func[x]] for x in func.keys()}
-        self.services.update({name: services})
+        self.services.update({name: func})
         # self.funcs.update(services)
 
     async def aconnect(self, host=tools.get_host(), retry=0):
         loop = asyncio.get_running_loop()
+        print(host)
         self.on_con_lost = loop.create_future()
         transport, protocol = await loop.create_connection(
             functools.partial(self.buildProtocol, RpcServiceRole.CLIENT), *host
@@ -239,4 +293,3 @@ class RpcServiceFactory:
 
     def connect(self, *args, **kwargs):
         asyncio.run(self.aconnect(*args, **kwargs))
-

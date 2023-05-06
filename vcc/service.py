@@ -6,8 +6,10 @@ import logging
 import traceback
 import enum
 import uuid
-import tools
-
+try:
+    from . import tools
+except ImportError:
+    import tools
 # from twisted.internet import task ### No more twisted
 # from twisted.internet.defer import Deferred
 # from twisted.internet.protocol import ClientFactory
@@ -131,7 +133,17 @@ class Service(lineReceiver):
     async def a_do_request(self, data):
         service = data["service"]
         namespace = data["namespace"]
-        func = self.factory.services[namespace][service]
+        if namespace in self.factory.services:
+            try:
+                func = self.factory.services[namespace][service]
+            except KeyError:
+                self.send(
+                    res="error",
+                    error="nosuch service",
+                    data=None,
+                    jobid=data["jobid"],
+                )
+
         request.Service = self
         # FIXME:Dont do the fucking param check and the code will work
         # if len(param.keys())!=getattr(func,"__code__",func).co_argcount-1:
@@ -244,7 +256,7 @@ class RpcServiceFactory:
         if name is None:
             name = type(instance).__name__.lower()
         if hasattr(instance, "exports") or hasattr(instance, "exports_async"):
-            services = {
+            func = {
                 i: getattr(instance, i)
                 for i in (
                     getattr(instance, "exports", [])

@@ -17,7 +17,7 @@ from redis.exceptions import (
     ConnectionError,
     TimeoutError
 )
-from typing import Any, Awaitable, Callable, cast, TypedDict, Literal, overload, no_type_check_decorator
+from typing import Any, Awaitable, Callable, cast, Coroutine, TypedDict, Literal, overload, no_type_check_decorator
 from os import getenv
 
 from .tools import check, rpc_request
@@ -130,7 +130,7 @@ class RpcExchanger:
                         json_message: RedisMessage = json_content_untyped
                         if self.recv_hook is not None:
                             recv_hook_return = self.recv_hook(json_message)
-                            if isinstance(recv_hook_return, Awaitable):
+                            if isinstance(recv_hook_return, Coroutine):
                                 asyncio.create_task(recv_hook_return)
                         session: str | None = None
                         username = json_message["username"]

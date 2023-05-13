@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import functools
@@ -17,17 +19,16 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
-request = tools.ContextObject()
 RpcServiceRole = enum.Enum("RpcServiceRole", ["SERVER", "CLIENT"])
 
 
 class ServiceExport:
-    def __init__(self, func=None, async_mode=False, thread=False, instence=None):
-        self.instence = instence
+    def __init__(self, func=None, async_mode=False, thread=False, instance=None):
+        self.instance = instance
         self.async_mode = async_mode
         self.thread = thread
         if func is None:
-            self.func = None
+            self.func: typing.Callable[..., typing.Any] = typing.cast(typing.Any, None)
             return
         self.func = func
         self.__name__ = self.func.__name__
@@ -39,8 +40,8 @@ class ServiceExport:
             self.__name__ = self.func.__name__
             self.__annotations__ = self.func.__annotations__
             return self
-        if self.instence:
-            args = (self.instence,) + args
+        if self.instance:
+            args = (self.instance,) + args
         if self.async_mode:
             return self.func(*args, **kwargs)
         if self.thread:
@@ -49,7 +50,7 @@ class ServiceExport:
             )
 
     def __get__(self, instance, _):
-        self.instence = instance
+        self.instance = instance
         return self
 
 
@@ -66,8 +67,8 @@ class SuperService:
     pass
 
 
-_annotation = typing.TypeVar("annotation", bound=dict)
-T_export = typing.TypeVar("export", bound=ServiceExport)
+Annotation = typing.TypeVar("Annotation", bound=dict)
+Export = typing.TypeVar("Export", bound=ServiceExport)
 
 
 class ServiceMeta(type):
@@ -86,7 +87,7 @@ class ServiceMeta(type):
 class lineReceiver(asyncio.Protocol):
     line_buffer = b""
 
-    def connection_made(self, transport) -> None:
+    def connection_made(self, transport: asyncio.Transport) -> None:
         self.transport = transport
 
     def data_received(self, data: bytes) -> None:
@@ -107,7 +108,7 @@ class Service(lineReceiver):
     def __init__(self, factory, role):
         self.factory: RpcServiceFactory = factory
         self.role = role
-        self.jobs: [asyncio.Future] = {}
+        self.jobs: dict[str, asyncio.Future] = {}
 
     def send(self, **obj):
         self.sendLine(bytes(json.dumps(obj), "UTF8"))
@@ -133,18 +134,17 @@ class Service(lineReceiver):
     async def a_do_request(self, data):
         service = data["service"]
         namespace = data["namespace"]
-        if namespace in self.factory.services:
-            try:
-                func = self.factory.services[namespace][service]
-            except KeyError:
-                self.send(
-                    res="error",
-                    error="nosuch service",
-                    data=None,
-                    jobid=data["jobid"],
-                )
+        try:
+            func = self.factory.services[namespace][service]
+        except KeyError:
+            self.send(
+                res="error",
+                error="nosuch service",
+                data=None,
+                jobid=data["jobid"],
+            )
+            return
 
-        request.Service = self
         # FIXME:Dont do the fucking param check and the code will work
         # if len(param.keys())!=getattr(func,"__code__",func).co_argcount-1:
         #     self.send({"res": "error", "error": "wrong format","jobid": data["jobid"]})
@@ -206,14 +206,16 @@ class ServiceTable(dict):
                 },
             )()
 
-    def __setitem__(self, name, value):
-        dict.__setitem__(self,name,value)
+    # Not required
+    # def __setitem__(self, name, value):
+    #     dict.__setitem__(self,name,value)
 
     def __getattr__(self, name):
-        if name in dir(self):
-            return object.__getattr(self,name)
+        # This is not required since this func is __getattr__ not __getattribute__
+        # if name in dir(self):
+        #     return object.__getattr(self,name)
         if name in self:
-            obj=self.get(name)
+            obj=self[name]
             return type(
                 name,
                 (),
@@ -231,18 +233,15 @@ class ServiceTable(dict):
                     "__getattr__": lambda self, n: lambda **x :superservice.call(name,n,x)
                 },
             )()
+        raise KeyError("No such service")
     
 
 class RpcServiceFactory:
-    def __init__(self, name, async_mode=False):
-        self.name = name
+    def __init__(self, async_mode=False):
         self.async_mode = async_mode
         self.services = ServiceTable(self)
-        self.superservice = None
+        self.superservice: Service | None = None
         # service={<namespace>:{<service>:[<annoations>,<ServiceExport>/<RemoteExport>]}}
-
-    def buildProtocol(self, *args, **kwargs):
-        return Service(self, *args, **kwargs)
 
     # def clientConnectionFailed(self, connector, reason):
     #     log.debug(reason)
@@ -270,38 +269,39 @@ class RpcServiceFactory:
                 for i in dir(instance)
                 if i[0] != "_" and callable(getattr(instance, i))
             }
-        annotations = {
-            key1: {
-                key2: str(value2) if str(value2)[0] != "<" else value2.__name__
-                for key2, value2 in value1.__annotations__.items()
-                if key2 != "return"
-            }
-            for key1, value1 in func.items()
-        }
         self.services.update({name: func})
         # self.funcs.update(services)
 
     async def aconnect(self, host=tools.get_host(), retry=0):
+        if retry > 10:
+            return
         loop = asyncio.get_running_loop()
         print(host)
         self.on_con_lost = loop.create_future()
         transport, protocol = await loop.create_connection(
-            functools.partial(self.buildProtocol, RpcServiceRole.CLIENT), *host
+            functools.partial(Service, self, RpcServiceRole.CLIENT), *host
         )
         await self.on_con_lost
-        asyncio.sleep(2)
-        return await self.aconnect(self, host, retry + 1)
+        await asyncio.sleep(2)
+        return await self.aconnect(host, retry + 1)
 
-    async def alisten(self, host: str, port: int):
+    async def alisten(self, host=tools.get_host()):
         self.role = RpcServiceRole.SERVER
         loop = asyncio.get_running_loop()
         return await (
             await loop.create_server(
-                functools.partial(self.buildProtocol, RpcServiceRole.SERVER),
-                host=host,
-                port=port,
+                functools.partial(Service, self, RpcServiceRole.SERVER),
+                *host
             )
         ).serve_forever()
 
     def connect(self, *args, **kwargs):
         asyncio.run(self.aconnect(*args, **kwargs))
+
+if __name__ == "__main__":
+    try:
+        import uvloop
+        uvloop.install()
+    except ImportError:
+        pass
+    asyncio.run(RpcServiceFactory().alisten())

@@ -77,12 +77,14 @@ export async function inviteLoader({ request }: LoaderFunctionArgs) {
   if (token == null) {
     return redirect("/")
   }
-  const chat = (await makeRequest({
-    type: "chat_invite",
-    uid: 0,
-    usrname: "",
-    msg: token
-  })).msg
+  const chat = (
+    await makeRequest({
+      type: "chat_invite",
+      uid: 0,
+      usrname: "",
+      msg: token
+    })
+  ).msg
   if (chat == null) {
     throw badRequest()
   }
@@ -114,7 +116,6 @@ export async function chatLoader({ params }: LoaderFunctionArgs) {
 
   return new Response()
 }
-
 
 function parseCommand(msg: string) {
   if (!msg.length || msg[0] !== "/") {
@@ -163,7 +164,7 @@ function parseCommand(msg: string) {
         //     user: parsedResult[2],
         //     name: parsedResult[3] as unknown as PermissionKey
         //   }
-        // } else 
+        // } else
         if (parsedResult[1] == "set") {
           const valueRaw = parsedResult[4].toLowerCase()
           const valueNumber = parseInt(valueRaw, 10)
@@ -180,7 +181,6 @@ function parseCommand(msg: string) {
     default:
       return error
   }
-
 }
 
 export async function chatAction({ params, request }: ActionFunctionArgs) {
@@ -208,7 +208,7 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
         return msg as unknown as [number, string][]
       }
     })
-    return data.find(([id, name]) => name == username)?.[0]
+    return data.find(([, name]) => name == username)?.[0]
   }
   console.log(parsedResult)
   if (parsedResult.type == "message" || parsedResult.type == "error") {
@@ -247,23 +247,23 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
     const { uid: success } = await makeRequest({
       type: "chat_modify_user_permission",
       msg: {
-        "chat_id": chat,
-        "modified_user_id": uid,
-        "name": parsedResult.name,
-        "value": parsedResult.value
+        chat_id: chat,
+        modified_user_id: uid,
+        name: parsedResult.name,
+        value: parsedResult.value
       } as any
     })
     return { ok: !!success }
-  } else {
-    const _: never = parsedResult
   }
   return { ok: false }
 }
 
 export function useChatActionData() {
-  return useActionData() as {
-    ok: boolean
-  } | undefined
+  return useActionData() as
+    | {
+        ok: boolean
+      }
+    | undefined
 }
 
 export async function settingsIndexLoader({ params }: LoaderFunctionArgs) {
@@ -375,13 +375,16 @@ export async function loginAction({ request }: ActionFunctionArgs) {
 }
 
 export function useLoginActionData() {
-  return useActionData() as {
-    success: true,
-    token: string
-  } | {
-    success: false,
-    token: null
-  } | undefined
+  return useActionData() as
+    | {
+        success: true
+        token: string
+      }
+    | {
+        success: false
+        token: null
+      }
+    | undefined
 }
 
 export async function registerLoader() {
@@ -401,10 +404,11 @@ export async function registerAction({ request }: ActionFunctionArgs) {
     usrname: username,
     msg: password
   })
-  if (!registerSuccess) return {
-    success: false,
-    token: null
-  }
+  if (!registerSuccess)
+    return {
+      success: false,
+      token: null
+    }
   const { uid, msg } = await makeRequest({
     uid: 0,
     type: "login",

@@ -4,7 +4,6 @@ import { PluginProvider } from "./components/Plugin"
 
 import App from "./App"
 import { queryClient, registerServiceWorker } from "./tools"
-import store from "./store"
 
 import "./index.css"
 import "./i18n"

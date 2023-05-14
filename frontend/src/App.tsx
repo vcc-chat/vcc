@@ -1,18 +1,15 @@
 import { useEffect, useRef } from "preact/hooks"
-import { signal } from "@preact/signals"
 import { lazy, Suspense, memo } from "preact/compat"
 
 import useWebSocket, { ReadyState } from "react-use-websocket"
 import { Route, createBrowserRouter, createRoutesFromElements, RouterProvider } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
-import classNames from "classnames"
 import { useTranslation } from "react-i18next"
 import DoneIcon from "@material-design-icons/svg/outlined/done.svg"
-import ErrorIcon from "@material-design-icons/svg/outlined/error_outline.svg"
 
 import type { Request } from "./config"
 import { Notification } from "./components/Notification"
-import { responseToChatList, useChatList } from "./tools"
+import { responseToChatList } from "./tools"
 import { LoginType } from "./state/login"
 import useStore from "./store"
 import * as loaders from "./loaders"
@@ -72,7 +69,6 @@ function useMessageWebSocket() {
   const queryClient = useQueryClient()
   const loginSuccess = useStore(state => state.type == LoginType.LOGIN_SUCCESS)
   const receiveHook = useStore(state => state.receiveHook)
-  const { names: chatNames, values: chatValues } = useChatList()
   const addMessage = useStore(state => state.addMessage)
   const changeAllChats = useStore(state => state.changeAllChat)
   const setSendJsonMessageRaw = useStore(state => state.setSendJsonMessageRaw)
@@ -160,70 +156,30 @@ function useMessageWebSocket() {
   }, [readyState])
 }
 
-const successAlertOpen = signal(false)
-const errorAlertOpen = signal(false)
-const alertContent = signal("")
-
-function useAlert() {
-  const setSuccessAlert = useStore(state => state.setSuccessAlert)
-  const setErrorAlert = useStore(state => state.setErrorAlert)
-
-  useEffect(() => {
-    setSuccessAlert((content: string) => {
-      successAlertOpen.value = true
-      alertContent.value = content
-      setTimeout(() => {
-        successAlertOpen.value = false
-      }, 5000)
-    })
-  }, [setSuccessAlert])
-
-  useEffect(() => {
-    setErrorAlert((content: string) => {
-      errorAlertOpen.value = true
-      alertContent.value = content
-      setTimeout(() => {
-        errorAlertOpen.value = false
-      }, 5000)
-    })
-  }, [setErrorAlert])
-}
-
 function SubRouter() {
   return <RouterProvider router={router} fallbackElement={<Loading />} />
 }
 
 function Alert() {
   const { t } = useTranslation()
-  useAlert()
+  const alerts = useStore(state => state.alerts)
   return (
     <>
-      <div
-        className={classNames(
-          "alert alert-success shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50",
-          successAlertOpen.value || "hidden"
-        )}
-      >
-        <div>
-          <DoneIcon />
-          <span>
-            {t("Success")}: {alertContent}
-          </span>
+      {alerts.map(({ type, content }) => (
+        <div
+          className={`alert ${
+            type === "success" ? "alert-success" : "alert-error"
+          } shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50`}
+          key={`${type} ${content}`}
+        >
+          <div>
+            <DoneIcon />
+            <span>
+              {t(type[0].toUpperCase() + type.slice(1))}: {content}
+            </span>
+          </div>
         </div>
-      </div>
-      <div
-        className={classNames(
-          "alert alert-error shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50",
-          errorAlertOpen.value || "hidden"
-        )}
-      >
-        <div>
-          <ErrorIcon />
-          <span>
-            {t("Error")}! {alertContent}
-          </span>
-        </div>
-      </div>
+      ))}
     </>
   )
 }

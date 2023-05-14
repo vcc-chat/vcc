@@ -47,11 +47,7 @@ export function Component() {
       msg: "github"
     })
     window.open(url, "_blank", "noopener,noreferrer")
-    const {
-      uid,
-      usrname: username,
-      msg: token
-    } = await makeRequest({
+    const { usrname: username, msg: token } = await makeRequest({
       type: "login_oauth",
       usrname: "github",
       msg: requestID

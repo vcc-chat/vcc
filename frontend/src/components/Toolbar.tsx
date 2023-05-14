@@ -4,7 +4,6 @@ import { useQueryClient, useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
 
 import useStore from "../store"
-import { Request, RequestType } from "../config"
 import { useChatList, useNetwork } from "../tools"
 import { SettingsEditItem, allPermissions, PermissionKey } from "./Settings"
 import { Trans, useTranslation } from "react-i18next"
@@ -14,8 +13,6 @@ export function JoinDialog({ id }: { id: string }) {
   const { makeRequest } = useNetwork()
   const { t } = useTranslation()
 
-  const changeValue = useStore(state => state.changeChat)
-  const changeName = useStore(state => state.changeChatName)
   const navigate = useNavigate()
   const { successAlert, errorAlert } = useNetwork()
   const { refetch } = useChatList()

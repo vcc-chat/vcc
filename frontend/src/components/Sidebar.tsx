@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useId } from "preact/hooks"
 import type { ComponentChildren } from "preact"
-import { useNavigate, type FetcherWithComponents } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import classNames from "classnames"
 import AccountCircle from "@material-design-icons/svg/filled/account_circle.svg"
@@ -12,17 +12,13 @@ import MoreHorizIcon from "@material-design-icons/svg/outlined/more_horiz.svg"
 import PeopleIcon from "@material-design-icons/svg/outlined/people.svg"
 import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
 
-import { MESSAGE_MIME_TYPE, } from "../config"
 import { ChangeNickname, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
 import { stringToColor, useChatList, useNetwork } from "../tools"
 import useStore from "../store"
 import { useTranslation } from "react-i18next"
 import { SidebarMenu } from "./SidebarMenu"
 
-export function NavBar({ toggle, toggleRightSidebar }: {
-  toggle: () => void
-  toggleRightSidebar: () => void
-}) {
+export function NavBar({ toggle, toggleRightSidebar }: { toggle: () => void; toggleRightSidebar: () => void }) {
   const chatName = useStore(state => state.chatName)
   const session = useStore(state => state.session)
   const { t } = useTranslation()
@@ -42,30 +38,36 @@ export function NavBar({ toggle, toggleRightSidebar }: {
             <AccountCircle />
           </label>
           <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
-            <li><a onClick={async () => {
-              useStore.setState({ token: null })
-              location.href = "/login"
-            }}>{t("Logout")}</a></li>
+            <li>
+              <a
+                onClick={async () => {
+                  useStore.setState({ token: null })
+                  location.href = "/login"
+                }}
+              >
+                {t("Logout")}
+              </a>
+            </li>
           </ul>
         </div>
       </div>
-      {session == null && <div className="flex-none">
-        <button className="btn btn-square btn-ghost inline-flex" onClick={toggleRightSidebar}>
-          <PeopleIcon />
-        </button>
-      </div>}
+      {session == null && (
+        <div className="flex-none">
+          <button className="btn btn-square btn-ghost inline-flex" onClick={toggleRightSidebar}>
+            <PeopleIcon />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
-function sendMessage(fetcher: FetcherWithComponents<any>, chat: number, msg: string, session: string | null) {
-  fetcher.submit({ msg, session: session ?? "" }, {
-    method: "post",
-    action: `/chats/${chat}/?index`
-  })
-}
-
-function SubChatSidebarItem({ chat, clickHandler, settingsClickHandler, setOpen }: {
+function SubChatSidebarItem({
+  chat,
+  clickHandler,
+  settingsClickHandler,
+  setOpen
+}: {
   chat: number
   setOpen: (value: boolean) => void
   clickHandler: (value: number, name: string, session: string | null) => void
@@ -74,23 +76,32 @@ function SubChatSidebarItem({ chat, clickHandler, settingsClickHandler, setOpen 
   const chatValue = useStore(state => state.chat)
   const { values: chatValues, names: chatNames } = useChatList()
   const sessions = useStore(state => state.sessions)
-    .filter(([id, session]) => id == chat)
-    .map(([chat, session]) => session)
+    .filter(([id]) => id == chat)
+    .map(([, session]) => session)
   const currentSession = useStore(state => state.session)
   const [fold, setFold] = useState(true)
   return (
     <>
       <li className="py-1 px-2 flex w-full btn-group">
-        <button className={classNames("flex flex-1 btn font-normal normal-case", (chatValue == chat && currentSession == null) ? "btn-primary" : "btn-ghost")} onClick={() => {
+        <button
+          className={classNames(
+            "flex flex-1 btn font-normal normal-case",
+            chatValue == chat && currentSession == null ? "btn-primary" : "btn-ghost"
+          )}
+          onClick={() => {
             setOpen(false)
             clickHandler(chat, chatNames[chatValues.indexOf(chat)], null)
-        }}>
+          }}
+        >
           <div className="ml-2 text-base my-auto mr-auto">{chatNames[chatValues.indexOf(chat)]}</div>
-        </button> 
+        </button>
         {!!sessions.length && (
-          <button className="btn btn-accent" onClick={() => {
-            setFold(!fold)
-          }}>
+          <button
+            className="btn btn-accent"
+            onClick={() => {
+              setFold(!fold)
+            }}
+          >
             {fold ? <ExpandMoreIcon /> : <ExpandLessIcon />}
           </button>
         )}
@@ -98,22 +109,33 @@ function SubChatSidebarItem({ chat, clickHandler, settingsClickHandler, setOpen 
           <TuneIcon />
         </button>
       </li>
-      {!!sessions.length && !fold && sessions.map(session => (
-        <li className="py-1 px-2 flex w-full btn-group" key={session}>
-          <button className={classNames("flex flex-1 btn font-normal normal-case", (chatValue == chat && session == currentSession) ? "btn-accent" : "btn-ghost")} onClick={() => {
-            setOpen(false)
-            clickHandler(chat, chatNames[chatValues.indexOf(chat)], session)
-          }}>
-            <div className="ml-4 text-base my-auto mr-auto">{session}</div>
-          </button>
-        </li>
-      ))}
+      {!!sessions.length &&
+        !fold &&
+        sessions.map(session => (
+          <li className="py-1 px-2 flex w-full btn-group" key={session}>
+            <button
+              className={classNames(
+                "flex flex-1 btn font-normal normal-case",
+                chatValue == chat && session == currentSession ? "btn-accent" : "btn-ghost"
+              )}
+              onClick={() => {
+                setOpen(false)
+                clickHandler(chat, chatNames[chatValues.indexOf(chat)], session)
+              }}
+            >
+              <div className="ml-4 text-base my-auto mr-auto">{session}</div>
+            </button>
+          </li>
+        ))}
     </>
   )
-
 }
 
-function SidebarItem({ value, setOpen, subChats }: {
+function SidebarItem({
+  value,
+  setOpen,
+  subChats
+}: {
   value: number
   setOpen: (value: boolean) => void
   subChats: number[]
@@ -142,78 +164,88 @@ function SidebarItem({ value, setOpen, subChats }: {
   return (
     <>
       <li className="py-1 px-2 flex w-full btn-group">
-        <button className={classNames("flex flex-1 btn font-normal normal-case", chatValue == value ? "btn-primary" : "btn-ghost")} onClick={() => {
-          setOpen(false)
-          clickHandler(value, chatNames[chatValues.indexOf(value)])
-        }}>
+        <button
+          className={classNames(
+            "flex flex-1 btn font-normal normal-case",
+            chatValue == value ? "btn-primary" : "btn-ghost"
+          )}
+          onClick={() => {
+            setOpen(false)
+            clickHandler(value, chatNames[chatValues.indexOf(value)])
+          }}
+        >
           <div className="text-base my-auto mr-auto">{chatNames[chatValues.indexOf(value)]}</div>
-        </button> 
-        <button className={classNames("btn btn-accent", {
-          hidden: !subChats.length
-        })} onClick={() => {
-          setFold(!fold)
-        }}>
+        </button>
+        <button
+          className={classNames("btn btn-accent", {
+            hidden: !subChats.length
+          })}
+          onClick={() => {
+            setFold(!fold)
+          }}
+        >
           {fold ? <ExpandMoreIcon /> : <ExpandLessIcon />}
         </button>
-        <button className="btn btn-secondary" onClick={settingsClickHandler(value, chatNames[chatValues.indexOf(value)])}>
+        <button
+          className="btn btn-secondary"
+          onClick={settingsClickHandler(value, chatNames[chatValues.indexOf(value)])}
+        >
           <TuneIcon />
         </button>
       </li>
-      {!fold && subChats.map(chat => (
-        <SubChatSidebarItem
-          key={chat}
-          chat={chat}
-          setOpen={setOpen}
-          clickHandler={clickHandler}
-          settingsClickHandler={settingsClickHandler}
-        />
-      ))}
+      {!fold &&
+        subChats.map(chat => (
+          <SubChatSidebarItem
+            key={chat}
+            chat={chat}
+            setOpen={setOpen}
+            clickHandler={clickHandler}
+            settingsClickHandler={settingsClickHandler}
+          />
+        ))}
     </>
   )
 }
 
-export function Sidebar({ open, setOpen }: {
-  open: boolean,
-  setOpen: (value: boolean) => void
-}) {
-  const navigate = useNavigate()
+export function Sidebar({ open, setOpen }: { open: boolean; setOpen: (value: boolean) => void }) {
   const { parentChats } = useChatList()
-  const { t } = useTranslation()
 
-  const listCreateItemButtonClickHandler = useCallback(() => {
-    navigate("/chats/create")
-  }, [])
+  const sidebarItems = useMemo(
+    () =>
+      Object.entries<number[]>(parentChats).map(value => (
+        <SidebarItem value={Number(value[0])} setOpen={setOpen} subChats={value[1]} key={value[0]} />
+      )),
+    [parentChats, setOpen]
+  )
 
-  const sidebarItems = useMemo(() => Object.entries<number[]>(parentChats).map(value => (
-    <SidebarItem
-      value={Number(value[0])}
-      setOpen={setOpen}
-      subChats={value[1]}
-      key={value[0]}
-    />
-  )), [parentChats, setOpen])
-
-  const joinChatDialogID = useId()
-  
   return (
     <>
-      <div 
-        aria-hidden={!open} 
-        className={classNames("duration-300 overflow-x-hidden w-full transition-all no-scrollbar sm:max-w-[16rem] sm:w-[16rem]", {
-          "max-w-full w-full overflow-y-auto": open,
-          "max-w-0 overflow-y-hidden": !open
-        })}
+      <div
+        aria-hidden={!open}
+        className={classNames(
+          "duration-300 overflow-x-hidden w-full transition-all no-scrollbar sm:max-w-[16rem] sm:w-[16rem]",
+          {
+            "max-w-full w-full overflow-y-auto": open,
+            "max-w-0 overflow-y-hidden": !open
+          }
+        )}
       >
         <SidebarMenu />
-        <ul className="flex flex-col">
-          {sidebarItems}
-        </ul>
+        <ul className="flex flex-col">{sidebarItems}</ul>
       </div>
     </>
   )
 }
 
-function UserItem({ name, id, online, setHandleUsername, setHandleUserID, first, menu }: {
+function UserItem({
+  name,
+  id,
+  online,
+  setHandleUsername,
+  setHandleUserID,
+  first,
+  menu
+}: {
   name: string
   id: number
   online: boolean
@@ -227,7 +259,7 @@ function UserItem({ name, id, online, setHandleUsername, setHandleUserID, first,
   const letter2 = (characters[1]?.[0] ?? "").toUpperCase()
   const { t } = useTranslation()
   const [show, setShow] = useState(false)
-  const centerIconButtonClickHandler = useCallback((ev: unknown) => {
+  const centerIconButtonClickHandler = useCallback(() => {
     setShow(!show)
     setHandleUsername(name)
     setHandleUserID(id)
@@ -237,11 +269,15 @@ function UserItem({ name, id, online, setHandleUsername, setHandleUserID, first,
       {!first && <div className="divider my-0" />}
       <li className="flex items-start py-2 px-6 my-1">
         <div className={classNames("avatar placeholder text-lg mr-4", online ? "online" : "offline")}>
-          <div className="rounded-full w-10 h-10" style={{
-            backgroundColor: stringToColor(name)
-          }}>
+          <div
+            className="rounded-full w-10 h-10"
+            style={{
+              backgroundColor: stringToColor(name)
+            }}
+          >
             <span className="text-white">
-              {letter1}{letter2}
+              {letter1}
+              {letter2}
             </span>
           </div>
         </div>
@@ -260,10 +296,7 @@ function UserItem({ name, id, online, setHandleUsername, setHandleUserID, first,
   )
 }
 
-export function UsersSidebar({ open, setOpen }: {
-  open: boolean
-  setOpen: (value: boolean) => void
-}) {
+export function UsersSidebar({ open, setOpen }: { open: boolean; setOpen: (value: boolean) => void }) {
   const chat = useStore(state => state.chat)
   const { makeRequest, successAlert, errorAlert } = useNetwork()
   const { refresh: refreshChats, values: chatValues, isLoading: chatValuesLoading } = useChatList()
@@ -291,7 +324,6 @@ export function UsersSidebar({ open, setOpen }: {
     if (!usersData) return
     for (const [uid, nickname] of usersData) {
       queryClient.setQueryData(["get-nickname", chat, uid], nickname)
-
     }
   }, [usersData])
   const { data: permissionRawData } = useQuery({
@@ -368,10 +400,10 @@ export function UsersSidebar({ open, setOpen }: {
     const { uid } = await makeRequest({
       type: "chat_modify_user_permission",
       msg: {
-        "chat_id": chat,
-        "modified_user_id": handleUserID,
-        "name": "banned",
-        "value": ban
+        chat_id: chat,
+        modified_user_id: handleUserID,
+        name: "banned",
+        value: ban
       } as any
     })
     if (uid) {
@@ -388,26 +420,42 @@ export function UsersSidebar({ open, setOpen }: {
 
   const menu = (
     <ul className="menu mt-4 bg-base-100 flex-1 ml-auto dropdown-content whitespace-nowrap" tabIndex={0}>
-      <li><a onClick={handleKickButtonClick}>{t(handleUsername == username ? "Quit" : "Kick")}</a></li>
-      <li><a onClick={handleBanButtonClick}>{t(permissionRawData?.[handleUserID]?.banned ? "Unban" : "Ban")}</a></li>
-      <li><label htmlFor={modifyPermissionDialogID}>{t("Modify Permission")}</label></li>
-      <li><label htmlFor={changeNicknameID}>{t("Change Nickname")}</label></li>
+      <li>
+        <a onClick={handleKickButtonClick}>{t(handleUsername == username ? "Quit" : "Kick")}</a>
+      </li>
+      <li>
+        <a onClick={handleBanButtonClick}>{t(permissionRawData?.[handleUserID]?.banned ? "Unban" : "Ban")}</a>
+      </li>
+      <li>
+        <label htmlFor={modifyPermissionDialogID}>{t("Modify Permission")}</label>
+      </li>
+      <li>
+        <label htmlFor={changeNicknameID}>{t("Change Nickname")}</label>
+      </li>
     </ul>
   )
 
-  const sortedUsers = useMemo(() => (
-    users
-      .sort()
-      .sort((a,b) => -a[2] || +b[2])
-      .sort((a,b) => -(a[0] == username) || +(b[0] == username))
-  ), [users, username])
+  const sortedUsers = useMemo(
+    () =>
+      users
+        .sort()
+        .sort((a, b) => -a[2] || +b[2])
+        .sort((a, b) => -(a[0] == username) || +(b[0] == username)),
+    [users, username]
+  )
 
   return (
-    <div className={classNames("w-full overflow-x-hidden flex transition-all duration-300 no-scrollbar bg-base-100", {
-      "sm:max-w-[18rem] max-w-full sm:w-[18rem] w-full overflow-y-auto": open,
-      "max-w-0 overflow-y-hidden": !open
-    })}>
-      <ModifyPermissionDialog uid={handleUserID} username={handleUsername} modifyPermissionDialogID={modifyPermissionDialogID} />
+    <div
+      className={classNames("w-full overflow-x-hidden flex transition-all duration-300 no-scrollbar bg-base-100", {
+        "sm:max-w-[18rem] max-w-full sm:w-[18rem] w-full overflow-y-auto": open,
+        "max-w-0 overflow-y-hidden": !open
+      })}
+    >
+      <ModifyPermissionDialog
+        uid={handleUserID}
+        username={handleUsername}
+        modifyPermissionDialogID={modifyPermissionDialogID}
+      />
       <ChangeNickname id={changeNicknameID} uid={handleUserID} />
       <ul className="flex-1 flex flex-col py-2 max-w-full">
         <button className="btn btn-ghost btn-circle sm:hidden" onClick={() => setOpen(false)}>
@@ -433,24 +481,27 @@ export function UsersSidebar({ open, setOpen }: {
   )
 }
 
-export function MainLayout({ children }: {
-  children: ComponentChildren
-}) {
+export function MainLayout({ children }: { children: ComponentChildren }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false)
   const session = useStore(state => state.session)
   const toggleCallback = useCallback(() => setSidebarOpen(!sidebarOpen), [setSidebarOpen, sidebarOpen])
-  const toggleRightCallback = useCallback(() => setRightSidebarOpen(!rightSidebarOpen), [setRightSidebarOpen, rightSidebarOpen])
+  const toggleRightCallback = useCallback(
+    () => setRightSidebarOpen(!rightSidebarOpen),
+    [setRightSidebarOpen, rightSidebarOpen]
+  )
   const leftSidebarID = useId()
   return (
     <div className="flex flex-1 overflow-hidden drawer drawer-mobile">
       <input id={leftSidebarID} type="checkbox" className="drawer-toggle" />
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-      <div className={classNames("flex flex-col flex-1 transition-all duration-300 overflow-x-hidden", rightSidebarOpen ? "w-0 sm:w-auto" : sidebarOpen ? "w-0 sm:w-auto" : "w-full")}>
-        <NavBar 
-          toggle={toggleCallback}
-          toggleRightSidebar={toggleRightCallback}
-        />
+      <div
+        className={classNames(
+          "flex flex-col flex-1 transition-all duration-300 overflow-x-hidden",
+          rightSidebarOpen ? "w-0 sm:w-auto" : sidebarOpen ? "w-0 sm:w-auto" : "w-full"
+        )}
+      >
+        <NavBar toggle={toggleCallback} toggleRightSidebar={toggleRightCallback} />
         {children}
       </div>
       {session == null && <UsersSidebar open={rightSidebarOpen} setOpen={setRightSidebarOpen} />}

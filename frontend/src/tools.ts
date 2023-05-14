@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo } from "preact/hooks"
+import { useCallback, useEffect } from "preact/hooks"
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query"
 import { persistQueryClient } from "@tanstack/react-query-persist-client"
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
-import { type Signal, effect } from "@preact/signals"
 
-import type { RequestType, Request, RequestWithTime } from "./config"
+import type { RequestWithTime } from "./config"
 import { LoginType } from "./state/login"
 import useStore from "./store"
 import { wait } from "./loaders"
@@ -76,8 +75,8 @@ export function responseToChatList(data: [number, string, number | null][]) {
   const names = data.map(value => value[1])
   const parentChats = Object.fromEntries(
     data
-      .map<[number, number]>(([a, b, c]) => [c ?? -1, a])
-      .sort(([a, b], [c, d]) => +(a > c))
+      .map<[number, number]>(([a, , c]) => [c ?? -1, a])
+      .sort(([a], [c]) => +(a > c))
       .reduce(
         (a, [b, d]) =>
           (a.length
@@ -86,7 +85,7 @@ export function responseToChatList(data: [number, string, number | null][]) {
         [] as [number, number[]][]
       )
       .map<[number, number[]]>(([a, b], i, arr) =>
-        a == -1 ? [a, b.filter(a => !arr.map(([a, b]) => a).includes(a))] : [a, b]
+        a == -1 ? [a, b.filter(a => !arr.map(([a]) => a).includes(a))] : [a, b]
       )
       .reduce(
         (a, b) => [...a, ...(b[0] == -1 ? b[1].map(a => [a, []] as [number, number[]]) : [b])],
@@ -182,17 +181,6 @@ export function useTitle(title: string) {
   useEffect(() => {
     document.title = title ? `${title} - web-vcc` : "web-vcc: vcc online"
   }, [title])
-}
-
-export function persistSignal<T>(signal: Signal<T>, key: string) {
-  const data = localStorage.getItem(key)
-  if (data) {
-    const obj = JSON.parse(data)
-    signal.value = obj
-  }
-  effect(() => {
-    localStorage.setItem(key, JSON.stringify(signal.value))
-  })
 }
 
 async function getChatRecord(chat: number) {

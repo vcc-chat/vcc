@@ -11,13 +11,11 @@ export default defineConfig(
       build: {
         target: "esnext"
       },
-      plugins: [
-        tauri()
-      ],
+      plugins: [tauri()],
       clearScreen: false,
       server: {
-        open: false,
-      },
+        open: false
+      }
     })
   )
 )

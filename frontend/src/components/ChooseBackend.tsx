@@ -1,12 +1,8 @@
-import { Form, useNavigate } from "react-router-dom"
 import type { TargetedEvent } from "preact/compat"
 import { useEffect, useState } from "preact/hooks"
-import classNames from "classnames"
 import { useTranslation } from "react-i18next"
 
 import useStore from "../store"
-import { useTitle } from "../tools"
-import { useSignal } from "@preact/signals"
 
 function urlCorrect(urlString: string) {
   try {
@@ -16,15 +12,16 @@ function urlCorrect(urlString: string) {
     return false
   }
 }
-const defaultServer = import.meta.env.VITE_DEFAULT_SERVER_ADDRESS || location.origin.replace("http", "ws") + "/ws/"
+const defaultServer: string =
+  import.meta.env.VITE_DEFAULT_SERVER_ADDRESS || location.origin.replace("http", "ws") + "/ws/"
 export default function ChooseBackend() {
   const backendAddress = useStore(state => state.backendAddress)
   const setBackendAddress = useStore(state => state.setBackendAddress)
 
-  const serverAddress = useSignal(defaultServer)
+  const [serverAddress, setServerAddress] = useState(defaultServer)
 
   useEffect(() => {
-    serverAddress.value = backendAddress ?? defaultServer
+    setServerAddress(backendAddress ?? defaultServer)
   }, [backendAddress])
 
   const { t } = useTranslation()
@@ -37,15 +34,15 @@ export default function ChooseBackend() {
           className="input input-bordered input-sm"
           value={serverAddress}
           onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
-            serverAddress.value = ev.currentTarget.value
+            setServerAddress(ev.currentTarget.value)
           }}
         />
         <button
           className="btn btn-primary btn-sm"
-          disabled={backendAddress == serverAddress.value || !urlCorrect(serverAddress.value)}
+          disabled={backendAddress == serverAddress || !urlCorrect(serverAddress)}
           type="button"
           onClick={() => {
-            setBackendAddress(serverAddress.value)
+            setBackendAddress(serverAddress)
           }}
         >
           {t("Change Server")}

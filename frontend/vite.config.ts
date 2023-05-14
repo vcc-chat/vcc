@@ -1,7 +1,6 @@
 import { defineConfig } from "vite"
 import preact from "@preact/preset-vite"
 import legacy from "@vitejs/plugin-legacy"
-import { VitePWA } from "vite-plugin-pwa"
 // import importToCDN, { autoComplete } from "vite-plugin-cdn-import"
 import svgr from "vite-plugin-svgr"
 import banner from "vite-plugin-banner"
@@ -16,7 +15,7 @@ const comment = `
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base:"/",
+  base: "/",
   plugins: [
     preact(),
     legacy({
@@ -80,7 +79,7 @@ export default defineConfig({
   resolve: {
     preserveSymlinks: true,
     alias: {
-      "react": "preact/compat",
+      react: "preact/compat",
       "react-dom": "preact/compat",
       "create-react-class": "preact-compat/lib/create-react-class",
       "react-dom-factories": "preact-compat/lib/react-dom-factories"

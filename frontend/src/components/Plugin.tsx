@@ -215,16 +215,16 @@ const workerInitCode = `(${function () {
         descriptor.configurable = true
         return descriptor
       },
-      getPrototypeOf(_) {
+      getPrototypeOf() {
         return readOnly(Reflect.getPrototypeOf(obj))
       },
       has(_, key) {
         return Reflect.has(obj, key)
       },
-      isExtensible(_) {
+      isExtensible() {
         return false
       },
-      ownKeys(_) {
+      ownKeys() {
         return Reflect.ownKeys(obj)
       },
       preventExtensions() {

@@ -20,7 +20,8 @@ from redis.exceptions import (
 from typing import Any, Awaitable, Callable, cast, Coroutine, TypedDict, Literal, overload, no_type_check_decorator
 from os import getenv
 
-from .tools import check, rpc_request
+from .service import RpcServiceFactory, Service
+from .tools import check, rpc_request, get_host
 
 log = logging.getLogger("vcc")
 log.addHandler(logging.NullHandler())
@@ -49,24 +50,6 @@ class PermissionDeniedError(RpcException):
 class ProviderNotFoundError(RpcException):
     pass
 
-class RpcExchangerRpcHandler2:
-    def __init__(self, exchanger: RpcExchanger,  provider: str) -> None:
-        self._exchanger = exchanger
-        self._provider = provider
-
-    def __getattr__(self, service: str) -> Callable[..., Awaitable[Any]]:
-        async def func(**data: dict[str, Any]) -> Any:
-            return await self._exchanger.rpc_request(self._provider+"/"+service, data)
-            
-        return func
-
-class RpcExchangerRpcHandler:
-    def __init__(self, exchanger: RpcExchanger) -> None:
-        self._exchanger = exchanger
-
-    def __getattr__(self, provider: str) -> RpcExchangerRpcHandler2:
-        return RpcExchangerRpcHandler2(self._exchanger, provider)
-
 class RedisMessage(TypedDict):
     username: str
     msg: str
@@ -87,16 +70,11 @@ class RedisEvent(TypedDict):
 
 class RpcExchanger:
     """Low-level api which is hard to use"""
-    _sock: socket.socket
     _redis: redis.Redis[bytes]
     recv_hook: Callable[[RedisMessage], None | Awaitable[None]] | None
     
     def __init__(self, *, rpc_host: str | None=None, rpc_port: int | None=None, redis_url: str | None=None) -> None:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind(("0.0.0.0", 0))
-        self._sock = sock
-
-        host_env=self.get_host()
+        host_env=get_host()
         rpc_host = host_env[0] if rpc_host is None else rpc_host
         rpc_port = host_env[1] if rpc_port is None else rpc_port
         self._redis_url = getenv("REDIS_URL", "redis://localhost:6379") if redis_url is None else redis_url
@@ -104,17 +82,8 @@ class RpcExchanger:
         self._socket_address = (rpc_host, rpc_port)
         self._redis = redis.Redis.from_url(self._redis_url, retry=Retry(ExponentialBackoff(), 5), retry_on_error=[ConnectionError, TimeoutError], health_check_interval=15)
         self._pubsub_raw: PubSub = self._redis.pubsub(ignore_subscribe_messages=True)
-        self._futures: dict[str, asyncio.Future[Any]] = {}
-        self._recv_lock = asyncio.Lock()
-        self.rpc = RpcExchangerRpcHandler(self)
+        self._rpc_factory = RpcServiceFactory()
         self.client_list: set[RpcExchangerBaseClient] = set()
-
-    def get_host(self) -> tuple[str, int]:
-        if "RPCHOST" in os.environ:
-            host = os.environ["RPCHOST"].split(":")
-            return host[0], int(host[1])
-        else:
-            return ("localhost", 2474)
 
     async def recv_task(self):
         raw_message: Any = None
@@ -167,54 +136,22 @@ class RpcExchanger:
             await self.pubsub.subscribe("events")
             await self.recv_task()
 
-    async def rpc_task(self):
-        while True:
-            try:
-                json_res = json.loads(await self.sock_recvline())
-                if "jobid" not in json_res:
-                    logging.debug(f"{json_res=}")
-                    raise RpcException("packets so fast")
-                future = self._futures[json_res["jobid"]]
-                if "error" in json_res:
-                    match json_res["error"]:
-                        case "no such service":
-                            future.set_exception(RpcException("no such service"))
-                        case "invalid request data type":
-                            future.set_exception(TypeError("invalid request data type"))
-                        case "wrong format":
-                            future.set_exception(TypeError("wrong format"))
-                        case _:
-                            future.set_exception(UnknownError)
-                else:
-                    future.set_result(json_res["data"])
-                del self._futures[json_res["jobid"]]
-            except (BrokenPipeError, socket.error):
-                await self.rpc_reconnect()
-
     async def __aenter__(self) -> RpcExchanger:
-        loop = asyncio.get_event_loop()
-        sock = self._sock
-        sock.setblocking(False)
-        await loop.sock_connect(sock, self._socket_address)
-        await loop.sock_sendall(sock, b'{"type": "handshake","role": "client"}\r\n')
-        await loop.sock_recv(sock, 65536)
+        asyncio.create_task(self._rpc_factory.aconnect())
+
         self.pubsub: PubSub = await self._pubsub_raw.__aenter__()
         await self.pubsub.subscribe("messages")
         await self.pubsub.subscribe("events")
             
         self._recv_task = asyncio.create_task(self.recv_task())
-        self._rpc_task = asyncio.create_task(self.rpc_task())
         return self
 
     async def __aexit__(self, *args: Any) -> None:
         self._recv_task.cancel()
-        self._rpc_task.cancel()
         await self.pubsub.unsubscribe("messages")
         await self.pubsub.unsubscribe("events")
         await self._pubsub_raw.__aexit__(*args)
         await self._redis.close()
-        self._sock.shutdown(socket.SHUT_RDWR)
-        self._sock.close()
 
     async def send_msg(self, uid: int, username: str, msg: str, chat: int, session: str | None=None) -> None:
         log.debug(f"messages")
@@ -236,48 +173,11 @@ class RpcExchanger:
         }))
         log.debug(f"{type=} {chat=}")
 
-    async def sock_recvline(self) -> str:
-        loop = asyncio.get_event_loop()
-        data=b""
-        async with self._recv_lock:
-            while True:
-                recv=await asyncio.shield(loop.sock_recv(self._sock,1))
-
-                if recv!=b'\r':
-                    data+=recv
-                else:
-                    await asyncio.shield(loop.sock_recv(self._sock,1)) # \n
-                    return data.decode()
-    async def rpc_request(self, service: str, data: dict[str, Any]) -> Any:
+    async def rpc_request(self, namespace: str, service: str, data: dict[str, Any]) -> Any:
         log.debug(f"{service=} {data=}")
-        loop = asyncio.get_event_loop()
-        new_uuid = str(uuid.uuid4())
-        try:
-            await asyncio.shield(loop.sock_sendall(self._sock, json.dumps({
-                "type": "request",
-                "service": service,
-                "data": data,
-                "jobid": new_uuid
-            }).encode() + b"\r\n"))
-        except (BrokenPipeError, socket.error):
-            await self.rpc_reconnect()
-        logging.debug(f"{service=}{data=}")
-        future = asyncio.Future[Any]()
-        self._futures[new_uuid] = future
-        result = await future
+        result = await cast(Service, self._rpc_factory.superservice).call(namespace, service, data)
         log.debug(f"{result=}")
         return result
-    
-    async def rpc_reconnect(self) -> None:
-        async with self._recv_lock:
-            loop = asyncio.get_event_loop()
-            self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._sock.bind(("0.0.0.0", 0))
-            self._sock.setblocking(False)
-            await loop.sock_connect(self._sock, self._socket_address)
-            await loop.sock_sendall(self._sock, b'{"type": "handshake","role": "client"}\r\n')
-            await loop.sock_recv(self._sock, 65536)
-
 
     def get_redis_instance(self) -> redis.Redis[bytes]:
         return self._redis
@@ -295,7 +195,6 @@ class RpcExchangerBaseClient:
     _id: int | None
     _name: str | None
     _pubsub: PubSub
-    _rpc: RpcExchangerRpcHandler
     _recv_future: asyncio.Future[tuple[Literal["message"], int, str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]]
     _chat_list_inited: bool
 
@@ -316,7 +215,7 @@ class RpcExchangerBaseClient:
         self._session_list = set()
         self._id = None
         self._name = None
-        self._rpc = self._exchanger.rpc
+        self._rpc = self._exchanger._rpc_factory.services
         self._chat_list_lock = asyncio.Lock()
         self._msg_callback = None
         self._event_callbacks = {}

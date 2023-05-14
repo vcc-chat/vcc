@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import functools
 import typing
@@ -55,7 +56,7 @@ class ServiceExport:
 
 
 class RemoteExport:
-    def __init__(self, service, namespace: str):
+    def __init__(self, service: Service, namespace: str):
         self.namespace = namespace
         self.service = service
 
@@ -65,10 +66,6 @@ class RemoteExport:
 
 class SuperService:
     pass
-
-
-Annotation = typing.TypeVar("Annotation", bound=dict)
-Export = typing.TypeVar("Export", bound=ServiceExport)
 
 
 class ServiceMeta(type):
@@ -186,7 +183,7 @@ class Service(lineReceiver):
 
 
 class ServiceTable(dict):
-    def __init__(self, factory):
+    def __init__(self, factory: RpcServiceFactory):
         self.factory = factory
     
     def __getitem__(self, name):
@@ -201,7 +198,7 @@ class ServiceTable(dict):
                 (),
                 {
                     "__getitem__": lambda self, n: functools.partial(
-                        superservice.send, name, n
+                        superservice.call, name, n
                     )
                 },
             )()
@@ -237,8 +234,7 @@ class ServiceTable(dict):
     
 
 class RpcServiceFactory:
-    def __init__(self, async_mode=False):
-        self.async_mode = async_mode
+    def __init__(self):
         self.services = ServiceTable(self)
         self.superservice: Service | None = None
         # service={<namespace>:{<service>:[<annoations>,<ServiceExport>/<RemoteExport>]}}
@@ -265,7 +261,7 @@ class RpcServiceFactory:
             }
         else:
             func = {
-                i: ServiceExport(getattr(instance, i), async_mode=self.async_mode)
+                i: ServiceExport(getattr(instance, i), async_mode=inspect.iscoroutinefunction(getattr(instance, i)))
                 for i in dir(instance)
                 if i[0] != "_" and callable(getattr(instance, i))
             }

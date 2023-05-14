@@ -30,13 +30,13 @@ def check(*, auth: bool=True, joined: str | None=None, not_joined: str | None=No
         return wrapper # type: ignore
     return decorator
 
-def rpc_request(service: str | None=None, *, id_arg: str | None=None):
+def rpc_request(_service: str | None=None, *, id_arg: str | None=None):
     def decorator(func: T) -> T:
-        _service = service if service is not None else "/".join(func.__name__.split("_", 1))
+        namespace, service = _service.split("/", 1) if _service is not None else func.__name__.split("_", 1)
         signature = inspect.signature(func)
         @wraps(func)
         def wrapper(self: RpcExchangerBaseClient, *args, **kwargs):
-            log.debug(f"{service=} {id_arg=} {_service=} {args=} {kwargs=}")
+            log.debug(f"{namespace=} {service=} {id_arg=} {args=} {kwargs=}")
             bound_signature = signature.bind(self, *args, **kwargs)
             bound_signature.apply_defaults()
             arguments = bound_signature.arguments
@@ -45,7 +45,7 @@ def rpc_request(service: str | None=None, *, id_arg: str | None=None):
                     id_arg: self._id
                 })
             del arguments["self"]
-            return self._exchanger.rpc_request(_service, arguments)
+            return self._exchanger.rpc_request(namespace, service, arguments)
         return wrapper # type: ignore
     return decorator
 

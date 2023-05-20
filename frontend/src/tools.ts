@@ -133,11 +133,6 @@ export function useChatList() {
         queryClient.invalidateQueries({
           queryKey: ["chat-list"]
         })
-      }, [queryClient]),
-      refetch: useCallback(() => {
-        return queryClient.refetchQueries({
-          queryKey: ["chat-list"]
-        })
       }, [queryClient])
     },
     data!

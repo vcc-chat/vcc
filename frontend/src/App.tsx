@@ -6,6 +6,7 @@ import { Route, createBrowserRouter, createRoutesFromElements, RouterProvider } 
 import { useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import DoneIcon from "@material-design-icons/svg/outlined/done.svg"
+import ErrorIcon from "@material-design-icons/svg/outlined/error_outline.svg"
 
 import type { Request } from "./config"
 import { Notification } from "./components/Notification"
@@ -173,7 +174,7 @@ function Alert() {
           key={`${type} ${content}`}
         >
           <div>
-            <DoneIcon />
+            {type === "success" ? <DoneIcon /> : <ErrorIcon />}
             <span>
               {t(type[0].toUpperCase() + type.slice(1))}: {content}
             </span>

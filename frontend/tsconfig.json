@@ -18,7 +18,8 @@
     "jsxImportSource": "preact",
     "paths": {
       "react": ["./src/typings/react"],
-      "react-dom": ["./node_modules/preact/compat/"]
+      "react-dom": ["./node_modules/preact/compat/"],
+      "classnames": ["./node_modules/clsx"]
     }
   },
   "include": ["src", "public/sw.js"],

@@ -1,7 +1,7 @@
 import type { TargetedEvent } from "preact/compat"
 import { useCallback, useEffect } from "preact/hooks"
 import { useNavigate, Form } from "react-router-dom"
-import classNames from "classnames"
+import clsx from "clsx"
 import { useTranslation } from "react-i18next"
 
 import { LoginType } from "../state/login"
@@ -63,7 +63,7 @@ export function Component() {
   return (
     <>
       <div
-        className={classNames("hero min-h-screen bg-base-200", {
+        className={clsx("hero min-h-screen bg-base-200", {
           hidden: loginStatus != LoginType.NOT_LOGIN
         })}
       >

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "preact/hooks"
 import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
-import classNames from "classnames"
+import clsx from "clsx"
 import { useTranslation } from "react-i18next"
 
 // export function notify(title: string, body: string) {
@@ -30,7 +30,7 @@ export function Notification() {
   }, [])
   return (
     <div
-      className={classNames("toast toast-start", {
+      className={clsx("toast toast-start", {
         hidden: !open
       })}
     >

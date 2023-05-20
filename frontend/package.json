@@ -20,7 +20,7 @@
     "@tanstack/react-query-persist-client": "^4.22.0",
     "character-entities-legacy": "^3.0.0",
     "character-reference-invalid": "^2.0.1",
-    "classnames": "^2.3.2",
+    "clsx": "^1.2.1",
     "daisyui": "^2.46.1",
     "date-fns": "^2.29.3",
     "dompurify": "^2.4.3",

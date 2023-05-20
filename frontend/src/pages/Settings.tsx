@@ -1,6 +1,6 @@
 import { memo } from "preact/compat"
 import { useMatches, useNavigate, Outlet } from "react-router-dom"
-import classNames from "classnames"
+import clsx from "clsx"
 import { useTranslation } from "react-i18next"
 import { useTitle } from "../tools"
 import useStore from "../store"
@@ -24,7 +24,7 @@ export const Component = memo(function Settings() {
     <div className="p-8 flex flex-col">
       <div className="tabs mb-4">
         <a
-          className={classNames("tab tab-bordered", {
+          className={clsx("tab tab-bordered", {
             "tab-active": showSettings == "info"
           })}
           onClick={() => {
@@ -34,7 +34,7 @@ export const Component = memo(function Settings() {
           {t("Basic Information")}
         </a>
         <a
-          className={classNames("tab tab-bordered", {
+          className={clsx("tab tab-bordered", {
             "tab-active": showSettings == "actions"
           })}
           onClick={() => {

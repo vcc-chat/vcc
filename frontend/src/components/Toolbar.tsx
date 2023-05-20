@@ -15,7 +15,7 @@ export function JoinDialog({ id }: { id: string }) {
 
   const navigate = useNavigate()
   const { successAlert, errorAlert } = useNetwork()
-  const { refetch } = useChatList()
+  const { refresh } = useChatList()
 
   const joinHandler = useCallback(async () => {
     let chat: number
@@ -30,13 +30,13 @@ export function JoinDialog({ id }: { id: string }) {
       type: "chat_join"
     })
     if (request.uid) {
-      await refetch()
+      await refresh()
       navigate(`/chats/${request.uid}`)
       successAlert(t("You have joined the chat successfully. "))
     } else {
       errorAlert(t("No such chat. "))
     }
-  }, [successAlert, errorAlert, refetch, dialogValue])
+  }, [successAlert, errorAlert, refresh, dialogValue])
   return createPortal(
     <>
       <input type="checkbox" id={id} className="modal-toggle" />

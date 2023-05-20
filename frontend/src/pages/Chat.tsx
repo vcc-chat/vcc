@@ -10,7 +10,7 @@ import remarkDirective from "remark-directive"
 // eslint-disable-next-line import/no-unresolved
 import remarkDirectiveRehype from "remark-directive-rehype"
 // import { PrismAsyncLight as SyntaxHighlighter } from "react-syntax-highlighter"
-import classNames from "classnames"
+import clsx from "clsx"
 // import { materialLight } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN, zhTW, enUS as en } from "date-fns/locale"
@@ -67,13 +67,10 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: RequestW
     return () => clearInterval(interval)
   }, [])
   return (
-    <li key={nowMsg.time} className={classNames("chat", req.usrname == selfUsername ? "chat-end" : "chat-start")}>
+    <li key={nowMsg.time} className={clsx("chat", req.usrname == selfUsername ? "chat-end" : "chat-start")}>
       <MessageAvatar name={username!} />
       <div
-        className={classNames(
-          "chat-header flex space-x-2",
-          req.usrname == selfUsername ? "flex-row-reverse" : "flex-row"
-        )}
+        className={clsx("chat-header flex space-x-2", req.usrname == selfUsername ? "flex-row-reverse" : "flex-row")}
       >
         {username!}
         <div className="text-xs opacity-50 mx-2 my-auto" draggable onDragStart={dragStartHandler}>
@@ -83,7 +80,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: RequestW
         </div>
       </div>
       <div
-        className={classNames(
+        className={clsx(
           "prose prose-headings:text-inherit chat-bubble",
           [
             "chat-bubble-primary",
@@ -341,7 +338,7 @@ export const Component = memo(function Chat() {
           <input type="hidden" name="session" value={session ?? ""} />
           <div className="btn-group absolute bottom-0 right-0">
             <label
-              className={classNames("btn btn-ghost btn-square", {
+              className={clsx("btn btn-ghost btn-square", {
                 "btn-disabled": chat == null || !ready
               })}
               htmlFor={fileUploadDialogID}

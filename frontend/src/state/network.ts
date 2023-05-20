@@ -33,9 +33,9 @@ const createNetworkSlice: StateCreator<NetworkState> = (set, get) => ({
     }))
   },
   async sendJsonMessage(req: Request) {
-    while (!get().sendJsonMessageRaw) await wait()
-    const { sendJsonMessageRaw } = get()
-    sendJsonMessageRaw!(req)
+    let sendJsonMessageRaw
+    while (!(sendJsonMessageRaw = get().sendJsonMessageRaw)) await wait()
+    sendJsonMessageRaw(req)
   },
   async makeRequest(request) {
     const { sendJsonMessage } = get()
@@ -51,7 +51,7 @@ const createNetworkSlice: StateCreator<NetworkState> = (set, get) => ({
       set(state => ({
         handleFunctionList: {
           ...state.handleFunctionList,
-          [uuid!]: res
+          [uuid]: res
         }
       }))
     })

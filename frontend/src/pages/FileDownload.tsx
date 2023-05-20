@@ -23,7 +23,6 @@ export function Component() {
       element.download = name
       element.href = URL.createObjectURL(content)
       element.target = "_blank"
-      ;(window as any).e = element
       element.click()
       if (history.length == 1) {
         navigate("/")

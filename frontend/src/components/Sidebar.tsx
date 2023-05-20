@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useId } from "preact/hooks"
 import type { ComponentChildren } from "preact"
 import { useNavigate } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import classNames from "classnames"
+import clsx from "clsx"
 import AccountCircle from "@material-design-icons/svg/filled/account_circle.svg"
 import MenuIcon from "@material-design-icons/svg/outlined/menu.svg"
 import TuneIcon from "@material-design-icons/svg/outlined/tune.svg"
@@ -84,7 +84,7 @@ function SubChatSidebarItem({
     <>
       <li className="py-1 px-2 flex w-full btn-group">
         <button
-          className={classNames(
+          className={clsx(
             "flex flex-1 btn font-normal normal-case",
             chatValue == chat && currentSession == null ? "btn-primary" : "btn-ghost"
           )}
@@ -114,7 +114,7 @@ function SubChatSidebarItem({
         sessions.map(session => (
           <li className="py-1 px-2 flex w-full btn-group" key={session}>
             <button
-              className={classNames(
+              className={clsx(
                 "flex flex-1 btn font-normal normal-case",
                 chatValue == chat && session == currentSession ? "btn-accent" : "btn-ghost"
               )}
@@ -165,10 +165,7 @@ function SidebarItem({
     <>
       <li className="py-1 px-2 flex w-full btn-group">
         <button
-          className={classNames(
-            "flex flex-1 btn font-normal normal-case",
-            chatValue == value ? "btn-primary" : "btn-ghost"
-          )}
+          className={clsx("flex flex-1 btn font-normal normal-case", chatValue == value ? "btn-primary" : "btn-ghost")}
           onClick={() => {
             setOpen(false)
             clickHandler(value, chatNames[chatValues.indexOf(value)])
@@ -177,7 +174,7 @@ function SidebarItem({
           <div className="text-base my-auto mr-auto">{chatNames[chatValues.indexOf(value)]}</div>
         </button>
         <button
-          className={classNames("btn btn-accent", {
+          className={clsx("btn btn-accent", {
             hidden: !subChats.length
           })}
           onClick={() => {
@@ -222,7 +219,7 @@ export function Sidebar({ open, setOpen }: { open: boolean; setOpen: (value: boo
     <>
       <div
         aria-hidden={!open}
-        className={classNames(
+        className={clsx(
           "duration-300 overflow-x-hidden w-full transition-all no-scrollbar sm:max-w-[16rem] sm:w-[16rem]",
           {
             "max-w-full w-full overflow-y-auto": open,
@@ -268,7 +265,7 @@ function UserItem({
     <>
       {!first && <div className="divider my-0" />}
       <li className="flex items-start py-2 px-6 my-1">
-        <div className={classNames("avatar placeholder text-lg mr-4", online ? "online" : "offline")}>
+        <div className={clsx("avatar placeholder text-lg mr-4", online ? "online" : "offline")}>
           <div
             className="rounded-full w-10 h-10"
             style={{
@@ -446,7 +443,7 @@ export function UsersSidebar({ open, setOpen }: { open: boolean; setOpen: (value
 
   return (
     <div
-      className={classNames("w-full overflow-x-hidden flex transition-all duration-300 no-scrollbar bg-base-100", {
+      className={clsx("w-full overflow-x-hidden flex transition-all duration-300 no-scrollbar bg-base-100", {
         "sm:max-w-[18rem] max-w-full sm:w-[18rem] w-full overflow-y-auto": open,
         "max-w-0 overflow-y-hidden": !open
       })}
@@ -496,7 +493,7 @@ export function MainLayout({ children }: { children: ComponentChildren }) {
       <input id={leftSidebarID} type="checkbox" className="drawer-toggle" />
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       <div
-        className={classNames(
+        className={clsx(
           "flex flex-col flex-1 transition-all duration-300 overflow-x-hidden",
           rightSidebarOpen ? "w-0 sm:w-auto" : sidebarOpen ? "w-0 sm:w-auto" : "w-full"
         )}

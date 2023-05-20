@@ -234,7 +234,7 @@ class ServiceTable(dict):
     
 
 class RpcServiceFactory:
-    def __init__(self):
+    def __init__(self, name=None, async_mode=True):
         self.services = ServiceTable(self)
         self.superservice: Service | None = None
         # service={<namespace>:{<service>:[<annoations>,<ServiceExport>/<RemoteExport>]}}

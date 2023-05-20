@@ -151,7 +151,7 @@ function useMessageWebSocket() {
     if (readyState !== ReadyState.CLOSED) return
     const timeout = setTimeout(() => {
       console.log({ errorAlert })
-      errorAlert!("Oh No! An unexpected error has occurred. ")
+      errorAlert("Oh No! The connection between server and client is interupted, reconnecting...")
     }, 2000)
     return () => clearTimeout(timeout)
   }, [readyState])

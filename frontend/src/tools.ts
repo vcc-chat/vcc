@@ -36,8 +36,8 @@ export function useNetwork() {
   const errorAlert = useStore(errorAlertSelector)
   return {
     makeRequest,
-    successAlert: successAlert!,
-    errorAlert: errorAlert!
+    successAlert,
+    errorAlert
   }
 }
 

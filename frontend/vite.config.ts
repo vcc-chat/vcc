@@ -14,13 +14,17 @@ const comment = `
 `.slice(1, -1)
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: "/",
   plugins: [
     preact(),
-    legacy({
-      targets: ["defaults", "not IE 11"]
-    }),
+    ...(mode === "production"
+      ? [
+          legacy({
+            targets: ["defaults", "not IE 11"]
+          })
+        ]
+      : []),
     // VitePWA({
     //   registerType: "autoUpdate",
     //   devOptions: {
@@ -89,4 +93,4 @@ export default defineConfig({
   server: {
     port: 3000
   }
-})
+}))

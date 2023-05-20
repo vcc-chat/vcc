@@ -16,6 +16,7 @@ const alertCloseTime = 5000
 
 const createAlertSlice: StateCreator<AlertState> = (set, get) => ({
   createAlert(newAlert) {
+    console.trace()
     set(({ alerts }) => ({
       alerts: alerts.concat(newAlert)
     }))

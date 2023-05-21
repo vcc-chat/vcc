@@ -88,11 +88,11 @@ class lineReceiver(asyncio.Protocol):
         self.transport = transport
 
     def data_received(self, data: bytes) -> None:
-        self.line_buffer += data
-        if data.endswith(b"\n"):
-            print(self.line_buffer)
-            self.line_received(self.line_buffer.decode())
-            self.line_buffer = b""
+        datas = data.split(b"\r\n")
+        datas[0] = self.line_buffer + datas[0]
+        self.line_buffer = datas.pop()
+        for i in datas:
+            self.line_received(i.decode())
 
     def sendLine(self, data):
         self.transport.write(data + b"\r\n")

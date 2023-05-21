@@ -293,12 +293,3 @@ class RpcServiceFactory:
 
     def connect(self, *args, **kwargs):
         asyncio.run(self.aconnect(*args, **kwargs))
-
-if __name__ == "__main__":
-    try:
-        import uvloop
-        uvloop.install()
-    except ImportError:
-        pass
-    logging.basicConfig(level=logging.DEBUG)
-    asyncio.run(RpcServiceFactory().alisten())

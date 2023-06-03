@@ -376,7 +376,7 @@ class RpcExchangerClient(RpcExchangerBaseClient):
             await self._rpc.login.add_online(id=uid)
             return uid, token
         return login_result
-    async def token_login(self, token: str) -> int | None:
+    async def token_login(self, token: str) -> tuple[int, str] | None:
         if self._id is not None and self._name is not None:
             return self._id
         uid, username = await self._rpc.login.token_login(token)
@@ -384,7 +384,7 @@ class RpcExchangerClient(RpcExchangerBaseClient):
             self._id = uid
             self._name = username
             await self._rpc.login.add_online(id=uid)
-        return uid
+        return uid, username
 
     async def request_oauth(self,platform:str)-> tuple[str,str]:
         provider_name="oauth_"+platform

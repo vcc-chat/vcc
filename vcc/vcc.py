@@ -82,7 +82,7 @@ class RpcExchanger:
         self._socket_address = (rpc_host, rpc_port)
         self._redis = redis.Redis.from_url(self._redis_url, retry=Retry(ExponentialBackoff(), 5), retry_on_error=[ConnectionError, TimeoutError], health_check_interval=15)
         self._pubsub_raw: PubSub = self._redis.pubsub(ignore_subscribe_messages=True)
-        self._rpc_factory = RpcServiceFactory()
+        self._rpc_factory = RpcServiceFactory(name="")
         self.client_list: set[RpcExchangerBaseClient] = set()
 
     async def recv_task(self):
@@ -365,15 +365,27 @@ class RpcExchangerBaseClient:
     
 
 class RpcExchangerClient(RpcExchangerBaseClient):
-    async def login(self, username: str, password: str) -> int | None:
+    async def login(self, username: str, password: str) -> tuple[int, str] | None:
+        if self._id is not None and self._name is not None:
+            return
+        login_result: tuple[int, str] | None = await self._rpc.login.login(username=username, password=password)
+        if login_result is not None:
+            uid, token = login_result
+            self._id = uid
+            self._name = username
+            await self._rpc.login.add_online(id=uid)
+            return uid, token
+        return login_result
+    async def token_login(self, token: str) -> int | None:
         if self._id is not None and self._name is not None:
             return self._id
-        uid: int | None = await self._rpc.login.login(username=username, password=password)
+        uid, username = await self._rpc.login.token_login(token)
         if uid is not None:
             self._id = uid
             self._name = username
             await self._rpc.login.add_online(id=uid)
         return uid
+
     async def request_oauth(self,platform:str)-> tuple[str,str]:
         provider_name="oauth_"+platform
         providers=await self._rpc.rpc.list_providers()

@@ -96,40 +96,30 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                 login_result = await client.login(username, msg)
                 if login_result is not None:
                     await client.chat_list()
-                    token = jwt.encode({
-                        "username": username,
-                        "uid": login_result,
-                        "exp": datetime.now(tz=timezone.utc) + timedelta(days=14)
-                    }, key, "HS512")
+                    token = login_result[1]
                 else:
                     token = ""
                 await send(
-                    uid=cast(Any, None if login_result is None else int(login_result)),
+                    uid=cast(Any, None if login_result is None else login_result[0]),
                     msg=token
                 )
                 if login_result is not None:
-                    value = await client.chat_list()
+                    value = await client.chat_list()  
                     logging.debug(f"{value=}")
                     await send("chat_list", msg=cast(Any, value))
             case "token_login":
-                try:
-                    result = jwt.decode(msg, key, ["HS512"])
+                login_result = await client.token_login(token)
+                if login_result is not None:
                     new_username: str = result["username"]
                     new_uid: int = result["uid"]
-                    # Dangerous! Don't do it in your own project.
-                    client._id = result["uid"]
-                    client._name = result["username"]
                     await client.chat_list()
                     await send(
                         uid=new_uid,
                         username=new_username
                     )
                     await client.add_online()
-                except (jwt.DecodeError, KeyError) as e:
-                    await send(
-                        uid=cast(Any, None),
-                        username=""
-                    )
+                else:
+                    await send(uid=cast(Any, None), username="")
             case "request_oauth":
                 url, request_id = await client.request_oauth(msg)
                 await send(username=request_id, msg=url)

@@ -6,6 +6,7 @@ import string
 import json
 import uuid
 
+from pathlib import Path
 from typing import Any, Callable, cast
 
 # from aiohttp.http_websocket import PACK_LEN1
@@ -13,6 +14,7 @@ from peewee import *
 
 import base
 import models
+import jwt
 
 db = models.get_database()
 
@@ -26,9 +28,16 @@ def random_string(length: int) -> str:
         for _ in range(length)
     )
 
+config_path = Path(__file__).parent / "config.json"
+if not config_path.is_file():
+    config_path.touch(0o700)
+    config_path.write_text(json.dumps({
+        "jwt_key": random_string(20)
+    }))
+jwt_key: str = json.loads(config_path.read_text())["jwt_key"]
 
 class Login:
-    def login(self, username: str, password: str) -> int | None:
+    def login(self, username: str, password: str) -> tuple[int, str] | None:
         if username == "system":
             return None
         user = User.get_or_none(User.name == username)
@@ -41,7 +50,19 @@ class Login:
         ).hexdigest()
         if hashed_password != user.password:
             return None
-        return user.id
+        return user.id, jwt.encode({
+            "id": id,
+            "name": username
+        }, jwt_key, algorithm="HS512")
+    
+    def token_login(self, token: str) -> tuple[int, str] | None:
+        try:
+            decoded_content = jwt.decode(token, jwt_key, algorithms=["HS512"])
+            id = decoded_content["id"]
+            name = decoded_content["name"]
+            return id, name
+        except jwt.DecodeError:
+            return None
 
     def register(self, username, password, oauth=None, oauth_data=None):
         if username == "system":

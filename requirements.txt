@@ -6,3 +6,4 @@ aiohttp
 pymysql
 redis
 vcc-lib
+PyJWT==2.7.0

@@ -48,7 +48,8 @@ def rpc_request(_service: str | None=None, *, id_arg: str | None=None):
             return self._exchanger.rpc_request(namespace, service, arguments)
         return wrapper # type: ignore
     return decorator
-
+def list_get_default(l,index,default=None):
+    return l[index] if index < len(l) else default
 def get_host() -> tuple[str, int]:
     if "RPCHOST" in os.environ:
         host = os.environ["RPCHOST"].split(":")

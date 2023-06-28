@@ -113,7 +113,7 @@ class Service(lineReceiver):
     def connection_made(self, transport):
         self.transport = transport
         if self.role == RpcServiceRole.SERVER:
-            self.send(type="connect", superservice="rpc" in self.factory.services)
+            self.send(type="connect",  capacity=list(self.factory.services["rpc"].keys()))
 
     def connection_lost(self, exc: Exception | None):
         if self.role == RpcServiceRole.CLIENT:
@@ -175,7 +175,7 @@ class Service(lineReceiver):
                 asyncio.create_task(self.a_do_request(data))
             case "connect":
                 if self.role == RpcServiceRole.CLIENT:
-                    if data["superservice"]:
+                    if "register" in data["capacity"]:
                         self.factory.superservice=self
                         asyncio.get_running_loop().create_task(self.factory.services.rpc.register(namespace="hello"))
             case "respond":
@@ -187,9 +187,7 @@ class ServiceTable(dict):
         self.factory = factory
     
     def __getitem__(self, name):
-        print(name)
         if name in self:
-            print(self)
             return self.get(name)
         if self.factory.superservice:
             superservice: Service = self.factory.superservice
@@ -236,7 +234,8 @@ class ServiceTable(dict):
 class RpcServiceFactory:
     def __init__(self, name=None, async_mode=True):
         self.services = ServiceTable(self)
-        self.superservice: Service | None = None
+        self.connections=[None]
+        self.superservice: Service | None = property(lambda: tools.list_get_default(self.connections,0))
         # service={<namespace>:{<service>:[<annoations>,<ServiceExport>/<RemoteExport>]}}
 
     # def clientConnectionFailed(self, connector, reason):

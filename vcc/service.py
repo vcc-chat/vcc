@@ -183,7 +183,7 @@ class Service(lineReceiver):
                 if self.role == RpcServiceRole.CLIENT:
                     if "register" in data["capacity"]:
                         print(self.factory.superservice)
-                        asyncio.get_running_loop().create_task(self.factory.services.rpc.register(namespace="hello"))
+                        asyncio.get_running_loop().create_task(self.factory.services.rpc.register(namespace=list(self.factory.services.keys())))
             case "respond":
                 self.make_respond(data["jobid"], data["data"])
 
@@ -214,7 +214,7 @@ class ServiceTable(dict):
 
     def __getattr__(self, name):
         if name in dir(self):
-            return object.__getattr(self, name)
+            return object.__getattr__(self, name)
         if name in self:
             obj = self.get(name)
             return type(

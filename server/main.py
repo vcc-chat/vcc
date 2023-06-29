@@ -8,12 +8,12 @@ class rpc():
     def __init__(self,factory:service.RpcServiceFactory):
         self.factory=factory
     def register(self,namespace:list):
-        service=request_context.Service
+        svc=request_context.Service
         if type(namespace)==str:
-            self.factory.services[namespace]=service
+            self.factory.services[namespace]=service.RemoteExport(svc,namespace)
             return
         for i in namespace:
-            self.factory.services[i]=service
+            self.factory.services[i]=service.RemoteExport(svc,i)
 
 if __name__=="__main__":
     server=service.RpcServiceFactory()

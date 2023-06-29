@@ -51,7 +51,7 @@ class Login:
         if hashed_password != user.password:
             return None
         return user.id, jwt.encode({
-            "id": id,
+            "id": user.id,
             "name": username
         }, jwt_key, algorithm="HS512")
     
@@ -176,6 +176,6 @@ class Login:
 
 if __name__ == "__main__":
     db.create_tables([User, UserMetadata])
-    server = base.RpcServiceFactory("login")
+    server = base.RpcServiceFactory()
     server.register(Login())
     server.connect()

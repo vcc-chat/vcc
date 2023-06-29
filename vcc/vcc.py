@@ -82,7 +82,7 @@ class RpcExchanger:
         self._socket_address = (rpc_host, rpc_port)
         self._redis = redis.Redis.from_url(self._redis_url, retry=Retry(ExponentialBackoff(), 5), retry_on_error=[ConnectionError, TimeoutError], health_check_interval=15)
         self._pubsub_raw: PubSub = self._redis.pubsub(ignore_subscribe_messages=True)
-        self._rpc_factory = RpcServiceFactory(name="")
+        self._rpc_factory = RpcServiceFactory()
         self.client_list: set[RpcExchangerBaseClient] = set()
 
     async def recv_task(self):

@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import logging
 import os
-
+import contextvars
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, TypeVar
 
@@ -13,6 +13,19 @@ if TYPE_CHECKING:
 T = TypeVar("T", bound=Callable)
 
 log = logging.getLogger("vcc")
+
+class ContextObject(object):
+    def __init__(self):
+        object.__setattr__(
+            self, "_context", contextvars.ContextVar("context", default={})
+        )
+
+    def __getattr__(self, name):
+        return self._context.get().get(name, None)
+
+    def __setattr__(self, name, value):
+        self._context.set(self._context.get() | {name: value})
+
 
 def check(*, auth: bool=True, joined: str | None=None, not_joined: str | None=None):
     def decorator(func: T) -> T:

@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import asyncio
@@ -21,7 +22,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 RpcServiceRole = enum.Enum("RpcServiceRole", ["SERVER", "CLIENT"])
-
+request_context=tools.ContextObject()
 
 class ServiceExport:
     def __init__(self, func=None, async_mode=False, thread=False, instance=None):
@@ -49,7 +50,9 @@ class ServiceExport:
             return asyncio.get_running_loop().run_in_executor(
                 None, lambda: self.func(*args, **kwargs)
             )
-
+        future=asyncio.Future()
+        future.set_result(self.func(*args, **kwargs))
+        return future
     def __get__(self, instance, _):
         self.instance = instance
         return self
@@ -114,7 +117,9 @@ class Service(lineReceiver):
         self.transport = transport
         if self.role == RpcServiceRole.SERVER:
             self.send(type="connect",  capacity=list(self.factory.services["rpc"].keys()))
-
+        else:
+            print(self.factory.connections)
+            self.factory.connections.append(self)
     def connection_lost(self, exc: Exception | None):
         if self.role == RpcServiceRole.CLIENT:
             self.factory.on_con_lost.set_result(True)
@@ -131,6 +136,7 @@ class Service(lineReceiver):
     async def a_do_request(self, data):
         service = data["service"]
         namespace = data["namespace"]
+        request_context.Service=self
         try:
             func = self.factory.services[namespace][service]
         except KeyError:
@@ -176,18 +182,20 @@ class Service(lineReceiver):
             case "connect":
                 if self.role == RpcServiceRole.CLIENT:
                     if "register" in data["capacity"]:
-                        self.factory.superservice=self
+                        print(self.factory.superservice)
                         asyncio.get_running_loop().create_task(self.factory.services.rpc.register(namespace="hello"))
             case "respond":
                 self.make_respond(data["jobid"], data["data"])
 
 
 class ServiceTable(dict):
-    def __init__(self, factory: RpcServiceFactory):
+    def __init__(self, factory):
         self.factory = factory
-    
+
     def __getitem__(self, name):
+        print(name)
         if name in self:
+            print(self)
             return self.get(name)
         if self.factory.superservice:
             superservice: Service = self.factory.superservice
@@ -196,28 +204,23 @@ class ServiceTable(dict):
                 (),
                 {
                     "__getitem__": lambda self, n: functools.partial(
-                        superservice.call, name, n
+                        superservice.send, name, n
                     )
                 },
             )()
 
-    # Not required
-    # def __setitem__(self, name, value):
-    #     dict.__setitem__(self,name,value)
+    def __setitem__(self, name, value):
+        dict.__setitem__(self, name, value)
 
     def __getattr__(self, name):
-        # This is not required since this func is __getattr__ not __getattribute__
-        # if name in dir(self):
-        #     return object.__getattr(self,name)
+        if name in dir(self):
+            return object.__getattr(self, name)
         if name in self:
-            obj=self[name]
+            obj = self.get(name)
             return type(
                 name,
                 (),
-                {
-                    "__getattr__": lambda self, n: obj[n] 
-                    
-                },
+                {"__getattr__": lambda self, n: obj[n]},
             )()
         if self.factory.superservice:
             superservice: Service = self.factory.superservice
@@ -225,17 +228,18 @@ class ServiceTable(dict):
                 name,
                 (),
                 {
-                    "__getattr__": lambda self, n: lambda **x :superservice.call(name,n,x)
+                    "__getattr__": lambda self, n: lambda **x: superservice.call(
+                        name, n, x
+                    )
                 },
             )()
-        raise KeyError("No such service")
-    
+
 
 class RpcServiceFactory:
-    def __init__(self, name=None, async_mode=True):
+    superservice: Service | None = property(lambda self: tools.list_get_default(self.connections,0))
+    def __init__(self):
         self.services = ServiceTable(self)
-        self.connections=[None]
-        self.superservice: Service | None = property(lambda: tools.list_get_default(self.connections,0))
+        self.connections=[]
         # service={<namespace>:{<service>:[<annoations>,<ServiceExport>/<RemoteExport>]}}
 
     # def clientConnectionFailed(self, connector, reason):
@@ -246,7 +250,7 @@ class RpcServiceFactory:
     #     log.debug(reason)
     #     self.done.callback(None)
 
-    def register(self, instance, name=None):
+    def register(self, instance, name=None,async_mode=False):
         if name is None:
             name = type(instance).__name__.lower()
         if hasattr(instance, "exports") or hasattr(instance, "exports_async"):
@@ -260,10 +264,18 @@ class RpcServiceFactory:
             }
         else:
             func = {
-                i: ServiceExport(getattr(instance, i), async_mode=inspect.iscoroutinefunction(getattr(instance, i)))
+                i: ServiceExport(getattr(instance, i), async_mode=async_mode)
                 for i in dir(instance)
                 if i[0] != "_" and callable(getattr(instance, i))
             }
+        annotations = {
+            key1: {
+                key2: str(value2) if str(value2)[0] != "<" else value2.__name__
+                for key2, value2 in value1.__annotations__.items()
+                if key2 != "return"
+            }
+            for key1, value1 in func.items()
+        }
         self.services.update({name: func})
         # self.funcs.update(services)
 

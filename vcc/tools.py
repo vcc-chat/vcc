@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 import logging
 import os
-
+import contextvars
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, TypeVar
 
@@ -14,6 +14,19 @@ T = TypeVar("T", bound=Callable)
 
 log = logging.getLogger("vcc")
 log.addHandler(logging.NullHandler())
+
+class ContextObject(object):
+    def __init__(self):
+        object.__setattr__(
+            self, "_context", contextvars.ContextVar("context", default={})
+        )
+
+    def __getattr__(self, name):
+        return self._context.get().get(name, None)
+
+    def __setattr__(self, name, value):
+        self._context.set(self._context.get() | {name: value})
+
 
 def check(*, auth: bool=True, joined: str | None=None, not_joined: str | None=None):
     def decorator(func: T) -> T:
@@ -31,13 +44,13 @@ def check(*, auth: bool=True, joined: str | None=None, not_joined: str | None=No
         return wrapper # type: ignore
     return decorator
 
-def rpc_request(service: str | None=None, *, id_arg: str | None=None):
+def rpc_request(_service: str | None=None, *, id_arg: str | None=None):
     def decorator(func: T) -> T:
-        _service = service if service is not None else "/".join(func.__name__.split("_", 1))
+        namespace, service = _service.split("/", 1) if _service is not None else func.__name__.split("_", 1)
         signature = inspect.signature(func)
         @wraps(func)
         def wrapper(self: RpcExchangerBaseClient, *args, **kwargs):
-            log.debug(f"{service=} {id_arg=} {_service=} {args=} {kwargs=}")
+            log.debug(f"{namespace=} {service=} {id_arg=} {args=} {kwargs=}")
             bound_signature = signature.bind(self, *args, **kwargs)
             bound_signature.apply_defaults()
             arguments = bound_signature.arguments
@@ -46,11 +59,12 @@ def rpc_request(service: str | None=None, *, id_arg: str | None=None):
                     id_arg: self._id
                 })
             del arguments["self"]
-            return self._exchanger.rpc_request(_service, arguments)
+            return self._exchanger.rpc_request(namespace, service, arguments)
         return wrapper # type: ignore
     return decorator
-
-def get_host(self) -> tuple[str, int]:
+def list_get_default(l,index,default=None):
+    return l[index] if index < len(l) else default
+def get_host() -> tuple[str, int]:
     if "RPCHOST" in os.environ:
         host = os.environ["RPCHOST"].split(":")
         return host[0], int(host[1])

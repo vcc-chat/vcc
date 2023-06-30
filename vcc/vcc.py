@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import redis.asyncio as redis
+import socket
 import logging
 import json
 import warnings
 import uuid
 import os
 
+from functools import wraps
 from redis.asyncio.client import PubSub
 from redis.backoff import ExponentialBackoff
 from redis.asyncio.retry import Retry
@@ -15,32 +17,38 @@ from redis.exceptions import (
     ConnectionError,
     TimeoutError
 )
-from typing import *
+from typing import Any, Awaitable, Callable, cast, Coroutine, TypedDict, Literal, overload, no_type_check_decorator
 from os import getenv
 
-from .tools import *
-from .protocol import build_protocol
+from .service import RpcServiceFactory, Service
+from .tools import check, rpc_request, get_host
+
+log = logging.getLogger("vcc")
+log.addHandler(logging.NullHandler())
 
 ChatUserPermissionName = Literal["kick", "rename", "invite", "modify_permission", "send"]
 ChatPermissionName = Literal["public"]
 
-class RpcExchangerRpcHandler2:
-    def __init__(self, exchanger: RpcExchanger,  provider: str) -> None:
-        self._exchanger = exchanger
-        self._provider = provider
+class RpcException(Exception):
+    pass
 
-    def __getattr__(self, service: str) -> Callable[..., Awaitable[Any]]:
-        async def func(**data: dict[str, Any]) -> Any:
-            return await self._exchanger.rpc_request(self._provider+"/"+service, data)
-            
-        return func
+class ChatAlreadyJoinedError(RpcException):
+    pass
 
-class RpcExchangerRpcHandler:
-    def __init__(self, exchanger: RpcExchanger) -> None:
-        self._exchanger = exchanger
+class ChatNotJoinedError(RpcException):
+    pass
 
-    def __getattr__(self, provider: str) -> RpcExchangerRpcHandler2:
-        return RpcExchangerRpcHandler2(self._exchanger, provider)
+class UnknownError(RpcException):
+    pass
+
+class NotAuthorizedError(RpcException):
+    pass
+
+class PermissionDeniedError(RpcException):
+    pass
+
+class ProviderNotFoundError(RpcException):
+    pass
 
 class RedisMessage(TypedDict):
     username: str
@@ -66,25 +74,16 @@ class RpcExchanger:
     recv_hook: Callable[[RedisMessage], None | Awaitable[None]] | None
     
     def __init__(self, *, rpc_host: str | None=None, rpc_port: int | None=None, redis_url: str | None=None) -> None:
-
-        host_env=self.get_host()
+        host_env=get_host()
         rpc_host = host_env[0] if rpc_host is None else rpc_host
         rpc_port = host_env[1] if rpc_port is None else rpc_port
         self._redis_url = getenv("REDIS_URL", "redis://localhost:6379") if redis_url is None else redis_url
 
+        self._socket_address = (rpc_host, rpc_port)
         self._redis = redis.Redis.from_url(self._redis_url, retry=Retry(ExponentialBackoff(), 5), retry_on_error=[ConnectionError, TimeoutError], health_check_interval=15)
         self._pubsub_raw: PubSub = self._redis.pubsub(ignore_subscribe_messages=True)
-        self._futures: dict[str, asyncio.Future[Any]] = {}
-        self._recv_lock = asyncio.Lock()
-        self.rpc = RpcExchangerRpcHandler(self)
+        self._rpc_factory = RpcServiceFactory()
         self.client_list: set[RpcExchangerBaseClient] = set()
-
-    def get_host(self) -> tuple[str, int]:
-        if "RPCHOST" in os.environ:
-            host = os.environ["RPCHOST"].split(":")
-            return host[0], int(host[1])
-        else:
-            return ("localhost", 2474)
 
     async def recv_task(self):
         raw_message: Any = None
@@ -138,10 +137,12 @@ class RpcExchanger:
             await self.recv_task()
 
     async def __aenter__(self) -> RpcExchanger:
+        asyncio.create_task(self._rpc_factory.aconnect())
+
         self.pubsub: PubSub = await self._pubsub_raw.__aenter__()
         await self.pubsub.subscribe("messages")
         await self.pubsub.subscribe("events")
-        self._protocol = await build_protocol()
+            
         self._recv_task = asyncio.create_task(self.recv_task())
         return self
 
@@ -171,8 +172,12 @@ class RpcExchanger:
             **({} if session is None else {"session": session})
         }))
         log.debug(f"{type=} {chat=}")
-    async def rpc_request(self, service: str, data: dict[str, Any]) -> Any:
-        return await self._protocol.rpc_request(service, data)
+
+    async def rpc_request(self, namespace: str, service: str, data: dict[str, Any]) -> Any:
+        log.debug(f"{service=} {data=}")
+        result = await cast(Service, self._rpc_factory.superservice).call(namespace, service, data)
+        log.debug(f"{result=}")
+        return result
 
     def get_redis_instance(self) -> redis.Redis[bytes]:
         return self._redis
@@ -190,7 +195,6 @@ class RpcExchangerBaseClient:
     _id: int | None
     _name: str | None
     _pubsub: PubSub
-    _rpc: RpcExchangerRpcHandler
     _recv_future: asyncio.Future[tuple[Literal["message"], int, str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]]
     _chat_list_inited: bool
 
@@ -211,7 +215,7 @@ class RpcExchangerBaseClient:
         self._session_list = set()
         self._id = None
         self._name = None
-        self._rpc = self._exchanger.rpc
+        self._rpc = self._exchanger._rpc_factory.services
         self._chat_list_lock = asyncio.Lock()
         self._msg_callback = None
         self._event_callbacks = {}
@@ -361,15 +365,27 @@ class RpcExchangerBaseClient:
     
 
 class RpcExchangerClient(RpcExchangerBaseClient):
-    async def login(self, username: str, password: str) -> int | None:
+    async def login(self, username: str, password: str) -> tuple[int, str] | None:
+        if self._id is not None and self._name is not None:
+            return
+        login_result: tuple[int, str] | None = await self._rpc.login.login(username=username, password=password)
+        if login_result is not None:
+            uid, token = login_result
+            self._id = uid
+            self._name = username
+            await self._rpc.login.add_online(id=uid)
+            return uid, token
+        return login_result
+    async def token_login(self, token: str) -> tuple[int, str] | None:
         if self._id is not None and self._name is not None:
             return self._id
-        uid: int | None = await self._rpc.login.login(username=username, password=password)
+        uid, username = await self._rpc.login.token_login(token)
         if uid is not None:
             self._id = uid
             self._name = username
             await self._rpc.login.add_online(id=uid)
-        return uid
+        return uid, username
+
     async def request_oauth(self,platform:str)-> tuple[str,str]:
         provider_name="oauth_"+platform
         providers=await self._rpc.rpc.list_providers()

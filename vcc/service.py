@@ -116,9 +116,12 @@ class Service(lineReceiver):
     def connection_made(self, transport):
         self.transport = transport
         if self.role == RpcServiceRole.SERVER:
-            self.send(type="connect",  capacity=list(self.factory.services["rpc"].keys()))
+            if "rpc" in self.factory.services:
+                capacity=list(self.factory.services["rpc"].keys())
+            else:
+                capacity=[]
+            self.send(type="connect",  capacity=capacity))
         else:
-            print(self.factory.connections)
             self.factory.connections.append(self)
     def connection_lost(self, exc: Exception | None):
         if self.role == RpcServiceRole.CLIENT:
@@ -191,13 +194,10 @@ class Service(lineReceiver):
 class ServiceTable(dict):
     def __init__(self, factory):
         self.factory = factory
-
-    def __getitem__(self, name):
-        print(name)
+    def _get(self,name):
         if name in self:
-            print(self)
             return self.get(name)
-        if self.factory.superservice:
+        if self.factory.superservice and request_context.Service!=(superservice:=self.factory.superservice):
             superservice: Service = self.factory.superservice
             return type(
                 name,
@@ -208,32 +208,16 @@ class ServiceTable(dict):
                     )
                 },
             )()
-
+        raise KeyError()
+    def __getitem__(self, name):
+        return self._get(name)
     def __setitem__(self, name, value):
         dict.__setitem__(self, name, value)
 
     def __getattr__(self, name):
         if name in dir(self):
             return object.__getattr__(self, name)
-        if name in self:
-            obj = self.get(name)
-            return type(
-                name,
-                (),
-                {"__getattr__": lambda self, n: obj[n]},
-            )()
-        if self.factory.superservice:
-            superservice: Service = self.factory.superservice
-            return type(
-                name,
-                (),
-                {
-                    "__getattr__": lambda self, n: lambda **x: superservice.call(
-                        name, n, x
-                    )
-                },
-            )()
-
+        return self._get(name)
 
 class RpcServiceFactory:
     superservice: Service | None = property(lambda self: tools.list_get_default(self.connections,0))

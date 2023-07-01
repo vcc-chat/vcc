@@ -185,7 +185,7 @@ class Service(lineReceiver):
             case "connect":
                 if self.role == RpcServiceRole.CLIENT:
                     if "register" in data["capacity"]:
-                        print(self.factory.superservice)
+                        print(self.factory.services.rpc)
                         asyncio.get_running_loop().create_task(self.factory.services.rpc.register(namespace=list(self.factory.services.keys())))
             case "respond":
                 self.make_respond(data["jobid"], data["data"])
@@ -205,7 +205,11 @@ class ServiceTable(dict):
                 {
                     "__getitem__": lambda self, n: functools.partial(
                         superservice.send, name, n
+                    ),
+                    "__getattr__": lambda self, n: lambda **x: superservice.call(
+                        name, n, x
                     )
+
                 },
             )()
         raise KeyError()

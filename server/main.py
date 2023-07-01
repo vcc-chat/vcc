@@ -9,6 +9,7 @@ class rpc():
         self.factory=factory
     def register(self,namespace:list):
         svc=request_context.Service
+        print(namespace)
         if type(namespace)==str:
             self.factory.services[namespace]=service.RemoteExport(svc,namespace)
             return

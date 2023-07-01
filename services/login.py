@@ -118,7 +118,6 @@ class Login:
             print(value)
             metadata.value = value
         elif isinstance(value, Callable):
-            print(1)
             metadata.value = str(value(metadata.value))
         metadata.save()
 

@@ -120,7 +120,7 @@ class Service(lineReceiver):
                 capacity=list(self.factory.services["rpc"].keys())
             else:
                 capacity=[]
-            self.send(type="connect",  capacity=capacity))
+            self.send(type="connect",  capacity=capacity)
         else:
             self.factory.connections.append(self)
     def connection_lost(self, exc: Exception | None):

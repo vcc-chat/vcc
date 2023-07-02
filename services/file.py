@@ -102,6 +102,6 @@ class File:
 
 
 if __name__ == "__main__":
-    server = base.RpcServiceFactory("file")
+    server = base.RpcServiceFactory()
     server.register(File())
     server.connect()

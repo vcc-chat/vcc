@@ -119,7 +119,7 @@ class Record(metaclass=base.ServiceMeta):
 
 if __name__ == "__main__":
     asyncio.set_event_loop(loop := asyncio.new_event_loop())
-    server = base.RpcServiceFactory("record")
+    server = base.RpcServiceFactory()
     service = Record()
     server.register(service)
     loop.create_task(server.aconnect())

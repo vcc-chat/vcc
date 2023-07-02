@@ -60,6 +60,7 @@ class ServiceExport:
 
 class RemoteExport:
     def __init__(self, service: Service, namespace: str):
+        self.service = service
         self.namespace = namespace
         self.connection=[]
         self.alive=0

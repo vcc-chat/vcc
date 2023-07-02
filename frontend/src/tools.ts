@@ -169,7 +169,7 @@ export function useNickname(
           initialData: initialData
         })
   })
-  return data
+  return data ?? initialData
 }
 
 export function useTitle(title: string) {

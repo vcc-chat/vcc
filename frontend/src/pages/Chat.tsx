@@ -68,7 +68,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: RequestW
   }, [])
   return (
     <li key={nowMsg.time} className={clsx("chat", req.usrname == selfUsername ? "chat-end" : "chat-start")}>
-      <MessageAvatar name={username!} />
+      <MessageAvatar name={username} />
       <div
         className={clsx("chat-header flex space-x-2", req.usrname == selfUsername ? "flex-row-reverse" : "flex-row")}
       >

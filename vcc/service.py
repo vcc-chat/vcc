@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-
+import os
 import asyncio
 import inspect
 import json
@@ -18,7 +18,7 @@ except ImportError:
 # from twisted.internet.defer import Deferred
 # from twisted.internet.protocol import ClientFactory
 # from twisted.protocols.basic import LineReceiver
-
+call_verbose=bool(os.getenv("VCC_CALL_VERBOSE"))
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 RpcServiceRole = enum.Enum("RpcServiceRole", ["SERVER", "CLIENT"])
@@ -61,8 +61,11 @@ class ServiceExport:
 class RemoteExport:
     def __init__(self, service: Service, namespace: str):
         self.namespace = namespace
-        self.service = service
-
+        self.connection=[]
+        self.alive=0
+    def add_connection(self,connection:service):
+        self.connection.append(connection)
+        self.alive+=1
     def __getitem__(self, name):
         return lambda **x:self.service.call(self.namespace, name,x)
 
@@ -131,6 +134,8 @@ class Service(lineReceiver):
         jobid = str(uuid.uuid4())
         future = asyncio.Future()
         self.jobs[jobid] = future
+        if call_verbose:
+            print(f'Call {namespace}.{service}({kwargs}) with jobid {jobid}')
         self.send(
             type="call", jobid=jobid, namespace=namespace, service=service, data=kwargs
         )
@@ -220,7 +225,7 @@ class ServiceTable(dict):
 
     def __getattr__(self, name):
         if name in dir(self):
-            return object.__getattr__(self, name)
+            return object.__getattribute__(self, name)
         return self._get(name)
 
 class RpcServiceFactory:

@@ -152,7 +152,7 @@ class Service(lineReceiver):
         except KeyError:
             self.send(
                 res="error",
-                error="nosuch service",
+                error=f"no such service {namespace}.{service}",
                 data=None,
                 jobid=data["jobid"],
             )
@@ -231,7 +231,7 @@ class ServiceTable(dict):
         return self._get(name)
 
 class RpcServiceFactory:
-    superservice: Service | None = property(lambda self: tools.list_get_default(self.connections,0))
+    superservice: Service | None = property(lambda self: tools.list_get_default(self.connections,0) if len(self.connections) else None)
     def __init__(self):
         self.services = ServiceTable(self)
         self.connections=[]

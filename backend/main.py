@@ -95,7 +95,6 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
             case "login":
                 login_result = await client.login(username, msg)
                 if login_result is not None:
-                    await client.chat_list()
                     token = login_result[1]
                 else:
                     token = ""
@@ -112,12 +111,10 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                 if login_result is not None:
                     new_username: str = login_result["username"]
                     new_uid: int = login_result["uid"]
-                    await client.chat_list()
                     await send(
                         uid=new_uid,
                         username=new_username
                     )
-                    await client.add_online()
                 else:
                     await send(uid=cast(Any, None), username="")
             case "request_oauth":

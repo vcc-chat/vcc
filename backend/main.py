@@ -109,8 +109,8 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
             case "token_login":
                 login_result = await client.token_login(msg)
                 if login_result is not None:
-                    new_username: str = login_result["username"]
-                    new_uid: int = login_result["uid"]
+                    new_username: str = login_result[1]
+                    new_uid: int = login_result[0]
                     await send(
                         uid=new_uid,
                         username=new_username
@@ -227,6 +227,7 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                     await websocket.close(1008)
                     return
                 push_register(client.id, msg)
+                await send()
             case _:
                 await websocket.close(1008)
                 return

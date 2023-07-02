@@ -108,10 +108,10 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                     logging.debug(f"{value=}")
                     await send("chat_list", msg=cast(Any, value))
             case "token_login":
-                login_result = await client.token_login(token)
+                login_result = await client.token_login(msg)
                 if login_result is not None:
-                    new_username: str = result["username"]
-                    new_uid: int = result["uid"]
+                    new_username: str = login_result["username"]
+                    new_uid: int = login_result["uid"]
                     await client.chat_list()
                     await send(
                         uid=new_uid,

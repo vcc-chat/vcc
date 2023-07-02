@@ -132,6 +132,7 @@ class Service(lineReceiver):
             self.factory.on_con_lost.set_result(True)
 
     async def call(self, namespace, service, kwargs):
+        log.debug(f"Request to rpc: {namespace=} {service=} {kwargs=}")
         jobid = str(uuid.uuid4())
         future = asyncio.Future()
         self.jobs[jobid] = future

@@ -366,7 +366,9 @@ class ChatService:
 
     async def list_somebody_joined(self, id: int) -> list[tuple[int, str, int | None]]:
         # after json.dumps, tuple returned will become json Array
+        print(0)
         try:
+            print(1)
             chat_users = (
                 ChatUser.select()
                 .where(~ChatUser.banned, ChatUser.user == id)
@@ -374,6 +376,7 @@ class ChatService:
                 .select(Chat.id, Chat.name, Chat.parent)
                 .execute()
             )
+            print(2)
             return [
                 (
                     chat_user.chat.id,
@@ -383,6 +386,7 @@ class ChatService:
                 for chat_user in chat_users
             ]
         except:
+            print(3)
             return []
 
     async def list_sub_chats(self, id: int) -> list[tuple[int, str]]:

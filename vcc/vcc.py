@@ -489,7 +489,7 @@ class RpcExchangerClient(RpcExchangerBaseClient):
     async def chat_list(self) -> list[tuple[int, str, int | None]]:
         """List all chat you joined"""
         result: list[tuple[int, str, int | None]] = [
-            cast(Any, tuple(i)) for i in await self._rpc.chat.list(id=self._id)
+            cast(Any, tuple(i)) for i in await self._rpc.chat.list_somebody_joined(id=self._id)
         ]
         result_set = {i[0] for i in result}
         self._chat_list_inited = True

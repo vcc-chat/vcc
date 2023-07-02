@@ -364,7 +364,7 @@ class ChatService:
         except:
             return {}
 
-    async def list(self, id: int) -> list[tuple[int, str, int | None]]:
+    async def list_somebody_joined(self, id: int) -> list[tuple[int, str, int | None]]:
         # after json.dumps, tuple returned will become json Array
         try:
             chat_users = (

@@ -453,3 +453,15 @@ export function chooseBackendLoader({ request: { url } }: LoaderFunctionArgs) {
   // console.log(request)
   return new Response()
 }
+
+export function clearDataLoader() {
+  store.setState({
+    messages: [],
+    token: null,
+    pluginLinks: [],
+    markdownToHTML: {},
+    backendAddress: null,
+    lastMessageTime: Infinity
+  })
+  location.pathname = "/login"
+}

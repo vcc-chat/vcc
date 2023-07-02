@@ -57,6 +57,7 @@ const router = createBrowserRouter(
         action={loaders.registerAction}
       />
       <Route path="*" element={<ErrorElement content="404 Not Found" />} />
+      <Route path="clear-data" loader={loaders.clearDataLoader} />
     </Route>
   )
 )

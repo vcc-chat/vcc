@@ -17,7 +17,7 @@ from redis.exceptions import (
     ConnectionError,
     TimeoutError
 )
-from typing import Any, Awaitable, Callable, cast, Coroutine, TypedDict, Literal, overload, no_type_check_decorator
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, cast, Coroutine, TypedDict, Literal, overload, no_type_check_decorator
 from os import getenv
 
 from .service import RpcServiceFactory, Service
@@ -67,6 +67,13 @@ class RedisEvent(TypedDict):
     type: Event
     data: Any
     chat: int
+
+if TYPE_CHECKING:
+    async def service_table_getattr(**kwargs) -> Any: ...
+    class ServiceTableTypeImpl:
+        def __getattr__(self, key): return service_table_getattr
+    class ServiceTableType:
+        def __getattr__(self, key) -> ServiceTableTypeImpl: ...
 
 class RpcExchanger:
     """Low-level api which is hard to use"""
@@ -215,7 +222,7 @@ class RpcExchangerBaseClient:
         self._session_list = set()
         self._id = None
         self._name = None
-        self._rpc = self._exchanger._rpc_factory.services
+        self._rpc: ServiceTableType = self._exchanger._rpc_factory.services # type: ignore
         self._chat_list_lock = asyncio.Lock()
         self._msg_callback = None
         self._event_callbacks = {}
@@ -378,8 +385,8 @@ class RpcExchangerClient(RpcExchangerBaseClient):
         return login_result
     async def token_login(self, token: str) -> tuple[int, str] | None:
         if self._id is not None and self._name is not None:
-            return self._id
-        uid, username = await self._rpc.login.token_login(token)
+            return self._id, self._name
+        uid, username = await self._rpc.login.token_login(token=token)
         if uid is not None:
             self._id = uid
             self._name = username

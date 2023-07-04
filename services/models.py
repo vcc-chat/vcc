@@ -15,6 +15,13 @@ from playhouse.shortcuts import ReconnectMixin
 import os
 
 
+def patch_save(Model):
+    #HACK
+    save_orig=Model.save
+    def save(self,*args,**kwargs):
+        save_orig(self,*args,**kwargs)
+        self._meta.database.commit()
+patch_save(Model)
 def bind_model(model, db):
     model.bind(db)
     return model

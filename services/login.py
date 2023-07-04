@@ -62,7 +62,7 @@ class Login:
             name = decoded_content["name"]
             return id, name
         except jwt.DecodeError:
-            return None
+            return (None,None)
 
     def register(self, username, password, oauth=None, oauth_data=None):
         if username == "system":

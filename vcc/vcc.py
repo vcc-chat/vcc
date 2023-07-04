@@ -391,6 +391,8 @@ class RpcExchangerClient(RpcExchangerBaseClient):
             self._id = uid
             self._name = username
             await self._rpc.login.add_online(id=uid)
+        else:
+            return None
         return uid, username
 
     async def request_oauth(self,platform:str)-> tuple[str,str]:

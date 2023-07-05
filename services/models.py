@@ -21,6 +21,8 @@ def patch_save(Model):
     def save(self,*args,**kwargs):
         save_orig(self,*args,**kwargs)
         self._meta.database.commit()
+
+    Model.save=save
 patch_save(Model)
 def bind_model(model, db):
     model.bind(db)

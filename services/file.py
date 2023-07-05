@@ -16,7 +16,7 @@ class File:
             os.environ.get("MINIO_URL", "localhost:9000"),
             os.environ.get("MINIO_ACCESS", "minioadmin"),
             os.environ.get("MINIO_SECRET", "minioadmin"),
-            secure=False,
+            secure=bool(os.environ.get("MINIO_SSL", False)),
         )
 
     def _create_bucket(self, bucket):

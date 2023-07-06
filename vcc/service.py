@@ -141,7 +141,9 @@ class Service(lineReceiver):
         self.send(
             type="call", jobid=jobid, namespace=namespace, service=service, data=kwargs
         )
-        return await future
+        ret= await future
+        del self.jobs[jobid]
+        return ret
 
     async def a_do_request(self, data):
         service = data["service"]
@@ -177,8 +179,10 @@ class Service(lineReceiver):
             )
 
     def make_respond(self, jobid, data):
-        self.jobs[jobid].set_result(data)
-
+        try:
+            self.jobs[jobid].set_result(data)
+        except:
+            return
     def line_received(self, data):
         try:
             data = json.loads(data)

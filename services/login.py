@@ -64,7 +64,7 @@ class Login:
         except jwt.DecodeError:
             return (None,None)
 
-    def register(self, username, password, oauth=None, oauth_data=None):
+    def register(self, username, password, oauth=None, oauth_data=None,nickname:str|None=None):
         if username == "system":
             return False
         hashed_password = hmac.new(
@@ -73,7 +73,7 @@ class Login:
         try:
             User(
                 name=username,
-                nickname=username,
+                nickname=username if nickname is None else nickname,
                 password=hashed_password,
                 salt=salt,
                 oauth=oauth,
@@ -92,7 +92,7 @@ class Login:
     #             return None
     #         e
 
-    def post_oauth(self, platform: str, metadata: str):
+    def post_oauth(self, platform: str, metadata: str,nickname:str|None=None):
         if (
             user := User.get_or_none(
                 User.oauth == platform, User.oauth_data == metadata
@@ -100,10 +100,14 @@ class Login:
         ) == None:
             username = "oauth_" + platform + str(uuid.uuid4())
             self.register(
-                username, str(uuid.uuid4()), oauth=platform, oauth_data=metadata
+                username, str(uuid.uuid4()), oauth=platform, oauth_data=metadata,nickname=nickname
             )
             user = User.get_or_none(User.name == username)
-        return user.id
+        print(123)
+        return user.id,jwt.encode({
+            "id": user.id,
+            "name": user.name
+        }, jwt_key, algorithm="HS512")
 
     def query_metadata(self, uid: int, key: str):
         return UserMetadata.get_or_none(

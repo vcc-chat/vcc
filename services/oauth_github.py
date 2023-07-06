@@ -97,7 +97,7 @@ if __name__ == "__main__":
     asyncio.set_event_loop(loop := asyncio.new_event_loop())
     server = base.RpcServiceFactory()
     service = oauthGithub()
-    server.register(service)
+    server.register(service,name="oauth_github")
     loop.create_task(server.aconnect())
     loop.create_task(service.http_server())
     loop.run_forever()

@@ -82,13 +82,16 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
     msg: str = json_result.get("msg")
     uuid: str = json_result.get("uuid", str(uuid4()))
     async def send(type: str = json_result["type"], *, uid: int=0, username: str="", msg: str="") -> None:
-        await websocket.send(json.dumps({
-            "type": type,
-            "uid": uid,
-            "usrname": username,
-            "msg": msg,
-            "uuid": uuid
-        }))
+        try:
+            await websocket.send(json.dumps({
+                "type": type,
+                "uid": uid,
+                "usrname": username,
+                "msg": msg,
+                "uuid": uuid
+            }))
+        except:
+            return
     logging.info(f"New request: {json_result=}")
     try:
         match json_result["type"]:
@@ -132,7 +135,7 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                 else:
                     token = ""
                 await send(
-                    uid=cast(Any, None if login_result is None else int(login_result)),
+                    uid=cast(Any, None if login_result is None else int(login_result[0])),
                     username=cast(str, client.name),
                     msg=token
                 )

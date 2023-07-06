@@ -146,6 +146,8 @@ class Service(lineReceiver):
     async def a_do_request(self, data):
         service = data["service"]
         namespace = data["namespace"]
+        if call_verbose:
+            print(f'Call {namespace}.{service}({data["data"]}) with jobid {data["jobid"]}')
         request_context.Service=self
         try:
             func = self.factory.services[namespace][service]

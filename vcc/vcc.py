@@ -410,7 +410,7 @@ class RpcExchangerClient(RpcExchangerBaseClient):
         if not provider_name in providers:
             raise ProviderNotFoundError()
         userinfo=await getattr(self._rpc,provider_name).login_oauth(requestid=requestid)
-        uid=await self._rpc.login.post_oauth(platform=platform,metadata=userinfo)
+        uid=await self._rpc.login.post_oauth(platform=platform,metadata=userinfo['id'],nickname=userinfo.get('nickname'))
         logging.debug(f"{uid=} {userinfo=}")
         self._id=uid
         self._name=await self._rpc.login.get_name(id=uid[0])

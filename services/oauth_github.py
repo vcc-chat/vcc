@@ -8,7 +8,7 @@ from aiohttp import ClientSession, request
 import base
 import threading
 from base import ServiceExport as export
-
+from urllib3.util import parse_url
 
 from aiohttp.web import Response
 
@@ -57,7 +57,13 @@ def oauthGhHttp(table: dict[str, asyncio.Future] = {}):
             table[requestid].set_result(userinfo["login"])
         return Response(text=HTTP_RESPONSE_HTML, content_type="text/html")
 
-    app.add_routes([aiohttp.web.get("/oauthcb/{requestid}", callback_url)])
+    app.add_routes(
+        [
+            aiohttp.web.get(
+                os.path.join(parse_url(GH_CALLBACKURL), "{requestid}"), callback_url
+            )
+        ]
+    )
     return lambda: aiohttp.web._run_app(app, port=HTTP_PORT)
 
 
@@ -97,7 +103,7 @@ if __name__ == "__main__":
     asyncio.set_event_loop(loop := asyncio.new_event_loop())
     server = base.RpcServiceFactory()
     service = oauthGithub()
-    server.register(service,name="oauth_github")
+    server.register(service, name="oauth_github")
     loop.create_task(server.aconnect())
     loop.create_task(service.http_server())
     loop.run_forever()

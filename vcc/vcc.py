@@ -413,7 +413,7 @@ class RpcExchangerClient(RpcExchangerBaseClient):
         uid=await self._rpc.login.post_oauth(platform=platform,metadata=userinfo)
         logging.debug(f"{uid=} {userinfo=}")
         self._id=uid
-        self._name=await self._rpc.login.get_name(id=uid)
+        self._name=await self._rpc.login.get_name(id=uid[0])
         return uid
     @check()
     async def add_online(self) -> None:

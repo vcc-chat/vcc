@@ -55,9 +55,8 @@ def oauthGhHttp(table: dict[str, asyncio.Future] = {}):
                 GH_GET_USER, headers={"Authorization": "token " + accesstoken}
             )
             userinfo = await userinfo.json()
-            table[requestid].set_result(userinfo["login"])
+            table[requestid].set_result({"id":userinfo["id"],"nickname":userinfo["login"]})
         return Response(text=HTTP_RESPONSE_HTML, content_type="text/html")
-    print(os.path.join(parse_url(GH_CALLBACKURL).path, "{requestid}"))
     app.add_routes(
         [
             aiohttp.web.get(

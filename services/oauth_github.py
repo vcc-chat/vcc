@@ -95,7 +95,7 @@ class oauthGithub(metaclass=base.ServiceMeta):
 
 if __name__ == "__main__":
     asyncio.set_event_loop(loop := asyncio.new_event_loop())
-    server = base.RpcServiceFactory("oauth_github")
+    server = base.RpcServiceFactory()
     service = oauthGithub()
     server.register(service)
     loop.create_task(server.aconnect())

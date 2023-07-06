@@ -3,6 +3,7 @@ import uuid
 import asyncio
 
 from os import getenv
+import os
 import aiohttp.web
 from aiohttp import ClientSession, request
 import base
@@ -56,11 +57,11 @@ def oauthGhHttp(table: dict[str, asyncio.Future] = {}):
             userinfo = await userinfo.json()
             table[requestid].set_result(userinfo["login"])
         return Response(text=HTTP_RESPONSE_HTML, content_type="text/html")
-
+    print(os.path.join(parse_url(GH_CALLBACKURL).path, "{requestid}"))
     app.add_routes(
         [
             aiohttp.web.get(
-                os.path.join(parse_url(GH_CALLBACKURL), "{requestid}"), callback_url
+                os.path.join(parse_url(GH_CALLBACKURL).path, "{requestid}"), callback_url
             )
         ]
     )

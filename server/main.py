@@ -15,7 +15,8 @@ class rpc():
             return
         for i in namespace:
             self.factory.services[i]=service.RemoteExport(svc,i)
-
+    def list_providers(self):
+        return list(self.factory.services.keys())
 if __name__=="__main__":
     server=service.RpcServiceFactory()
     server.register(rpc(server))

@@ -11,12 +11,13 @@ import ExpandLessIcon from "@material-design-icons/svg/outlined/expand_less.svg"
 import MoreHorizIcon from "@material-design-icons/svg/outlined/more_horiz.svg"
 import PeopleIcon from "@material-design-icons/svg/outlined/people.svg"
 import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
+import { useTranslation } from "react-i18next"
 
 import { ChangeNickname, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
-import { stringToColor, useChatList, useNetwork } from "../tools"
+import { stringToColor, useChatList, useAlert } from "../tools"
 import useStore from "../store"
-import { useTranslation } from "react-i18next"
 import { SidebarMenu } from "./SidebarMenu"
+import rpc from "../network"
 
 export function NavBar({ toggle, toggleRightSidebar }: { toggle: () => void; toggleRightSidebar: () => void }) {
   const chatName = useStore(state => state.chatName)
@@ -295,7 +296,7 @@ function UserItem({
 
 export function UsersSidebar({ open, setOpen }: { open: boolean; setOpen: (value: boolean) => void }) {
   const chat = useStore(state => state.chat)
-  const { makeRequest, successAlert, errorAlert } = useNetwork()
+  const { successAlert, errorAlert } = useAlert()
   const { refresh: refreshChats, values: chatValues, isLoading: chatValuesLoading } = useChatList()
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -309,11 +310,7 @@ export function UsersSidebar({ open, setOpen }: { open: boolean; setOpen: (value
     queryKey: ["user-list", chat],
     queryFn: async () => {
       if (chat == null) return []
-      const { msg } = await makeRequest({
-        type: "chat_get_users",
-        uid: chat!
-      })
-      return msg as unknown as [number, string][]
+      return await rpc.chat.getUsers(chat)
     },
     enabled: chat != null
   })
@@ -327,13 +324,7 @@ export function UsersSidebar({ open, setOpen }: { open: boolean; setOpen: (value
     queryKey: ["user-permission", chat],
     queryFn: async () => {
       if (chat == null) return
-      const { msg } = await makeRequest({
-        type: "chat_get_all_permission",
-        uid: chat!,
-        usrname: "",
-        msg: ""
-      })
-      return msg as unknown as Record<number, Record<string, boolean>>
+      return await rpc.chat.getAllPermission(chat)
     },
     enabled: chat != null
   })
@@ -341,11 +332,7 @@ export function UsersSidebar({ open, setOpen }: { open: boolean; setOpen: (value
     queryKey: ["is-online", usersData],
     queryFn: async () => {
       if (chat == null || usersData == null || !usersData.length) return []
-      const { msg } = await makeRequest({
-        type: "is_online",
-        msg: usersData!.map(a => a[0]) as any
-      })
-      return msg as unknown as boolean[]
+      return await rpc.user.isOnline(usersData.map(a => a[0]))
     },
     enabled: chat != null && usersData != null && !!usersData?.length
   })
@@ -366,23 +353,14 @@ export function UsersSidebar({ open, setOpen }: { open: boolean; setOpen: (value
   const handleKickButtonClick = useCallback(async () => {
     if (chat == undefined) return
     if (handleUsername == username) {
-      const { uid } = await makeRequest({
-        uid: chat,
-        type: "chat_quit"
-      })
-      if (uid) {
+      if (await rpc.chat.quit(chat)) {
         successAlert(t("You have quit the chat successfully. "))
         refreshChats()
       } else {
         errorAlert(t("Unexpected error: You haven't quit the chat successfully. "))
       }
     } else {
-      const { uid } = await makeRequest({
-        type: "chat_kick",
-        uid: chat,
-        msg: handleUserID as any
-      })
-      if (uid) {
+      if (await rpc.chat.kick(chat, handleUserID)) {
         successAlert(t("User has been kicked."))
         refreshChats()
         queryClient.invalidateQueries({ queryKey: ["user-list", chat] })
@@ -394,16 +372,7 @@ export function UsersSidebar({ open, setOpen }: { open: boolean; setOpen: (value
 
   const handleBanButtonClick = useCallback(async () => {
     const ban = !permissionRawData?.[handleUserID]?.banned
-    const { uid } = await makeRequest({
-      type: "chat_modify_user_permission",
-      msg: {
-        chat_id: chat,
-        modified_user_id: handleUserID,
-        name: "banned",
-        value: ban
-      } as any
-    })
-    if (uid) {
+    if (await rpc.chat.modifyUserPermission(chat!, handleUserID, "banned", ban)) {
       successAlert(t(ban ? "User has been successfully banned." : "User has been successfully unbanned."))
       refreshChats()
       queryClient.invalidateQueries({ queryKey: ["user-list", chat] })

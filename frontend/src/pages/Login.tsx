@@ -7,15 +7,16 @@ import { useTranslation } from "react-i18next"
 import { LoginType } from "../state/login"
 import useStore from "../store"
 import { useLoginActionData } from "../loaders"
-import { useNetwork, useTitle } from "../tools"
+import { useAlert, useTitle } from "../tools"
 import ChooseBackend, { initBackend } from "../components/ChooseBackend"
+import rpc from "../network"
 
 export function Component() {
   const username = useStore(state => state.username)
   const changeUsername = useStore(state => state.changeUsername)
   const navigate = useNavigate()
   const loginActionData = useLoginActionData()
-  const { makeRequest, errorAlert } = useNetwork()
+  const { errorAlert } = useAlert()
   const success = useStore(state => state.success)
   const failed = useStore(state => state.failed)
   const startGet = useStore(state => state.startGet)
@@ -42,21 +43,14 @@ export function Component() {
 
   const githubOauthHandler = useCallback(async () => {
     initBackend()
-    const { usrname: requestID, msg: url } = await makeRequest({
-      type: "request_oauth",
-      msg: "github"
-    })
+    const { url, requestID } = await rpc.oauth.request()
     window.open(url, "_blank", "noopener,noreferrer")
-    const { usrname: username, msg: token } = await makeRequest({
-      type: "login_oauth",
-      usrname: "github",
-      msg: requestID
-    })
+    const { username, token } = await rpc.oauth.login(requestID)
     setToken(token)
     changeUsername(username)
     success()
     navigate("/")
-  }, [makeRequest])
+  }, [])
 
   useTitle("Login")
 

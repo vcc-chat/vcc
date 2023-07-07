@@ -1,9 +1,9 @@
 import { useEffect, useState } from "preact/hooks"
-import { useNetwork, useTitle } from "../tools"
+import { useTitle } from "../tools"
 import { useNavigate, useParams } from "react-router-dom"
+import rpc from "../network"
 
 export function Component() {
-  const { makeRequest } = useNetwork()
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -13,10 +13,7 @@ export function Component() {
 
   useEffect(() => {
     ;(async () => {
-      const { usrname: name, msg: url } = await makeRequest({
-        type: "file_download",
-        msg: id
-      })
+      const { name, url } = await rpc.file.download(id!)
       setFileName(name)
       const content = await (await fetch(url)).blob()
       const element = document.createElement("a")

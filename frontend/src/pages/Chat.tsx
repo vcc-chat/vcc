@@ -21,8 +21,9 @@ import SendIcon from "@material-design-icons/svg/filled/send.svg"
 import { type RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
 import { MessageAvatar, MessageLink } from "../components/Messages"
 import useStore from "../store"
-import { stringToNumber, useChatList, useNetwork, useNickname, useTitle } from "../tools"
+import { stringToNumber, useChatList, useAlert, useNickname, useTitle } from "../tools"
 import { useChatActionData } from "../loaders"
+import rpc from "../network"
 
 const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: RequestWithTime }) {
   const req = nowMsg.req
@@ -187,7 +188,6 @@ function MessageComponent({ nowMsg }: { nowMsg: RequestWithTime }) {
 }
 
 export function FileUploadDialog({ id }: { id: string }) {
-  const { makeRequest } = useNetwork()
   const fileInputID = useId()
   const ref = useRef<HTMLInputElement | null>(null)
   const files = ref.current?.files
@@ -220,16 +220,8 @@ export function FileUploadDialog({ id }: { id: string }) {
               type="button"
               onClick={async () => {
                 if (!file) return
-                const { usrname: id, msg: url } = await makeRequest({
-                  type: "file_upload",
-                  msg: file.name
-                })
-                console.log({ id, url })
-                const { ok } = await fetch(url, {
-                  method: "PUT",
-                  body: file
-                })
-                console.log({ ok })
+                const { id, url, ok } = await rpc.file.upload(file)
+                console.log({ id, url, ok })
                 fetcher.submit(
                   {
                     session,
@@ -262,7 +254,7 @@ export const Component = memo(function Chat() {
   const chat = Number.isNaN(chatRaw) || !chats.includes(chatRaw) ? null : chatRaw
   const messageHistory = useStore(state => state.messages)
   const messages = chat == null || messageHistory[chat] == null ? [] : messageHistory[chat]
-  const { successAlert, errorAlert } = useNetwork()
+  const { successAlert, errorAlert } = useAlert()
   const ref = useRef<HTMLUListElement>(null)
   const fetcher = useFetcher()
   const session = useStore(state => state.session)

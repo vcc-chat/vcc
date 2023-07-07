@@ -3,10 +3,10 @@ import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query"
 import { persistQueryClient } from "@tanstack/react-query-persist-client"
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
 
-import type { RequestWithTime } from "./config"
 import { LoginType } from "./state/login"
 import useStore from "./store"
 import { wait } from "./loaders"
+import rpc from "./network"
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,16 +26,13 @@ persistQueryClient({
   persister: localStoragePersister
 })
 
-const makeRequestSelector = (state: ReturnType<typeof useStore.getState>) => state.makeRequest
 const successAlertSelector = (state: ReturnType<typeof useStore.getState>) => state.successAlert
 const errorAlertSelector = (state: ReturnType<typeof useStore.getState>) => state.errorAlert
 
-export function useNetwork() {
-  const makeRequest = useStore(makeRequestSelector)
+export function useAlert() {
   const successAlert = useStore(successAlertSelector)
   const errorAlert = useStore(errorAlertSelector)
   return {
-    makeRequest,
     successAlert,
     errorAlert
   }
@@ -96,11 +93,7 @@ export function responseToChatList(data: [number, string, number | null][]) {
 }
 
 export async function queryChatList() {
-  const { msg: msgUntyped } = await useStore.getState().makeRequest({
-    type: "chat_list"
-  })
-  const data = msgUntyped as unknown as [number, string, number | null][]
-  const { values, names, parentChats } = responseToChatList(data)
+  const { values, names, parentChats } = await rpc.chat.list()
   useStore.getState().changeAllChat(values, names)
   return {
     values,
@@ -150,18 +143,9 @@ export function useNickname(
     initialData?: string
   } = {}
 ) {
-  const { makeRequest } = useNetwork()
   const { data } = useQuery({
     queryKey: ["get-nickname", chat, uid],
-    queryFn: async () => {
-      return (
-        await makeRequest({
-          type: "chat_get_nickname",
-          uid,
-          usrname: chat as unknown as string
-        })
-      ).usrname
-    },
+    queryFn: () => rpc.chat.getNickname(chat, uid),
     enabled: enabled,
     ...(initialData == undefined
       ? {}
@@ -179,25 +163,8 @@ export function useTitle(title: string) {
 }
 
 async function getChatRecord(chat: number) {
-  const { makeRequest, lastMessageTime } = useStore.getState()
-  const { msg } = await makeRequest({
-    uid: chat,
-    msg: lastMessageTime as any,
-    type: "record_query"
-  })
-  return (msg as unknown as string[]).map<RequestWithTime>((dataString, index) => {
-    const data = JSON.parse(dataString)
-    return {
-      req: {
-        msg: data.msg,
-        usrname: data.username,
-        uid: data.chat,
-        type: "message"
-      },
-      // need to be changed
-      time: Date.now() + index
-    }
-  })
+  const { lastMessageTime } = useStore.getState()
+  return await rpc.record.query(chat, lastMessageTime)
 }
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -214,16 +181,13 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export async function registerServiceWorker() {
-  const { makeRequest } = useStore.getState()
   if (!navigator.serviceWorker || !window.PushManager) return
   await navigator.serviceWorker.register("/sw.js", { scope: "/" })
   const registration = await navigator.serviceWorker.ready
   const subscription =
     (await registration.pushManager.getSubscription()) ||
     (await (async () => {
-      const { msg: vapidPublicKey } = await makeRequest({
-        type: "push_get_vapid_public_key"
-      })
+      const vapidPublicKey = await rpc.push.getVapidPublicKey()
       const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey)
       return await registration.pushManager.subscribe({
         applicationServerKey: convertedVapidKey,
@@ -237,10 +201,7 @@ export async function registerServiceWorker() {
     await wait()
     await wait()
   }
-  await makeRequest({
-    type: "push_register",
-    msg: subscription.toJSON() as any
-  })
+  await rpc.push.register(subscription.toJSON())
 }
 
 let first = true

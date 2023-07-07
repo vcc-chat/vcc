@@ -2,12 +2,13 @@ import { useMemo, useState } from "preact/hooks"
 import type { TargetedEvent } from "preact/compat"
 import { useNavigate } from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { useChatList, useNetwork, useTitle } from "../tools"
+import { useChatList, useAlert, useTitle } from "../tools"
 import useStore from "../store"
+import rpc from "../network"
 
 export function Component() {
   const { values: chats, names: chatNames, parentChats, refresh } = useChatList()
-  const { makeRequest, successAlert, errorAlert } = useNetwork()
+  const { successAlert, errorAlert } = useAlert()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const addSession = useStore(state => state.addSession)
@@ -83,25 +84,16 @@ export function Component() {
                 onClick={async () => {
                   if (chatName === "") return
                   if (isParentChat) {
-                    const { uid } = await makeRequest({
-                      type: "chat_create",
-                      usrname: chatName,
-                      uid: parentChat
-                    })
-                    if (uid) {
+                    const chat = await rpc.chat.create(chatName, parentChat)
+                    if (chat) {
                       successAlert(t("You have created the chat successfully. "))
                       refresh()
-                      navigate(`/chats/${uid}`)
+                      navigate(`/chats/${chat}`)
                     } else {
                       errorAlert(`You haven't created the chat successfully. `)
                     }
                   } else {
-                    const { uid } = await makeRequest({
-                      type: "session_join",
-                      uid: parentChat,
-                      msg: chatName
-                    })
-                    if (uid) {
+                    if (await rpc.session.join(chatName, parentChat)) {
                       successAlert(t("You have created/joined the session successfully. "))
                       addSession(parentChat, chatName)
                       navigate(`/chats/${parentChat}`)

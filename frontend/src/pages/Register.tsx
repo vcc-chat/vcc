@@ -3,7 +3,7 @@ import { useNavigate, Form } from "react-router-dom"
 import clsx from "clsx"
 import { useTranslation } from "react-i18next"
 
-import { useNetwork, useTitle } from "../tools"
+import { useAlert, useTitle } from "../tools"
 import { useRegisterActionData } from "../loaders"
 import { LoginType } from "../state/login"
 import useStore from "../store"
@@ -12,7 +12,7 @@ import { initBackend } from "../components/ChooseBackend"
 export function Component() {
   const loginStatus = useStore(state => state.type)
   const navigate = useNavigate()
-  const { successAlert, errorAlert } = useNetwork()
+  const { successAlert, errorAlert } = useAlert()
   const result = useRegisterActionData()
   const { t } = useTranslation()
   const setToken = useStore(state => state.setToken)

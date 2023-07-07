@@ -1,12 +1,13 @@
 import { useNavigate, useLoaderData } from "react-router-dom"
 import { useTranslation } from "react-i18next"
 
-import { useChatList, useNetwork, useTitle } from "../tools"
+import { useChatList, useAlert, useTitle } from "../tools"
 import useStore from "../store"
 import clsx from "clsx"
+import rpc from "../network"
 
 export function Component() {
-  const { makeRequest, successAlert, errorAlert } = useNetwork()
+  const { successAlert, errorAlert } = useAlert()
   const ready = useStore(state => state.ready)
   const { chat, token } = useLoaderData() as { chat: number; token: string }
   const { refresh, values: chats } = useChatList()
@@ -55,15 +56,12 @@ export function Component() {
                 <button
                   className="btn btn-primary"
                   onClick={async () => {
-                    const { uid } = await makeRequest({
-                      type: "chat_invite",
-                      msg: token
-                    })
-                    console.log(uid)
-                    if (uid) {
+                    const chat = await rpc.chat.invite(token)
+                    console.log(chat)
+                    if (chat) {
                       await refresh()
                       successAlert(t("You have joined the chat successfully. "))
-                      navigate(`/chats/${uid}`)
+                      navigate(`/chats/${chat}`)
                     } else {
                       errorAlert(t("Oh No! An unexpected error has occurred. "))
                       navigate("/")

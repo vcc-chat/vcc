@@ -4,14 +4,15 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
 import useStore from "../store"
-import { useChatList, useNetwork } from "../tools"
+import { useChatList, useAlert } from "../tools"
 import { useSettingsActionsLoaderData } from "../loaders"
+import rpc from "../network"
 
 export const Component = memo(function SettingsActions() {
   const chat = useStore(state => state.chat)
   const chatName = useStore(state => state.chatName)
   const { refresh: refreshChats } = useChatList()
-  const { makeRequest, successAlert, errorAlert } = useNetwork()
+  const { successAlert, errorAlert } = useAlert()
   const [renameValue, setRenameValue] = useState("")
   const { public_: publicRaw } = useSettingsActionsLoaderData()
   const [publicValue, setPublic] = useState(false)
@@ -28,12 +29,7 @@ export const Component = memo(function SettingsActions() {
   }, [publicRaw])
 
   async function rename() {
-    const { uid } = await makeRequest({
-      type: "chat_rename",
-      uid: chat!,
-      msg: renameValue
-    })
-    if (uid) {
+    if (await rpc.chat.rename(chat!, renameValue)) {
       successAlert(t("Chat has renamed."))
     } else {
       errorAlert(t("Permission denied."))
@@ -45,13 +41,7 @@ export const Component = memo(function SettingsActions() {
   }
 
   async function modifyPublic() {
-    const { uid } = await makeRequest({
-      type: "chat_modify_permission",
-      uid: chat!,
-      usrname: "public",
-      msg: publicValue as any
-    })
-    if (uid) {
+    if (await rpc.chat.modifyPermission(chat!, "public", publicValue)) {
       successAlert(t(`The chat has been ${publicValue ? "public" : "private"}.`))
     } else {
       errorAlert(t("Permission denied."))

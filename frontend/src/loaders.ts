@@ -14,13 +14,13 @@ import { PermissionKey, allPermissions } from "./components/Settings"
 
 import shellQuote from "shell-quote"
 import { initBackend } from "./components/ChooseBackend"
+import rpc from "./network"
 
 export function wait() {
   return new Promise<void>(res => setTimeout(res, 0))
 }
 
 async function authLoader(jumpToLogin = true) {
-  const { makeRequest } = store.getState()
   const loginStatus = store.getState().type
   if (loginStatus == LoginType.LOGIN_SUCCESS) {
     return new Response()
@@ -32,16 +32,11 @@ async function authLoader(jumpToLogin = true) {
     return new Response()
   }
   const token = store.getState().token
-  if (typeof token == "string") {
-    const req = await makeRequest({
-      type: "token_login",
-      uid: 0,
-      usrname: "",
-      msg: token
-    })
-    if (req.uid != null) {
+  if (token != null) {
+    const { success, username } = await rpc.user.tokenLogin(token)
+    if (success) {
       store.setState({
-        username: req.usrname
+        username
       })
       store.getState().success()
     } else {
@@ -69,7 +64,6 @@ function badRequest() {
 }
 
 export async function inviteLoader({ request }: LoaderFunctionArgs) {
-  const { makeRequest } = store.getState()
   await authLoader()
 
   const url = new URL(request.url)
@@ -77,14 +71,7 @@ export async function inviteLoader({ request }: LoaderFunctionArgs) {
   if (token == null) {
     return redirect("/")
   }
-  const chat = (
-    await makeRequest({
-      type: "chat_invite",
-      uid: 0,
-      usrname: "",
-      msg: token
-    })
-  ).msg
+  const { chat } = await rpc.chat.checkInvite(token)
   if (chat == null) {
     throw badRequest()
   }
@@ -184,7 +171,7 @@ function parseCommand(msg: string) {
 }
 
 export async function chatAction({ params, request }: ActionFunctionArgs) {
-  const { makeRequest, sendJsonMessage } = store.getState()
+  const { sendJsonMessage } = store.getState()
   const { id: chatString } = params
   const { msg, session } = Object.fromEntries(await request.formData())
   console.log({ chatString, msg, session })
@@ -200,13 +187,7 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
   async function getUserID(username: string) {
     const data = await queryClient.fetchQuery({
       queryKey: ["user-list", chat],
-      queryFn: async () => {
-        const { msg } = await makeRequest({
-          type: "chat_get_users",
-          uid: chat
-        })
-        return msg as unknown as [number, string][]
-      }
+      queryFn: () => rpc.chat.getUsers(chat)
     })
     return data.find(([, name]) => name == username)?.[0]
   }
@@ -232,28 +213,16 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
   } else if (parsedResult.type == "kick") {
     const uid = await getUserID(parsedResult.user)
     if (uid == undefined) return { ok: false }
-    const { uid: success } = await makeRequest({
-      type: "chat_kick",
-      uid: chat,
-      msg: uid as any
-    })
+    const success = await rpc.chat.kick(chat, uid)
     if (success) {
       queryClient.invalidateQueries({ queryKey: ["user-list", chat] })
     }
-    return { ok: !!success }
+    return { ok: success }
   } else if (parsedResult.type == "perm-set") {
     const uid = await getUserID(parsedResult.user)
     if (uid == undefined) return { ok: false }
-    const { uid: success } = await makeRequest({
-      type: "chat_modify_user_permission",
-      msg: {
-        chat_id: chat,
-        modified_user_id: uid,
-        name: parsedResult.name,
-        value: parsedResult.value
-      } as any
-    })
-    return { ok: !!success }
+    const success = await rpc.chat.modifyUserPermission(chat, uid, parsedResult.name, parsedResult.value)
+    return { ok: success }
   }
   return { ok: false }
 }
@@ -276,7 +245,6 @@ export async function settingsLoader() {
 }
 
 export async function settingsInfoLoader({ params }: LoaderFunctionArgs) {
-  const { makeRequest } = store.getState()
   await authLoader()
 
   const { id: chatString } = params
@@ -287,21 +255,12 @@ export async function settingsInfoLoader({ params }: LoaderFunctionArgs) {
 
   const inviteLink = await queryClient.fetchQuery({
     queryKey: ["get-invite-link", chat],
-    queryFn: async () => {
-      const { msg } = await makeRequest({
-        type: "chat_generate_invite",
-        uid: chat,
-        usrname: "",
-        msg: ""
-      })
-      return `/chats/invite/?token=${msg}`
-    }
+    queryFn: () => rpc.chat.getInviteLink(chat)
   })
   return json({ inviteLink })
 }
 
 export async function settingsActionsLoader({ params }: LoaderFunctionArgs) {
-  const { makeRequest } = store.getState()
   await authLoader()
 
   const { id: chatString } = params
@@ -312,15 +271,7 @@ export async function settingsActionsLoader({ params }: LoaderFunctionArgs) {
 
   const a = await queryClient.fetchQuery({
     queryKey: ["chat-public", chat],
-    queryFn: async () => {
-      const { msg } = await makeRequest({
-        type: "chat_get_permission",
-        uid: chat,
-        usrname: "",
-        msg: ""
-      })
-      return msg as unknown as Record<string, boolean>
-    }
+    queryFn: () => rpc.chat.getPermission(chat)
   })
   return json({ public_: a.public })
 }
@@ -350,28 +301,17 @@ export async function loginLoader() {
 
 export async function loginAction({ request }: ActionFunctionArgs) {
   initBackend()
-  const { makeRequest } = store.getState()
   const { username, password } = Object.fromEntries(await request.formData())
   if (typeof username != "string" || typeof password != "string") {
     throw badRequest()
   }
-  const { uid, msg } = await makeRequest({
-    uid: 0,
-    type: "login",
-    usrname: username,
-    msg: password
-  })
-  if (uid) {
-    return {
-      success: true,
-      token: msg
-    }
-  } else {
-    return {
-      success: false,
-      token: null
-    }
+  const result = await rpc.user.login(username, password)
+  if (result.success) {
+    store.setState({
+      username
+    })
   }
+  return result
 }
 
 export function useLoginActionData() {
@@ -393,39 +333,17 @@ export async function registerLoader() {
 
 export async function registerAction({ request }: ActionFunctionArgs) {
   initBackend()
-  const { makeRequest } = store.getState()
   const { username, password } = Object.fromEntries(await request.formData())
   if (typeof username != "string" || typeof password != "string") {
     throw badRequest()
   }
-  const { uid: registerSuccess } = await makeRequest({
-    uid: 0,
-    type: "register",
-    usrname: username,
-    msg: password
-  })
+  const registerSuccess = await rpc.user.register(username, password)
   if (!registerSuccess)
     return {
       success: false,
       token: null
     }
-  const { uid, msg } = await makeRequest({
-    uid: 0,
-    type: "login",
-    usrname: username,
-    msg: password
-  })
-  if (uid) {
-    return {
-      success: true,
-      token: msg
-    }
-  } else {
-    return {
-      success: false,
-      token: null
-    }
-  }
+  return await rpc.user.login(username, password)
 }
 
 export function useRegisterActionData() {

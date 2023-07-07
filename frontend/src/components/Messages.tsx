@@ -16,7 +16,7 @@ export function MessageAvatar({ name }: { name?: string }) {
           backgroundColor: name ? stringToColor(name) : "black"
         }}
       >
-        <span className="text-white">
+        <span className="text-white select-none">
           {letter1}
           {letter2}
         </span>

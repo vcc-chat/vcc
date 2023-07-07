@@ -4,17 +4,17 @@ import { useQueryClient, useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
 
 import useStore from "../store"
-import { useChatList, useNetwork } from "../tools"
+import { useChatList, useAlert } from "../tools"
 import { SettingsEditItem, allPermissions, PermissionKey } from "./Settings"
 import { Trans, useTranslation } from "react-i18next"
+import rpc from "../network"
 
 export function JoinDialog({ id }: { id: string }) {
   const [dialogValue, setDialogValue] = useState("")
-  const { makeRequest } = useNetwork()
   const { t } = useTranslation()
 
   const navigate = useNavigate()
-  const { successAlert, errorAlert } = useNetwork()
+  const { successAlert, errorAlert } = useAlert()
   const { refresh } = useChatList()
 
   const joinHandler = useCallback(async () => {
@@ -25,13 +25,9 @@ export function JoinDialog({ id }: { id: string }) {
       return
     }
     if (chat === null) return
-    const request = await makeRequest({
-      uid: chat,
-      type: "chat_join"
-    })
-    if (request.uid) {
+    if (await rpc.chat.join(chat)) {
       await refresh()
-      navigate(`/chats/${request.uid}`)
+      navigate(`/chats/${chat}`)
       successAlert(t("You have joined the chat successfully. "))
     } else {
       errorAlert(t("No such chat. "))
@@ -68,25 +64,16 @@ export function JoinDialog({ id }: { id: string }) {
 
 export function ChangeNickname({ id, uid }: { id: string; uid: number }) {
   const [dialogValue, setDialogValue] = useState("")
-  const { makeRequest } = useNetwork()
   const { t } = useTranslation()
   const chat = useStore(state => state.chat)
 
-  const navigate = useNavigate()
-  const { successAlert, errorAlert } = useNetwork()
+  const { successAlert, errorAlert } = useAlert()
   const queryClient = useQueryClient()
 
   const changeHandler = useCallback(async () => {
     if (dialogValue === null) return
-    const request = await makeRequest({
-      msg: chat as unknown as string,
-      uid,
-      usrname: dialogValue,
-      type: "chat_change_nickname"
-    })
-    if (request.uid) {
+    if (await rpc.chat.changeNickname(chat!, uid, dialogValue)) {
       queryClient.invalidateQueries(["get-nickname", uid])
-      navigate(`/chats/${request.uid}`)
       successAlert(t("You have changed the nickname successfully. "))
     } else {
       errorAlert(t("Permission denied. "))
@@ -130,19 +117,13 @@ export function EditPermissionDialog({
   username: string
   modifyPermissionDialogID: string
 }) {
-  const { makeRequest, successAlert, errorAlert } = useNetwork()
+  const { successAlert, errorAlert } = useAlert()
   const chat = useStore(state => state.chat)
   const { data: permissionRawData } = useQuery({
     queryKey: ["user-permission", chat],
     queryFn: async () => {
       if (chat == null) return
-      const { msg } = await makeRequest({
-        type: "chat_get_all_permission",
-        uid: chat!,
-        usrname: "",
-        msg: ""
-      })
-      return msg as unknown as Record<number, Record<string, boolean>>
+      return await rpc.chat.getAllPermission(chat!)
     },
     enabled: chat != null
   })
@@ -171,23 +152,9 @@ export function EditPermissionDialog({
   function makeModifyPermissionRequest(name: PermissionKey) {
     const value = permissions[name]
     if (permissionOriginal != undefined && permissionOriginal[name] == value) {
-      return Promise.resolve({
-        uid: 1,
-        type: "chat_modify_user_permission" as const,
-        usrname: "",
-        msg: ""
-      })
+      return Promise.resolve(true)
     }
-    const request = makeRequest({
-      type: "chat_modify_user_permission" as const,
-      msg: {
-        chat_id: chat,
-        modified_user_id: uid,
-        name: name,
-        value: value
-      } as any
-    })
-    return request
+    return rpc.chat.modifyUserPermission(chat!, uid, name, value)
   }
   useEffect(() => {
     if (!permissionOriginal) return
@@ -225,7 +192,7 @@ export function EditPermissionDialog({
                     queryClient.invalidateQueries({
                       queryKey: ["user-permission", chat]
                     })
-                    const success = result.map(req => !!req.uid).reduce((a, b) => a && b)
+                    const success = result.reduce((a, b) => a && b)
                     if (success) {
                       successAlert(t("Permission has successfully been modified."))
                     } else {

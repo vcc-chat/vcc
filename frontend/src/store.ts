@@ -41,4 +41,15 @@ const useStore = create<
   )
 )
 
+export function clearData() {
+  useStore.setState({
+    messages: [],
+    token: null,
+    pluginLinks: [],
+    markdownToHTML: {},
+    backendAddress: null,
+    lastMessageTime: Infinity
+  })
+}
+
 export default useStore

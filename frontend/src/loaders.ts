@@ -7,7 +7,7 @@ import {
   useLoaderData
 } from "react-router-dom"
 
-import store from "./store"
+import store, { clearData } from "./store"
 import { LoginType } from "./state/login"
 import { queryClient, syncMessages } from "./tools"
 import { PermissionKey, allPermissions } from "./components/Settings"
@@ -343,7 +343,13 @@ export async function registerAction({ request }: ActionFunctionArgs) {
       success: false,
       token: null
     }
-  return await rpc.user.login(username, password)
+  const result = await rpc.user.login(username, password)
+  if (result.success) {
+    store.setState({
+      username
+    })
+  }
+  return result
 }
 
 export function useRegisterActionData() {
@@ -372,14 +378,8 @@ export function chooseBackendLoader({ request: { url } }: LoaderFunctionArgs) {
   return new Response()
 }
 
-export function clearDataLoader() {
-  store.setState({
-    messages: [],
-    token: null,
-    pluginLinks: [],
-    markdownToHTML: {},
-    backendAddress: null,
-    lastMessageTime: Infinity
-  })
+export function logoutLoader() {
+  clearData()
+  queryClient.clear()
   location.pathname = "/login"
 }

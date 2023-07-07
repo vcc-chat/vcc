@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useId } from "preact/hooks"
 import type { ComponentChildren } from "preact"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import clsx from "clsx"
 import AccountCircle from "@material-design-icons/svg/filled/account_circle.svg"
@@ -40,14 +40,7 @@ export function NavBar({ toggle, toggleRightSidebar }: { toggle: () => void; tog
           </label>
           <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
             <li>
-              <a
-                onClick={async () => {
-                  useStore.setState({ token: null })
-                  location.href = "/login"
-                }}
-              >
-                {t("Logout")}
-              </a>
+              <Link to="/logout">{t("Logout")}</Link>
             </li>
           </ul>
         </div>

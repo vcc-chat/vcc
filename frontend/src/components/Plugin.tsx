@@ -184,7 +184,7 @@ const workerInitCode = `(${function () {
     if (cachedResult != undefined) return cachedResult
     if (readOnlySet.has(obj)) return obj
 
-    const proxy = new ProxyClone(proxyFunction, {
+    const proxy = new ProxyClone(typeof obj == "function" ? proxyFunction : Object.create(null), {
       apply(_, thisArg, argumentsList) {
         const result: any = reflectApply(obj, thisArg, argumentsList)
         if ((typeof result == "object" || typeof result == "function") && result != null) {
@@ -254,7 +254,12 @@ const workerInitCode = `(${function () {
           if (key == Symbol.unscopables) {
             return undefined
           }
-          return target[key] ?? readOnly(self[key as any])
+          if (key in target) return target[key]
+          const value: any = self[key as any]
+          if (typeof value == "function") {
+            return readOnly(value.bind(target))
+          }
+          return readOnly(self[key as any])
         },
         has() {
           return true

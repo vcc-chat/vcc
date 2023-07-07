@@ -1,7 +1,5 @@
 import { useCallback, useEffect } from "preact/hooks"
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query"
-import { persistQueryClient } from "@tanstack/react-query-persist-client"
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
 
 import { LoginType } from "./state/login"
 import useStore from "./store"
@@ -15,15 +13,6 @@ export const queryClient = new QueryClient({
       cacheTime: Infinity
     }
   }
-})
-
-const localStoragePersister = createSyncStoragePersister({
-  storage: localStorage
-})
-
-persistQueryClient({
-  queryClient,
-  persister: localStoragePersister
 })
 
 const successAlertSelector = (state: ReturnType<typeof useStore.getState>) => state.successAlert

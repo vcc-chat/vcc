@@ -28,17 +28,35 @@ HTTP_RESPONSE_TIMEOUT = """
 """
 
 
-def oauthGhHttp(table: dict[str, asyncio.Future] = {}):
+def oauthGhHttp(procress_oauth):
     app = aiohttp.web.Application()
     route = aiohttp.web.RouteTableDef()
 
     async def callback_url(request):
         requestid = request.match_info["requestid"]
-        print(requestid)
-        if not requestid in table:
+        query=request.query
+        if (await procress_oauth(requestid,query))==-1:
             return Response(text=HTTP_RESPONSE_TIMEOUT, content_type="text/html")
+        return Response(text=HTTP_RESPONSE_HTML, content_type="text/html")
+    app.add_routes(
+        [
+            aiohttp.web.get(
+                os.path.join(parse_url(GH_CALLBACKURL).path, "{requestid}"), callback_url
+            )
+        ]
+    )
+    return lambda: aiohttp.web._run_app(app, port=HTTP_PORT)
+
+class oauthGithub(metaclass=base.ServiceMeta):
+    def __init__(self) -> None:
+        self.table: dict[str, asyncio.Future] = {}
+        self.http_server = oauthGhHttp(self.procress_oauth)
+    @export(async_mode=True)
+    async def procress_oauth(self,requestid,query):
+        if not requestid in self.table:
+            return -1
         async with ClientSession(headers={"Accept": "application/json"}) as client:
-            code = request.query["code"]
+            code = query["code"]
             access = await client.post(
                 GH_ACCESS_URL_TEMPLATE.format(
                     **{
@@ -55,23 +73,8 @@ def oauthGhHttp(table: dict[str, asyncio.Future] = {}):
                 GH_GET_USER, headers={"Authorization": "token " + accesstoken}
             )
             userinfo = await userinfo.json()
-            table[requestid].set_result({"id":userinfo["id"],"nickname":userinfo["login"]})
-        return Response(text=HTTP_RESPONSE_HTML, content_type="text/html")
-    app.add_routes(
-        [
-            aiohttp.web.get(
-                os.path.join(parse_url(GH_CALLBACKURL).path, "{requestid}"), callback_url
-            )
-        ]
-    )
-    return lambda: aiohttp.web._run_app(app, port=HTTP_PORT)
-
-
-class oauthGithub(metaclass=base.ServiceMeta):
-    def __init__(self) -> None:
-        self.table: dict[str, asyncio.Future] = {}
-        self.http_server = oauthGhHttp(table=self.table)
-
+            self.table[requestid].set_result({"id":userinfo["id"],"nickname":userinfo["login"]})
+        return 0
     @export(thread=False)
     def request_oauth(self):
         requestid = str(uuid.uuid4())

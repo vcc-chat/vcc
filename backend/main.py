@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from vcc import RpcExchanger, RpcExchangerClient, PermissionDeniedError
-from sanic import Sanic, Request, Websocket
+from sanic import Sanic, Request, Websocket, html
 from sanic.response import text,file_stream
 from sanic.exceptions import NotFound
 from limits import parse
@@ -296,7 +296,12 @@ async def loop(request: Request, websocket: Websocket) -> None:
             continue
         break
     logging.info(f"{request.id} has disconnected")
-
+@app.route("/oauth/<platform:str>/<requestid:str>")
+async def procress_oauth(request:Request,platform,requestid):
+    query=request.args
+    query={a:b for a,b in list(map(lambda x:[x,query[x][0]],query.keys()))}
+    await app.ctx.exchanger.rpc_request("oauth_"+platform,"procress_oauth",{'requestid':requestid,'query':query})
+    return html("OK")
 app.config.WEBSOCKET_MAX_SIZE = 1 << 13
 
 logging.getLogger("vcc.vcc").setLevel(logging.DEBUG)

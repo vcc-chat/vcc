@@ -44,7 +44,7 @@ export function Component() {
   const githubOauthHandler = useCallback(async () => {
     initBackend()
     const { url, requestID } = await rpc.oauth.request()
-    window.open(url, "_blank", "noopener,noreferrer")
+    window.open(url, "_blank", "noopener,noreferrer,popup")
     const { username, token } = await rpc.oauth.login(requestID)
     setToken(token)
     changeUsername(username)

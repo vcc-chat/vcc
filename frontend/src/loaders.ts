@@ -382,4 +382,5 @@ export function logoutLoader() {
   clearData()
   queryClient.clear()
   location.pathname = "/login"
+  return new Response()
 }

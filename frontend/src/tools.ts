@@ -179,6 +179,9 @@ export async function registerServiceWorker() {
   if (!navigator.serviceWorker || !window.PushManager) return
   await navigator.serviceWorker.register("/sw.js", { scope: "/" })
   const registration = await navigator.serviceWorker.ready
+  while (useStore.getState().type != LoginType.LOGIN_SUCCESS) {
+    await wait()
+  }
   const subscription =
     (await registration.pushManager.getSubscription()) ||
     (await (async () => {
@@ -189,13 +192,6 @@ export async function registerServiceWorker() {
         userVisibleOnly: true
       })
     })())
-  while (useStore.getState().type != LoginType.LOGIN_SUCCESS) {
-    await wait()
-    await wait()
-    await wait()
-    await wait()
-    await wait()
-  }
   await rpc.push.register(subscription.toJSON())
 }
 

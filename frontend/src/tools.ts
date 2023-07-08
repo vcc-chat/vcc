@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "preact/hooks"
+import { useCallback, useEffect, useLayoutEffect } from "preact/hooks"
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { LoginType } from "./state/login"
@@ -149,6 +149,12 @@ export function useTitle(title: string) {
   useEffect(() => {
     document.title = title ? `${title} - web-vcc` : "web-vcc: vcc online"
   }, [title])
+}
+
+export function usePreload(func: () => Promise<any>) {
+  useLayoutEffect(() => {
+    func()
+  }, [])
 }
 
 async function getChatRecord(chat: number) {

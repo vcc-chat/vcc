@@ -7,11 +7,12 @@ import { useTranslation } from "react-i18next"
 import { LoginType } from "../state/login"
 import useStore from "../store"
 import { useLoginActionData } from "../loaders"
-import { useAlert, useTitle } from "../tools"
+import { useAlert, usePreload, useTitle } from "../tools"
 import ChooseBackend, { initBackend } from "../components/ChooseBackend"
 import rpc from "../network"
 
 export function Component() {
+  usePreload(() => import("./Chat"))
   const username = useStore(state => state.username)
   const changeUsername = useStore(state => state.changeUsername)
   const navigate = useNavigate()

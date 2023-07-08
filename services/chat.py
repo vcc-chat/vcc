@@ -11,7 +11,7 @@ import base
 import warnings
 import redis.asyncio as redis
 from models import *
-
+import traceback
 db = get_database()
 
 bind_model(User, db)
@@ -109,6 +109,7 @@ class ChatService:
 
     async def join(self, chat_id: int, user_id: int) -> bool:
         try:
+            print(0)
             chat = Chat.get_by_id(chat_id)
             if not chat.public:
                 return False
@@ -118,7 +119,7 @@ class ChatService:
                     return False
                 # Also join parent chat
                 parent_chat_user, parent_chat_user_created = ChatUser.get_or_create(
-                    chat=parent_chat, user=user_id
+                    chat_id=parent_chat, user_id=user_id
                 )
                 if parent_chat_user.banned:
                     return False
@@ -129,8 +130,11 @@ class ChatService:
             await self._send_event(
                 chat_id, "join", {"user_name": user.name, "user_id": user_id}
             )
+            print(1)
             return True
         except:
+            print(2)
+            traceback.print_exc()
             return False
 
     async def quit(self, chat_id: int, user_id: int) -> bool:
@@ -366,9 +370,7 @@ class ChatService:
 
     async def list_somebody_joined(self, id: int) -> list[tuple[int, str, int | None]]:
         # after json.dumps, tuple returned will become json Array
-        print(0)
         try:
-            print(1)
             chat_users = (
                 ChatUser.select()
                 .where(~ChatUser.banned, ChatUser.user == id)
@@ -376,7 +378,6 @@ class ChatService:
                 .select(Chat.id, Chat.name, Chat.parent)
                 .execute()
             )
-            print(2)
             return [
                 (
                     chat_user.chat.id,
@@ -386,7 +387,6 @@ class ChatService:
                 for chat_user in chat_users
             ]
         except:
-            print(3)
             return []
 
     async def list_sub_chats(self, id: int) -> list[tuple[int, str]]:

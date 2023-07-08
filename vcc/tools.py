@@ -4,13 +4,66 @@ import inspect
 import logging
 import os
 import contextvars
+import copy
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, TypeVar, TypedDict
 
 if TYPE_CHECKING:
     from .vcc import RpcExchangerBaseClient
 
 T = TypeVar("T", bound=Callable)
+
+log = logging.getLogger("vcc")
+log.addHandler(logging.NullHandler())
+
+ChatUserPermissionName = Literal["kick", "rename", "invite", "modify_permission", "send"]
+ChatPermissionName = Literal["public"]
+
+class RpcException(Exception):
+    pass
+
+class ChatAlreadyJoinedError(RpcException):
+    pass
+
+class ChatNotJoinedError(RpcException):
+    pass
+
+class UnknownError(RpcException):
+    pass
+
+class NotAuthorizedError(RpcException):
+    pass
+
+class PermissionDeniedError(RpcException):
+    pass
+
+class ProviderNotFoundError(RpcException):
+    pass
+
+class RedisMessage(TypedDict):
+    username: str
+    msg: str
+    # TODO: add NotRequired after upgrading to python3.11
+    session: str
+    chat: int
+    uid: int
+
+Event = Literal["join", "quit", "kick", "rename", "invite"]
+
+MessageCallback = Callable[[int, str, str, int, str | None], None | Awaitable[None]]
+EventCallback = Callable[[Event, Any, int], None | Awaitable[None]]
+
+class RedisEvent(TypedDict):
+    type: Event
+    data: Any
+    chat: int
+
+if TYPE_CHECKING:
+    async def service_table_getattr(**kwargs) -> Any: ...
+    class ServiceTableTypeImpl:
+        def __getattr__(self, key): return service_table_getattr
+    class ServiceTableType:
+        def __getattr__(self, key) -> ServiceTableTypeImpl: ...
 
 log = logging.getLogger("vcc")
 log.addHandler(logging.NullHandler())
@@ -28,7 +81,7 @@ class ContextObject(object):
         self._context.set(self._context.get() | {name: value})
 
 
-def check(*, auth: bool=True, joined: str | None=None, not_joined: str | None=None):
+def check(*, auth: bool=True, joined: str | None=None, not_joined: str | None=None, error_return: Any=Exception):
     def decorator(func: T) -> T:
         signature = inspect.signature(func)
         @wraps(func)
@@ -36,10 +89,16 @@ def check(*, auth: bool=True, joined: str | None=None, not_joined: str | None=No
             bound_signature = signature.bind(self, *args, **kwargs)
             if auth:
                 self.check_authorized()
-            if joined is not None:
-                await self.check_joined(bound_signature.arguments[joined])
-            if not_joined is not None:
-                await self.check_not_joined(bound_signature.arguments[not_joined])
+            try:
+                if joined is not None:
+                    await self.check_joined(bound_signature.arguments[joined])
+                if not_joined is not None:
+                    await self.check_not_joined(bound_signature.arguments[not_joined])
+            except RpcException as e:
+                log.warning(e, exc_info=True)
+                if error_return is Exception:
+                    raise
+                return copy.deepcopy(error_return)
             return await func(self, *args, **kwargs)
         return wrapper # type: ignore
     return decorator
@@ -71,27 +130,6 @@ def get_host() -> tuple[str, int]:
     else:
         return ("localhost", 2474)
 
-class RpcException(Exception):
-    pass
-
-class ChatAlreadyJoinedError(RpcException):
-    pass
-
-class ChatNotJoinedError(RpcException):
-    pass
-
-class UnknownError(RpcException):
-    pass
-
-class NotAuthorizedError(RpcException):
-    pass
-
-class PermissionDeniedError(RpcException):
-    pass
-
-class ProviderNotFoundError(RpcException):
-    pass
-
 __all__ = [
     "check", 
     "rpc_request", 
@@ -103,5 +141,13 @@ __all__ = [
     "NotAuthorizedError",
     "PermissionDeniedError",
     "ProviderNotFoundError",
-    "log"
+    "log",
+    "ChatUserPermissionName",
+    "ChatPermissionName",
+    "Event",
+    "MessageCallback",
+    "EventCallback",
+    "RedisEvent",
+    "ServiceTableType",
+    "RedisMessage"
 ]

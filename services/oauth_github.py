@@ -37,6 +37,7 @@ def oauthGhHttp(procress_oauth):
         query=request.query
         if (await procress_oauth(requestid,query))==-1:
             return Response(text=HTTP_RESPONSE_TIMEOUT, content_type="text/html")
+
         return Response(text=HTTP_RESPONSE_HTML, content_type="text/html")
     app.add_routes(
         [
@@ -57,6 +58,14 @@ class oauthGithub(metaclass=base.ServiceMeta):
             return -1
         async with ClientSession(headers={"Accept": "application/json"}) as client:
             code = query["code"]
+            print(GH_ACCESS_URL_TEMPLATE.format(
+                    **{
+                        "clientid": GH_CLIENTID,
+                        "clientsec": GH_CLIENTSEC,
+                        "callbackurl": GH_CALLBACKURL,
+                        "requestid": requestid,
+                        "code": code,
+                    }))
             access = await client.post(
                 GH_ACCESS_URL_TEMPLATE.format(
                     **{
@@ -68,6 +77,7 @@ class oauthGithub(metaclass=base.ServiceMeta):
                     }
                 )
             )
+            print(await access.json())
             accesstoken = (await access.json())["access_token"]
             userinfo = await client.get(
                 GH_GET_USER, headers={"Authorization": "token " + accesstoken}

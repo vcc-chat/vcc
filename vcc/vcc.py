@@ -17,11 +17,18 @@ from redis.exceptions import (
     ConnectionError,
     TimeoutError
 )
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, cast, Coroutine, TypedDict, Literal, overload, no_type_check_decorator
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, cast, Coroutine, Literal, overload, no_type_check_decorator
 from os import getenv
 
 from .service import RpcServiceFactory, Service
 from .tools import *
+
+if TYPE_CHECKING:
+    async def service_table_getattr(**kwargs) -> Any: ...
+    class ServiceTableTypeImpl:
+        def __getattr__(self, key): return service_table_getattr
+    class ServiceTableType:
+        def __getattr__(self, key) -> ServiceTableTypeImpl: ...
 
 class RpcExchanger:
     """Low-level api which is hard to use"""

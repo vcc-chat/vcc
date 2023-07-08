@@ -58,13 +58,6 @@ class RedisEvent(TypedDict):
     data: Any
     chat: int
 
-if TYPE_CHECKING:
-    async def service_table_getattr(**kwargs) -> Any: ...
-    class ServiceTableTypeImpl:
-        def __getattr__(self, key): return service_table_getattr
-    class ServiceTableType:
-        def __getattr__(self, key) -> ServiceTableTypeImpl: ...
-
 log = logging.getLogger("vcc")
 log.addHandler(logging.NullHandler())
 
@@ -148,6 +141,6 @@ __all__ = [
     "MessageCallback",
     "EventCallback",
     "RedisEvent",
-    "ServiceTableType",
     "RedisMessage"
 ]
+

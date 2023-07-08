@@ -123,7 +123,7 @@ class ChatService:
                 )
                 if parent_chat_user.banned:
                     return False
-            chat_user, chat_user_created = ChatUser.get_or_create(chat=chat, user=user)
+            chat_user, chat_user_created = ChatUser.get_or_create(chat_id=chat, user_id=user)
             if chat_user.banned:
                 return False
             await self._send_message(chat_id, f"{user.name} has joined the chat.")

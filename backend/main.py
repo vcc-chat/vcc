@@ -118,7 +118,15 @@ async def handle_request(websocket: Websocket, client: RpcExchangerClient, json_
                         uid=new_uid,
                         username=new_username
                     )
-                else:
+                    return
+                # Since rpc hasn't implemented api of oauth's token, we try web-vcc's own token
+                try:
+                    result = jwt.decode(msg, key, ["HS512"])
+                    client._id = result["uid"]
+                    client._name = result["username"]
+                    await client.add_online()
+                    await send(uid=result["uid"], username=result["username"])
+                except (jwt.DecodeError, KeyError):
                     await send(uid=cast(Any, None), username="")
             case "request_oauth":
                 url, request_id = await client.request_oauth(msg)

@@ -306,11 +306,7 @@ export async function loginAction({ request }: ActionFunctionArgs) {
     throw badRequest()
   }
   const result = await rpc.user.login(username, password)
-  if (result.success) {
-    store.setState({
-      username
-    })
-  }
+  store.getState().changeUsername(username)
   return result
 }
 

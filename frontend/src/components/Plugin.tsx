@@ -155,6 +155,7 @@ const workerInitCode = `(${function () {
 
   const ObjectClone = Object
   const freeze = Object.freeze
+  const isFrozen = Object.isFrozen
   const ProxyClone = Proxy
   const reflectApply = Reflect.apply
 
@@ -181,33 +182,15 @@ const workerInitCode = `(${function () {
   function readOnly(obj: any): any {
     if ((typeof obj != "object" && typeof obj != "function") || obj == null) return obj
     const cachedResult = readOnlyMap.get(obj)
+
     if (cachedResult != undefined) return cachedResult
     if (readOnlySet.has(obj)) return obj
+    if (isFrozen(obj)) return obj
 
-    const proxy = new ProxyClone(typeof obj == "function" ? proxyFunction : Object.create(null), {
-      apply(_, thisArg, argumentsList) {
-        const result: any = reflectApply(obj, thisArg, argumentsList)
-        if ((typeof result == "object" || typeof result == "function") && result != null) {
-          toReadOnly(result.__proto__)
-        }
-        return result
-      },
-      construct(_, argumentsList, newTarget) {
-        const result: any = Reflect.construct(obj, argumentsList, newTarget)
-        if ((typeof result == "object" || typeof result == "function") && result != null) {
-          toReadOnly(result.__proto__)
-        }
-        return result
-      },
-      defineProperty() {
-        return false
-      },
-      deleteProperty() {
-        return false
-      },
-      get(_, key) {
-        return readOnly(obj[key])
-      },
+    const handler: ProxyHandler<any> = {
+      defineProperty: () => false,
+      deleteProperty: () => false,
+      get: (_, key) => readOnly(obj[key]),
       getOwnPropertyDescriptor(_, key) {
         const descriptor = Reflect.getOwnPropertyDescriptor(obj, key)
         if (!descriptor) return
@@ -221,22 +204,35 @@ const workerInitCode = `(${function () {
       has(_, key) {
         return Reflect.has(obj, key)
       },
-      isExtensible() {
-        return false
-      },
+      isExtensible: () => false,
       ownKeys() {
         return Reflect.ownKeys(obj)
       },
-      preventExtensions() {
-        return true
-      },
-      set() {
-        return false
-      },
-      setPrototypeOf() {
-        return false
-      }
-    })
+      preventExtensions: () => false,
+      set: () => false,
+      setPrototypeOf: () => false
+    }
+
+    if (typeof obj == "function") {
+      Object.assign(handler, {
+        apply(_, thisArg, argumentsList) {
+          const result: any = reflectApply(obj, thisArg, argumentsList)
+          if ((typeof result == "object" || typeof result == "function") && result != null) {
+            toReadOnly(result.__proto__)
+          }
+          return result
+        },
+        construct(_, argumentsList, newTarget) {
+          const result: any = Reflect.construct(obj, argumentsList, newTarget)
+          if ((typeof result == "object" || typeof result == "function") && result != null) {
+            toReadOnly(result.__proto__)
+          }
+          return result
+        }
+      } as ProxyHandler<any>)
+    }
+
+    const proxy = new ProxyClone(typeof obj == "function" ? proxyFunction : Object.create(null), handler)
     readOnlySet.add(proxy)
     readOnlyMap.set(obj, proxy)
     return proxy
@@ -308,32 +304,34 @@ function createIframeSrc(originalScripts: string[]) {
   }
   return (
     "data:text/html;charset=utf-8," +
-    encodeURIComponent(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta http-equiv="Content-Security-Policy" content="${csp}">
-        <script nonce="${nonce}">
-          (function () {
-            var script = ${JSON.stringify(scripts)}
-            var url = URL.createObjectURL(new Blob([script]), {
-              type: "application/javascript"
-            })
-            var worker = new Worker(url)
-            worker.onmessage = function (ev) {
-              console.log("from worker", ev.data)
-              parent.postMessage(ev.data, "*")
-            }
-            window.onmessage = function (ev) {
-              console.log("from parent", ev.data)
-              worker.postMessage(ev.data)
-            }
-          })()
-        </script>
-      </head>
-      <body></body>
-    </html>
-  `)
+    encodeURIComponent(
+      `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta http-equiv="Content-Security-Policy" content="${csp}">
+            <script nonce="${nonce}">
+              (function () {
+                var script = atob(${JSON.stringify(btoa(scripts))})
+                var url = URL.createObjectURL(new Blob([script]), {
+                  type: "application/javascript"
+                })
+                var worker = new Worker(url)
+                worker.onmessage = function (ev) {
+                  parent.postMessage(ev.data, "*")
+                }
+                window.onmessage = function (ev) {
+                  worker.postMessage(ev.data)
+                }
+              })()
+            </script>
+          </head>
+          <body></body>
+        </html>
+      `
+        .replace(/ +/g, " ")
+        .replace(/\n/g, "")
+    )
   )
 }
 

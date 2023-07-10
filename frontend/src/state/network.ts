@@ -8,10 +8,13 @@ interface NetworkState {
   ready: boolean
   setReady: (ready: boolean) => void
   handleFunctionList: Record<string, (value: Request) => void>
-  sendJsonMessageRaw: ((request: Request) => void) | null
-  setSendJsonMessageRaw: (func: (request: Request) => void) => void
-  sendJsonMessage: (request: Request) => Promise<void>
-  makeRequest: (request: { type: RequestType; uid?: number; usrname?: string; msg?: string }) => Promise<Request>
+  sendJsonMessageRaw: ((method: string, request: Request) => void) | null
+  setSendJsonMessageRaw: (func: (method: string, request: Request) => void) => void
+  sendJsonMessage: (method: string, request: Request) => Promise<void>
+  makeRequest: (
+    method: string,
+    request: { type: RequestType; uid?: number; usrname?: string; msg?: string }
+  ) => Promise<Request>
 }
 
 const createNetworkSlice: StateCreator<NetworkState> = (set, get) => ({
@@ -32,15 +35,15 @@ const createNetworkSlice: StateCreator<NetworkState> = (set, get) => ({
       sendJsonMessageRaw: func
     }))
   },
-  async sendJsonMessage(req: Request) {
+  async sendJsonMessage(method, request) {
     let sendJsonMessageRaw
     while (!(sendJsonMessageRaw = get().sendJsonMessageRaw)) await wait()
-    sendJsonMessageRaw(req)
+    sendJsonMessageRaw(method, request)
   },
-  async makeRequest(request) {
+  async makeRequest(method, request) {
     const { sendJsonMessage } = get()
     const uuid = URL.createObjectURL(new Blob()).slice(-36)
-    sendJsonMessage({
+    sendJsonMessage(method, {
       ...request,
       uuid
     } as any)

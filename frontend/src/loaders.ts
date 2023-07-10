@@ -204,10 +204,10 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
     if (sendHook) {
       const newRequest = await sendHook(rawRequest)
       if (newRequest != null) {
-        await sendJsonMessage(newRequest)
+        await sendJsonMessage("message", newRequest)
       }
     } else {
-      await sendJsonMessage(rawRequest)
+      await sendJsonMessage("message", rawRequest)
     }
     return { ok: true }
   } else if (parsedResult.type == "kick") {

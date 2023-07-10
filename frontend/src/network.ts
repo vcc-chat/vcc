@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import type { RequestType, Request, RequestWithTime } from "./config"
 import useStore from "./store"
 import { responseToChatList } from "./tools"
+import { wait } from "./loaders"
 
 export async function useWebSocketConnection() {
   const backendAddress = useStore(state => state.backendAddress)
@@ -23,6 +24,8 @@ export async function useWebSocketConnection() {
     const serverAndClient = new JSONRPCServerAndClient(
       new JSONRPCServer(),
       new JSONRPCClient(async request => {
+        if (webSocket.readyState == WebSocket.CLOSING || webSocket.readyState == WebSocket.CLOSED) return
+        while (webSocket.readyState == WebSocket.CONNECTING) await wait()
         webSocket.send(JSON.stringify(request))
       })
     )
@@ -55,13 +58,14 @@ export async function useWebSocketConnection() {
         })
       }
     })
-    setSendJsonMessageRaw(request => {
-      const { type, ...other } = request
-      if (request.type == "message") {
-        serverAndClient.notify(type, other)
+    setSendJsonMessageRaw((method, request) => {
+      const { uuid, ...other } = request
+      console.log(method, other)
+      if (method == "message") {
+        serverAndClient.notify(method, other)
       } else {
-        serverAndClient.request(type, other).then(result => {
-          useStore.getState().handleFunctionList[request.uuid!](result)
+        serverAndClient.request(method, other).then(result => {
+          useStore.getState().handleFunctionList[uuid!](result)
         })
       }
     })
@@ -69,7 +73,7 @@ export async function useWebSocketConnection() {
 }
 
 async function makeRequest(method: RequestType, request: Record<string, any> = {}): Promise<any> {
-  return await useStore.getState().makeRequest(Object.assign({ type: method }, request) as any)
+  return await useStore.getState().makeRequest(method, request as any)
 }
 
 const rpc = {

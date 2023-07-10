@@ -169,12 +169,10 @@ async def loop(request: Request, websocket: Websocket) -> None:
 
 
 @app.route("/oauth/<platform:str>/<requestid:str>")
-async def procress_oauth(request: Request, platform, requestid):
-    query = request.args
-    query = {a: b for a, b in list(map(lambda x: [x, query[x][0]], query.keys()))}
-    app.ctx.exchanger.rpc_request(
-        "oauth_" + platform, "procress_oauth", {"requestid": requestid, "query": query}
-    )
+async def procress_oauth(request:Request,platform,requestid):
+    query=request.args
+    query={a:b for a,b in list(map(lambda x:[x,query[x][0]],query.keys()))}
+    await app.ctx.exchanger.rpc_request("oauth_"+platform,"procress_oauth",{'requestid':requestid,'query':query})
     return html("<script>window.close()</script>")
 
 

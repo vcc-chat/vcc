@@ -41,12 +41,9 @@ const createNetworkSlice: StateCreator<NetworkState> = (set, get) => ({
     const { sendJsonMessage } = get()
     const uuid = URL.createObjectURL(new Blob()).slice(-36)
     sendJsonMessage({
-      type: request.type,
-      uid: request.uid ?? 0,
-      usrname: request.usrname ?? "",
-      msg: request.msg ?? "",
+      ...request,
       uuid
-    })
+    } as any)
     const result = await new Promise<Request>(res => {
       set(state => ({
         handleFunctionList: {

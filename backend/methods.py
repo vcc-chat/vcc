@@ -3,7 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import functools
 from uuid import uuid4
-from vcc import PermissionDeniedError, RpcExchangerClient
+from vcc import (
+    PermissionDeniedError,
+    RpcExchangerClient,
+    ChatUserPermissionName,
+    ChatPermissionName,
+)
 from webpush import *
 
 import jwt
@@ -39,40 +44,39 @@ class Methods:
     def __init__(self, client: RpcExchangerClient):
         self._client = client
 
-    async def login(self, usrname, uid, msg, **kwargs):
+    async def login(self, username, password):
         client = self._client
-        login_result = await client.login(usrname, msg)
+        login_result = await client.login(username, password)
         if login_result is not None:
             token = login_result[1]
         else:
-            token = ""
-        return {"uid": None if login_result is None else login_result[0], "msg": token}
+            token = None
+        return {"success": login_result is not None, "token": token}
 
-    async def token_login(self, usrname, uid, msg, **kwargs):
+    async def token_login(self, token):
         client = self._client
-        login_result = await client.token_login(msg)
+        login_result = await client.token_login(token)
         if login_result is not None:
             new_username: str = login_result[1]
-            new_uid: int = login_result[0]
-            return {"uid": new_uid, "usrname": new_username}
+            return {"success": True, "username": new_username}
         # Since rpc hasn't implemented api of oauth's token, we try web-vcc's own token
         try:
-            result = jwt.decode(msg, key, ["HS512"])
+            result = jwt.decode(token, key, ["HS512"])
             client._id = result["uid"]
             client._name = result["username"]
             await client.add_online()
-            return {"uid": result["uid"], "usrname": result["username"]}
+            return {"success": True, "username": result["username"]}
         except (jwt.DecodeError, KeyError):
-            return {"uid": None, "usrname": ""}
+            return {"success": False, "username": ""}
 
-    async def request_oauth(self, usrname, uid, msg, **kwargs):
+    async def request_oauth(self, platform):
         client = self._client
-        url, request_id = await client.request_oauth(msg)
-        return {"usrname": request_id, "msg": url}
+        url, request_id = await client.request_oauth(platform)
+        return {"request_id": request_id, "url": url}
 
-    async def login_oauth(self, usrname, uid, msg, **kwargs):
+    async def login_oauth(self, platform, request_id):
         client = self._client
-        login_result = await client.login_oauth(usrname, msg)
+        login_result = await client.login_oauth(platform, request_id)
         if login_result is not None:
             # await client.chat_list()
             token = jwt.encode(
@@ -87,21 +91,20 @@ class Methods:
         else:
             token = ""
         return {
-            "uid": (None if login_result is None else int(login_result[0])),
-            "usrname": client.name,
-            "msg": token,
+            "username": client.name,
+            "token": token,
         }
 
-    async def is_online(self, usrname, uid, msg, **kwargs):
+    async def is_online(self, users):
         client = self._client
-        return {"msg": (await client.is_online(msg))}
+        return await client.is_online(users)
 
-    async def register(self, usrname, uid, msg, **kwargs):
+    async def register(self, username, password):
         client = self._client
-        return {"uid": int(await client.register(usrname, msg))}
+        return await client.register(username, password)
 
     @notification
-    async def message(self, usrname, uid, msg, **kwargs):
+    async def message(self, uid, msg, **kwargs):
         client = self._client
         try:
             await client.send(
@@ -110,126 +113,114 @@ class Methods:
         except PermissionDeniedError:
             pass  # FIXME: feedback to frontend
 
-    async def session_join(self, usrname, uid, msg, **kwargs):
+    async def session_join(self, name: str, parent: int):
         client = self._client
-        return {"uid": await client.session_join(msg, uid)}
+        return await client.session_join(name, parent)
 
-    async def chat_create(self, usrname, uid, msg, **kwargs):
+    async def chat_create(self, name: str, parent: int | None) -> int:
         client = self._client
-        return {
-            "uid": await client.chat_create(
-                usrname, -1 if uid == 0 or uid is None else uid
-            )
-        }
+        return await client.chat_create(
+            name, -1 if parent == 0 or parent is None else parent
+        )
 
-    async def chat_join(self, usrname, uid, msg, **kwargs):
+    async def chat_join(self, chat: int) -> bool:
         client = self._client
-        # also return session name
-        join_successfully = await client.chat_join(uid)
-        if not join_successfully:
-            return {"uid": 0}
-        else:
-            return {"uid": 1, "usrname": await client.chat_get_name(uid)}
+        return await client.chat_join(chat)
 
-    async def chat_quit(self, usrname, uid, msg, **kwargs):
+    async def chat_quit(self, chat: int):
         client = self._client
-        return {"uid": int(await client.chat_quit(uid))}
+        return await client.chat_quit(chat)
 
-    async def chat_get_name(self, usrname, uid, msg, **kwargs):
+    async def chat_get_name(self, chat: int):
         client = self._client
-        return {"usrname": await client.chat_get_name(uid)}
+        return await client.chat_get_name(chat)
 
-    async def chat_list(self, usrname, uid, msg, **kwargs):
+    async def chat_list(self):
         client = self._client
-        value = await client.chat_list()
-        return {"msg": value}
+        return await client.chat_list()
 
-    async def chat_get_users(self, usrname, uid, msg, **kwargs):
+    async def chat_get_users(self, chat: int):
         client = self._client
-        return {"msg": await client.chat_get_users(uid)}
+        return await client.chat_get_users(chat)
 
-    async def chat_rename(self, usrname, uid, msg, **kwargs):
+    async def chat_rename(self, chat: int, name: str):
         client = self._client
-        return {"uid": int(await client.chat_rename(uid, msg))}
+        return await client.chat_rename(chat, name)
 
-    async def chat_kick(self, usrname, uid, msg, **kwargs):
-        client = self._client
-        return {"uid": int(await client.chat_kick(uid, int(msg)))}
+    async def chat_kick(self, chat: int, user: int):
+        return await self._client.chat_kick(chat, user)
 
-    async def chat_modify_user_permission(self, usrname, uid, msg, **kwargs):
+    async def chat_modify_user_permission(
+        self,
+        chat_id: int,
+        modified_user_id: int,
+        name: ChatUserPermissionName,
+        value: bool,
+    ):
         client = self._client
-        data = msg
-        return {
-            "uid": int(
-                await client.chat_modify_user_permission(
-                    data["chat_id"],
-                    data["modified_user_id"],
-                    data["name"],
-                    data["value"],
-                )
-            )
-        }
+        return await client.chat_modify_user_permission(
+            chat_id,
+            modified_user_id,
+            name,
+            value,
+        )
 
-    async def chat_get_all_permission(self, usrname, uid, msg, **kwargs):
+    async def chat_get_all_permission(self, chat: int):
         client = self._client
-        return {"msg": await client.chat_get_all_permission(uid)}
+        return await client.chat_get_all_permission(chat)
 
-    async def chat_get_permission(self, usrname, uid, msg, **kwargs):
+    async def chat_get_permission(self, chat: int):
         client = self._client
-        return {"msg": await client.chat_get_permission(uid)}
+        return await client.chat_get_permission(chat)
 
-    async def chat_modify_permission(self, usrname, uid, msg, **kwargs):
+    async def chat_modify_permission(
+        self, chat: int, name: ChatPermissionName, value: bool
+    ):
         client = self._client
-        return {
-            "uid": int(await client.chat_modify_permission(uid, usrname, bool(msg)))
-        }
+        return await client.chat_modify_permission(chat, name, value)
 
-    async def chat_generate_invite(self, usrname, uid, msg, **kwargs):
+    async def chat_generate_invite(self, chat: int):
         client = self._client
-        if uid not in client._chat_list:
+        if chat not in client._chat_list:
             raise PermissionDeniedError()
-        token = jwt.encode(
+        return jwt.encode(
             {
-                "": [uid, client.id],
+                "": [chat, client.id],
                 "exp": datetime.now(tz=timezone.utc) + timedelta(days=14),
             },
             key,
             "HS256",
         )
-        return {"msg": token}
 
-    async def chat_check_invite(self, usrname, uid, msg, **kwargs):
+    async def chat_check_invite(self, token: str):
         try:
-            result = jwt.decode(msg, key, ["HS256"])
-            return {"uid": result[""][1], "msg": result[""][0]}
+            result = jwt.decode(token, key, ["HS256"])
+            return {"inviter": result[""][1], "chat": result[""][0]}
         except (jwt.DecodeError, KeyError):
-            return {"uid": None}
+            return {"inviter": None, "chat": None}
 
-    async def chat_invite(self, usrname, uid, msg, **kwargs):
+    async def chat_invite(self, token: str):
         client = self._client
         try:
-            result = jwt.decode(msg, key, ["HS256"])
-            return {
-                "uid": int(
-                    await client.chat_invite(
-                        chat_id=result[""][0], user_id=result[""][1]
-                    )
-                )
-            }
+            result = jwt.decode(token, key, ["HS256"])
+            return await client.chat_invite(
+                chat_id=result[""][0], user_id=result[""][1]
+            )
+
         except (jwt.DecodeError, KeyError):
-            return {"uid": None}
+            return False
 
-    async def file_upload(self, usrname, uid, msg, **kwargs):
+    async def file_upload(self, name: str):
         client = self._client
-        url, id = await client.file_new_object(msg)
-        return {"usrname": id, "msg": url}
+        url, id = await client.file_new_object(name)
+        return {"id": id, "url": url}
 
-    async def file_download(self, usrname, uid, msg, **kwargs):
+    async def file_download(self, id: str):
         client = self._client
-        url, name = await client.file_get_object(msg)
-        return {"usrname": name, "msg": url}
+        url, name = await client.file_get_object(id)
+        return {"name": name, "url": url}
 
-    async def record_query(self, usrname, uid, msg, **kwargs):
+    async def record_query(self, **kwargs):
         # client.check_authorized()
         # client.check_joined(uid)
         # result = await client._exchanger.rpc.record.query_record(chatid=uid, time=int(msg))
@@ -237,20 +228,20 @@ class Methods:
         # FIXME: Temporily disable support for chat record
         return {"msg": ([])}
 
-    async def chat_get_nickname(self, usrname, uid, msg, **kwargs):
+    async def chat_get_nickname(self, chat: int, user: int):
         client = self._client
-        return {"usrname": await client.chat_get_nickname(int(usrname), uid)}
+        return await client.chat_get_nickname(chat, user)
 
-    async def chat_change_nickname(self, usrname, uid, msg, **kwargs):
+    async def chat_change_nickname(self, chat: int, user: int, name: str):
         client = self._client
-        return {"uid": int(await client.chat_change_nickname(msg, uid, usrname))}
+        return await client.chat_change_nickname(chat, user, name)
 
-    async def push_get_vapid_public_key(self, usrname, uid, msg, **kwargs):
-        return {"msg": application_server_key}
+    async def push_get_vapid_public_key(self):
+        return application_server_key
 
-    async def push_register(self, usrname, uid, msg, **kwargs):
+    async def push_register(self, subscription):
         client = self._client
         if client.id is None:
             raise CloseException(1008)
-        push_register(client.id, msg)
+        push_register(client.id, subscription)
         return {}

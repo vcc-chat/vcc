@@ -1,17 +1,11 @@
-import { useEffect, useRef } from "preact/hooks"
 import { lazy, Suspense, memo } from "preact/compat"
 
-import useWebSocket, { ReadyState } from "react-use-websocket"
 import { Route, createBrowserRouter, createRoutesFromElements, RouterProvider } from "react-router-dom"
-import { useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import DoneIcon from "@material-design-icons/svg/outlined/done.svg"
 import ErrorIcon from "@material-design-icons/svg/outlined/error_outline.svg"
 
-import type { Request } from "./config"
 import { Notification } from "./components/Notification"
-import { responseToChatList } from "./tools"
-import { LoginType } from "./state/login"
 import useStore from "./store"
 import * as loaders from "./loaders"
 import { useWebSocketConnection } from "./network"

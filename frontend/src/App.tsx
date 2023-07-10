@@ -65,13 +65,11 @@ function Alert() {
   const { t } = useTranslation()
   const alerts = useStore(state => state.alerts)
   return (
-    <>
-      {alerts.map(({ type, content }) => (
+    <div className="left-2 bottom-2 absolute flex flex-col gap-2">
+      {alerts.map(({ type, content, index }) => (
         <div
-          className={`alert ${
-            type === "success" ? "alert-success" : "alert-error"
-          } shadow-lg absolute left-2 bottom-2 w-auto p-5 z-50`}
-          key={`${type} ${content}`}
+          className={`alert ${type === "success" ? "alert-success" : "alert-error"} shadow-lg w-auto p-5 z-50`}
+          key={`${type} ${content} ${index}`}
         >
           <div>
             {type === "success" ? <DoneIcon /> : <ErrorIcon />}
@@ -81,7 +79,7 @@ function Alert() {
           </div>
         </div>
       ))}
-    </>
+    </div>
   )
 }
 

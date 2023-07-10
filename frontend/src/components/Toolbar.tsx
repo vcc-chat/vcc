@@ -158,7 +158,9 @@ export function EditPermissionDialog({
   }
   useEffect(() => {
     if (!permissionOriginal) return
-    setPermissions(permissionOriginal as any)
+    for (const i in permissionOriginal) {
+      setPermissions({ key: i as any, value: permissionOriginal[i] })
+    }
   }, [permissionOriginal])
   return (
     <>

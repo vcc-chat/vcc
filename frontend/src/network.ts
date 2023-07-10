@@ -1,6 +1,72 @@
-import type { RequestType, RequestWithTime } from "./config"
-import store from "./store"
+import { JSONRPCClient, JSONRPCServer, JSONRPCServerAndClient } from "json-rpc-2.0"
+import { useEffect } from "preact/hooks"
+import { useQueryClient } from "@tanstack/react-query"
+
+import type { RequestType, Request, RequestWithTime } from "./config"
+import useStore from "./store"
 import { responseToChatList } from "./tools"
+
+export async function useWebSocketConnection() {
+  const backendAddress = useStore(state => state.backendAddress)
+  const setSendJsonMessageRaw = useStore(state => state.setSendJsonMessageRaw)
+  const setReady = useStore(state => state.setReady)
+  const changeLastMessageTime = useStore(state => state.changeLastMessageTime)
+  const receiveHook = useStore(state => state.receiveHook)
+  const addMessage = useStore(state => state.addMessage)
+  const errorAlert = useStore(state => state.errorAlert)
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    if (!backendAddress) return
+    const webSocket = new WebSocket(backendAddress)
+    webSocket.addEventListener("open", () => setReady(true))
+    webSocket.addEventListener("error", () => setReady(false))
+    const serverAndClient = new JSONRPCServerAndClient(
+      new JSONRPCServer(),
+      new JSONRPCClient(async request => {
+        webSocket.send(JSON.stringify(request))
+      })
+    )
+    webSocket.addEventListener("message", event => {
+      serverAndClient.receiveAndSend(JSON.parse(event.data.toString()))
+    })
+
+    webSocket.addEventListener("close", event => {
+      serverAndClient.rejectAllPendingRequests(`Connection is closed (${event.reason}).`)
+      setReady(false)
+      errorAlert("Oh No! The connection between server and client is interupted.")
+    })
+    serverAndClient.addMethod("message", async (message: Request) => {
+      changeLastMessageTime()
+      if (message.msg == "") return
+      const newMessage = {
+        req: receiveHook ? await receiveHook(message) : message,
+        time: +new Date()
+      }
+      const request = newMessage.req
+      if (request == null) return
+      addMessage(newMessage)
+      // notify(chatNames[chatValues.indexOf(request.uid)], `${request.usrname}: ${request.msg}`)
+      if (
+        request.usrname == "system" &&
+        (request.msg.includes("join") || request.msg.includes("quit") || request.msg.includes("kick"))
+      ) {
+        queryClient.invalidateQueries({
+          queryKey: ["user-list", request.uid]
+        })
+      }
+    })
+    setSendJsonMessageRaw(request => {
+      const { type, ...other } = request
+      if (request.type == "message") {
+        serverAndClient.notify(type, other)
+      } else {
+        serverAndClient.request(type, other).then(result => {
+          useStore.getState().handleFunctionList[request.uuid!](result)
+        })
+      }
+    })
+  }, [backendAddress])
+}
 
 async function makeRequest(request: {
   type: RequestType
@@ -8,7 +74,7 @@ async function makeRequest(request: {
   usrname?: string | undefined
   msg?: string | undefined
 }) {
-  return await store.getState().makeRequest(request)
+  return await useStore.getState().makeRequest(request)
 }
 
 const rpc = {

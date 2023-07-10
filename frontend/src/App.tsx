@@ -14,6 +14,7 @@ import { responseToChatList } from "./tools"
 import { LoginType } from "./state/login"
 import useStore from "./store"
 import * as loaders from "./loaders"
+import { useWebSocketConnection } from "./network"
 
 const ErrorElement = lazy(() => import("./pages/ErrorElement"))
 
@@ -62,102 +63,6 @@ const router = createBrowserRouter(
   )
 )
 
-function useMessageWebSocket() {
-  const backendAddress = useStore(state => state.backendAddress!)
-  const { sendJsonMessage, lastJsonMessage, lastMessage, readyState } = useWebSocket(backendAddress, {
-    shouldReconnect: ({ code }) => code != 1000 && code != 1001
-  })
-
-  const queryClient = useQueryClient()
-  const loginSuccess = useStore(state => state.type == LoginType.LOGIN_SUCCESS)
-  const receiveHook = useStore(state => state.receiveHook)
-  const addMessage = useStore(state => state.addMessage)
-  const changeAllChats = useStore(state => state.changeAllChat)
-  const setSendJsonMessageRaw = useStore(state => state.setSendJsonMessageRaw)
-  const setReady = useStore(state => state.setReady)
-  const errorAlert = useStore(state => state.errorAlert)
-  const changeLastMessageTime = useStore(state => state.changeLastMessageTime)
-  const tokenLogin = useStore(state => state.tokenLogin)
-  const loginType = useStore(state => state.type)
-  const firstTimeConnect = useRef(true)
-  useEffect(() => {
-    if (readyState != ReadyState.CONNECTING) return
-    console.log(1)
-    if (firstTimeConnect.current) {
-      firstTimeConnect.current = false
-      return
-    }
-    if (loginType != LoginType.LOGIN_SUCCESS) return
-    tokenLogin()
-    // This is an internal api, but we use it since this don't need it run in react router's context
-    router.revalidate()
-  }, [readyState])
-  ;(window as any).sendJsonMessage = sendJsonMessage
-
-  useEffect(() => {
-    setSendJsonMessageRaw(sendJsonMessage)
-  }, [sendJsonMessage])
-
-  useEffect(() => {
-    setReady(readyState === ReadyState.OPEN)
-  }, [readyState])
-
-  const handleFunctionList = useStore(state => state.handleFunctionList)
-
-  useEffect(() => {
-    const message: Request = lastJsonMessage
-    if (message == null) return
-    const func = handleFunctionList[message.uuid!]
-    if (func != undefined) {
-      func(message)
-      return
-    }
-    switch (message.type) {
-      case "message":
-        if (!loginSuccess) break
-        ;(async () => {
-          changeLastMessageTime()
-          if (message.msg == "") return
-          const newMessage = {
-            req: receiveHook ? await receiveHook(message) : message,
-            time: +new Date()
-          }
-          const request = newMessage.req
-          if (request == null) return
-          addMessage(newMessage)
-          // notify(chatNames[chatValues.indexOf(request.uid)], `${request.usrname}: ${request.msg}`)
-          if (
-            request.usrname == "system" &&
-            (request.msg.includes("join") || request.msg.includes("quit") || request.msg.includes("kick"))
-          ) {
-            queryClient.invalidateQueries({
-              queryKey: ["user-list", request.uid]
-            })
-          }
-        })()
-        break
-      case "chat_list":
-        queryClient.setQueryData(["chat-list"], () => {
-          const { values, names, parentChats } = responseToChatList(message.msg as any)
-          changeAllChats(values, names)
-          return { values, names, parentChats }
-        })
-        break
-      default:
-        console.error("Uncaught message: ", { message })
-    }
-  }, [lastMessage])
-
-  useEffect(() => {
-    if (readyState !== ReadyState.CLOSED) return
-    const timeout = setTimeout(() => {
-      console.log({ errorAlert })
-      errorAlert("Oh No! The connection between server and client is interupted, reconnecting...")
-    }, 2000)
-    return () => clearTimeout(timeout)
-  }, [readyState])
-}
-
 function SubRouter() {
   return <RouterProvider router={router} fallbackElement={<Loading />} />
 }
@@ -187,7 +92,7 @@ function Alert() {
 }
 
 function WebSocket() {
-  useMessageWebSocket()
+  useWebSocketConnection()
   return null
 }
 

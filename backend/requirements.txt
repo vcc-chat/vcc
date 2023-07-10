@@ -5,6 +5,7 @@ vcc-lib
 multidict==6.0.4
 sanic
 limits
-PyJWT
+PyJWT==2.6.0
 py-vapid==1.9.0
 pywebpush==1.14.0
+json-rpc==1.15.0

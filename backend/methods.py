@@ -91,7 +91,7 @@ class Methods:
         client = self._client
         return {"uid": int(await client.register(usrname, msg))}
 
-    async def message(self, usrname, uid, msg, session, **kwargs):
+    async def message(self, usrname, uid, msg, **kwargs):
         client = self._client
         try:
             await client.send(

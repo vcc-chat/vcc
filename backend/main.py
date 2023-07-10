@@ -40,27 +40,31 @@ async def recv_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
     try:
         async for result in client:
             if result[0] == "event":
-                json_msg = json.dumps(
-                    {
-                        "type": "event",
-                        "uid": result[3],
-                        "msg": result[
-                            2
-                        ],  # FIXME: I dont know if it will break client side because this may be a dict
-                    }
-                )
-                await websocket.send(json_msg)
+                # FIXME: allow events
+                # json_msg = json.dumps(
+                #     {
+                #         "type": "event",
+                #         "uid": result[3],
+                #         "msg": result[
+                #             2
+                #         ],  # FIXME: I dont know if it will break client side because this may be a dict
+                #     }
+                # )
+                # await websocket.send(json_msg)
                 continue
             _, uid, username, msg, chat, session = result
             logging.debug(f"{username=} {msg=} {chat=}")
             json_msg = json.dumps(
                 {
-                    "type": "message",
-                    "uid": chat,
-                    "user_id": uid,
-                    "usrname": username,
-                    "msg": msg,
-                    "session": session,
+                    "method": "message",
+                    "params": {
+                        "uid": chat,
+                        "user_id": uid,
+                        "usrname": username,
+                        "msg": msg,
+                        "session": session,
+                    },
+                    "jsonrpc": "2.0",
                 }
             )
             await websocket.send(json_msg)

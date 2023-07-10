@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import functools
 from uuid import uuid4
 from vcc import PermissionDeniedError, RpcExchangerClient
 from webpush import *
@@ -24,6 +25,14 @@ with open(confpath) as config_file:
 
 class CloseException(Exception):
     pass
+
+
+def notification(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        asyncio.create_task(func(*args, **kwargs))
+
+    return wrapper
 
 
 class Methods:
@@ -91,6 +100,7 @@ class Methods:
         client = self._client
         return {"uid": int(await client.register(usrname, msg))}
 
+    @notification
     async def message(self, usrname, uid, msg, **kwargs):
         client = self._client
         try:

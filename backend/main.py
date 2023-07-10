@@ -272,7 +272,7 @@ async def send_loop(
             if json_msg is None:
                 break
             # await rate_limit(ip)
-            task_list.add(asyncio.create_task(rpc_awaiter(client, websocket)))
+            task_list.add(asyncio.create_task(rpc_awaiter(response, websocket)))
     except Exception as e:
         logging.info(e, exc_info=True)
         await websocket.close(1008, ",".join(e.args))

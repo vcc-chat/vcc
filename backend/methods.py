@@ -189,7 +189,6 @@ class Methods:
         return {"msg": token}
 
     async def chat_check_invite(self, usrname, uid, msg, **kwargs):
-        client = self._client
         try:
             result = jwt.decode(msg, key, ["HS256"])
             return {"uid": result[""][1], "msg": result[""][0]}
@@ -221,7 +220,6 @@ class Methods:
         return {"usrname": name, "msg": url}
 
     async def record_query(self, usrname, uid, msg, **kwargs):
-        client = self._client
         # client.check_authorized()
         # client.check_joined(uid)
         # result = await client._exchanger.rpc.record.query_record(chatid=uid, time=int(msg))
@@ -238,13 +236,11 @@ class Methods:
         return {"uid": int(await client.chat_change_nickname(msg, uid, usrname))}
 
     async def push_get_vapid_public_key(self, usrname, uid, msg, **kwargs):
-        client = self._client
         return {"msg": application_server_key}
 
     async def push_register(self, usrname, uid, msg, **kwargs):
         client = self._client
         if client.id is None:
             raise CloseException(1008)
-            return
         push_register(client.id, msg)
         return {}

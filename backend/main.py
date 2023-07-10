@@ -258,7 +258,7 @@ async def rpc_awaiter(response, websocket: Websocket):
             logging.warn("Uncaught exception", exc_info=e)
             await websocket.close(1008)
 
-    await websocket.send(json.dumps(response))
+    await websocket.send(json.dumps(data))
 
 
 async def send_loop(

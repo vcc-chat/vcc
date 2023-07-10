@@ -312,18 +312,18 @@ function createIframeSrc(originalScripts: string[]) {
             <meta http-equiv="Content-Security-Policy" content="${csp}">
             <script nonce="${nonce}">
               (function () {
-                var script = atob(${JSON.stringify(btoa(scripts))})
+                var script = atob(${JSON.stringify(btoa(scripts))});
                 var url = URL.createObjectURL(new Blob([script]), {
                   type: "application/javascript"
-                })
-                var worker = new Worker(url)
+                });
+                var worker = new Worker(url);
                 worker.onmessage = function (ev) {
                   parent.postMessage(ev.data, "*")
-                }
+                };
                 window.onmessage = function (ev) {
                   worker.postMessage(ev.data)
-                }
-              })()
+                };
+              })();
             </script>
           </head>
           <body></body>

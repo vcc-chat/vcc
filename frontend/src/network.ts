@@ -55,7 +55,9 @@ export async function useWebSocketConnection() {
         })
       }
     })
+    console.log("setSendJsonMessageRaw called")
     setSendJsonMessageRaw(request => {
+      console.log({ request }, "sendJsonMessageRaw called")
       const { type, ...other } = request
       if (request.type == "message") {
         serverAndClient.notify(type, other)

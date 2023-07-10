@@ -246,9 +246,10 @@ async def recv_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
 async def rpc_awaiter(response, websocket: Websocket):
     data = response.data
 
-    async def assign_result(i):
-        if i["error"]:
-            return
+    # Note that data may be batch
+    for i in data if isinstance(data, list) else [data]:
+        if "error" in i:
+            continue
         try:
             i["result"] = await i["result"]
         except CloseException:
@@ -256,15 +257,7 @@ async def rpc_awaiter(response, websocket: Websocket):
         except Exception as e:
             logging.warn("Uncaught exception", exc_info=e)
             await websocket.close(1008)
-        return
 
-    task_list: set[asyncio.Task] = set()
-
-    # Note that data may be batch
-    for i in data if isinstance(data, list) else [data]:
-        task_list.add(asyncio.create_task(assign_result(i)))
-
-    await asyncio.gather(*task_list)
     await websocket.send(json.dumps(response))
 
 

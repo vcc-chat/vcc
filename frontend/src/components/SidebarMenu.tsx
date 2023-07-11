@@ -1,25 +1,21 @@
-import { useCallback, useId } from "preact/hooks"
-import { useNavigate } from "react-router-dom"
+import { useId } from "preact/hooks"
 
 import GroupAddIcon from "@material-design-icons/svg/outlined/group_add.svg"
 import AddCircleIcon from "@material-design-icons/svg/outlined/add_circle_outline.svg"
 import MenuIcon from "@material-design-icons/svg/outlined/menu.svg"
 
-import { JoinDialog } from "./Toolbar"
+import { CreateDialog, JoinDialog } from "./Toolbar"
 import { useTranslation } from "react-i18next"
 
 export function SidebarMenu() {
-  const navigate = useNavigate()
   const { t } = useTranslation()
   const joinChatDialogID = useId()
-
-  const listCreateItemButtonClickHandler = useCallback(() => {
-    navigate("/chats/create")
-  }, [])
+  const createChatDialogID = useId()
 
   return (
     <>
       <JoinDialog id={joinChatDialogID} />
+      <CreateDialog id={createChatDialogID} />
       <div className="flex">
         <div className="opacity-80 text-sm m-4 select-none">{t("Chat")}</div>
         <div className="dropdown ml-auto dropdown-end">
@@ -28,12 +24,12 @@ export function SidebarMenu() {
           </label>
           <ul tabIndex={0} className="dropdown-content menu whitespace-nowrap bg-base-100 p-2 rounded-box mr-2">
             <li>
-              <a onClick={listCreateItemButtonClickHandler}>
+              <label htmlFor={createChatDialogID}>
                 <div className="my-auto opacity-60">
                   <AddCircleIcon />
                 </div>
                 <div className="text-base ml-2">{t("Create Chat")}</div>
-              </a>
+              </label>
             </li>
             <li>
               <label htmlFor={joinChatDialogID}>

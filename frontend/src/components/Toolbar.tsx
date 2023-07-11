@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useReducer } from "preact/hooks"
+import { useState, useEffect, useCallback, useReducer, useMemo } from "preact/hooks"
 import { type TargetedEvent, createPortal } from "preact/compat"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
@@ -53,6 +53,105 @@ export function JoinDialog({ id }: { id: string }) {
             </label>
             <button className="btn" onClick={joinHandler}>
               {t("Join")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body
+  )
+}
+
+export function CreateDialog({ id }: { id: string }) {
+  const [chatName, setChatName] = useState("")
+  const { t } = useTranslation()
+
+  const navigate = useNavigate()
+  const { successAlert, errorAlert } = useAlert()
+  const { values: chats, names: chatNames, parentChats, refresh } = useChatList()
+
+  const addSession = useStore(state => state.addSession)
+
+  const [parentChat, setParentChat] = useState(-1)
+
+  const isParentChat = useMemo(
+    () => Object.keys(parentChats).includes(String(parentChat)) || parentChat == -1,
+    [parentChats, parentChat]
+  )
+
+  const createHandler = useCallback(async () => {
+    if (chatName === "") return
+    if (isParentChat) {
+      const chat = await rpc.chat.create(chatName, parentChat)
+      if (chat) {
+        successAlert(t("You have created the chat successfully. "))
+        refresh()
+        navigate(`/chats/${chat}`)
+      } else {
+        errorAlert(`You haven't created the chat successfully. `)
+      }
+    } else {
+      if (await rpc.session.join(chatName, parentChat)) {
+        successAlert(t("You have created/joined the session successfully. "))
+        addSession(parentChat, chatName)
+        navigate(`/chats/${parentChat}`)
+      } else {
+        errorAlert(t("Permission denied. "))
+      }
+    }
+  }, [successAlert, errorAlert, refresh, chatName, isParentChat])
+
+  return createPortal(
+    <>
+      <input type="checkbox" id={id} className="modal-toggle" />
+      <div className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">
+            {t("Create your ")}
+            {t(isParentChat ? "chat" : "session")}
+          </h3>
+          <p className="py-4">
+            {t(
+              isParentChat
+                ? "Create a chat and talk with your friends in it. "
+                : "Create a session and talk on a topic. "
+            )}
+          </p>
+          <input
+            className="input"
+            autoFocus
+            placeholder={t("Name") ?? ""}
+            value={chatName}
+            onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => setChatName(ev.currentTarget.value)}
+          />
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">{t("Parent Chat")}</span>
+            </label>
+            <select
+              className="select w-full max-w-xs"
+              value={parentChat == -1 ? t("None")! : `${parentChat} ${chatNames[chats.indexOf(parentChat)]}`}
+              onChange={(ev: TargetedEvent<HTMLSelectElement, Event>) => {
+                setParentChat(ev.currentTarget.value == t("None") ? -1 : parseInt(ev.currentTarget.value.split(" ")[0]))
+              }}
+            >
+              <option>{t("None")}</option>
+              {chats.map((chat, index) => {
+                const name = chatNames[index]
+                return (
+                  <option key={chat}>
+                    {chat} {name}
+                  </option>
+                )
+              })}
+            </select>
+          </div>
+          <div className="modal-action">
+            <label htmlFor={id} className="btn">
+              {t("Close")}
+            </label>
+            <button className="btn" onClick={createHandler}>
+              {t("Create")}
             </button>
           </div>
         </div>

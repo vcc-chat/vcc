@@ -48,7 +48,7 @@ const createChatSlice: StateCreator<ChatState> = set => ({
         return {}
       }
       return {
-        sessions: sessions.concat([chat, session])
+        sessions: sessions.concat([[chat, session]])
       }
     })
   }

@@ -22,7 +22,7 @@ const router = createBrowserRouter(
       <Route index loader={loaders.homeLoader} />
       <Route path="chats">
         <Route path="invite" lazy={() => import("./pages/Invite")} loader={loaders.inviteLoader} />
-        <Route path="create" lazy={() => import("./pages/CreateChat")} loader={loaders.createChatLoader} />
+        {/* <Route path="create" lazy={() => import("./pages/CreateChat")} loader={loaders.createChatLoader} /> */}
         <Route path=":id" lazy={() => import("./pages/ChatRoot")}>
           <Route index lazy={() => import("./pages/Chat")} action={loaders.chatAction} loader={loaders.chatLoader} />
           <Route path="settings" lazy={() => import("./pages/Settings")}>

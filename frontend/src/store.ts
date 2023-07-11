@@ -47,7 +47,7 @@ export function clearData() {
     token: null,
     pluginLinks: [],
     markdownToHTML: {},
-    backendAddress: null,
+    // backendAddress: null,
     lastMessageTime: Infinity
   })
 }

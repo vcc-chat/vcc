@@ -11,7 +11,7 @@ class VccClient {
 
   VccClient() {
     this._messages = StreamController<Map>();
-    this.message=this._messages.stream
+    this.message = this._messages.stream;
   }
   connect(server) async {
     if (this.connected) {
@@ -35,6 +35,10 @@ class VccClient {
 
   list_chat() async {
     return await this.peer.sendRequest("chat_list");
+  }
+
+  send_message(int chat, String message) {
+    return this.peer.sendNotification("message",{"uid":chat,"msg":message});
   }
 }
 

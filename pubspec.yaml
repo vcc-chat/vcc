@@ -1,4 +1,4 @@
-name: rvcc
+name: vcc
 description: A new Flutter project.
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -38,6 +38,7 @@ dependencies:
   shared_preferences: ^2.2.0
   web_socket_channel: ^2.4.0
   json_rpc_2: ^3.0.2
+  chat_bubbles: ^1.4.1
 
 dev_dependencies:
   flutter_test:

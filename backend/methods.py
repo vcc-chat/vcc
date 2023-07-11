@@ -104,11 +104,11 @@ class Methods:
         return await client.register(username, password)
 
     @notification
-    async def message(self, uid, msg, **kwargs):
+    async def message(self, chat, msg, **kwargs):
         client = self._client
         try:
             await client.send(
-                msg, uid, kwargs["session"] if "session" in kwargs else None
+                msg, chat, kwargs["session"] if "session" in kwargs else None
             )
         except PermissionDeniedError:
             pass  # FIXME: feedback to frontend

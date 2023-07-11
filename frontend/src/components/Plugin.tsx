@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "preact/hooks"
 import type { ComponentChildren } from "preact"
 import { useQueries } from "@tanstack/react-query"
 
-import { Request } from "../config"
+import { Message } from "../config"
 import useStore from "../store"
 
 async function getMetaInfo(urlString: string) {
@@ -35,9 +35,9 @@ const nonce = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16)
 const csp = `default-src 'none'; worker-src blob:; script-src 'nonce-${nonce}';`
 
 const workerInitCode = `(${function () {
-  const receiveHooks: ((message: Request) => Request | null)[] = []
-  const sendHooks: ((message: Request) => Request | null)[] = []
-  const commandHooks: Record<string, (args: string[]) => Request | null> = {}
+  const receiveHooks: ((message: Message) => Message | null)[] = []
+  const sendHooks: ((message: Message) => Message | null)[] = []
+  const commandHooks: Record<string, (args: string[]) => Message | null> = {}
   const appHooks: Record<
     string,
     () => {
@@ -50,12 +50,12 @@ const workerInitCode = `(${function () {
       ev: MessageEvent<
         | {
             type: "message"
-            msg: Request | null
+            msg: Message | null
             id: string
           }
         | {
             type: "send-message"
-            msg: Request | null
+            msg: Message | null
             id: string
           }
         | {
@@ -99,7 +99,7 @@ const workerInitCode = `(${function () {
       }
       if (data.type == "command") {
         const { command, arguments: args } = data
-        let msg: Request | null = null
+        let msg: Message | null = null
         if (command in commandHooks) {
           msg = commandHooks[command](args)
         }
@@ -132,7 +132,7 @@ const workerInitCode = `(${function () {
 
   function on(
     event: "receive" | "send" | `command:${string}` | `app:${string}`,
-    func: (...args: any) => Request | null
+    func: (...args: any) => Message | null
   ) {
     if (event == "receive") {
       receiveHooks.push(func)
@@ -358,7 +358,7 @@ export function PluginProvider({ children }: { children: ComponentChildren }) {
 
   useEffect(() => {
     const callbacks = callbacksRef.current
-    function callback(ev: MessageEvent<{ id: string; msg: Request }>) {
+    function callback(ev: MessageEvent<{ id: string; msg: Message }>) {
       if (ev.source !== iframeRef.current?.contentWindow) return
       if (ev.data.msg == undefined) return
       callbacks[ev.data.id]?.(ev)
@@ -393,7 +393,7 @@ export function PluginProvider({ children }: { children: ComponentChildren }) {
   }, [])
 
   const onLoadHandler = useCallback(() => {
-    setReceiveHook(async (req: Request) => {
+    setReceiveHook(async (req: Message) => {
       const id = generateUUID()
       iframeRef.current!.contentWindow!.postMessage(
         {
@@ -404,10 +404,10 @@ export function PluginProvider({ children }: { children: ComponentChildren }) {
         "*"
       )
 
-      return await new Promise<Request>(res => {
+      return await new Promise<Message>(res => {
         function callback(
           ev: MessageEvent<{
-            msg: Request
+            msg: Message
           }>
         ) {
           console.log("parent received", ev.data.msg)
@@ -416,7 +416,7 @@ export function PluginProvider({ children }: { children: ComponentChildren }) {
         callbacksRef.current[id] = callback
       })
     })
-    setSendHook(async (req: Request) => {
+    setSendHook(async (req: Message) => {
       const id = generateUUID()
       iframeRef.current!.contentWindow!.postMessage(
         {
@@ -426,10 +426,10 @@ export function PluginProvider({ children }: { children: ComponentChildren }) {
         },
         "*"
       )
-      return await new Promise<Request>(res => {
+      return await new Promise<Message>(res => {
         function callback(
           ev: MessageEvent<{
-            msg: Request
+            msg: Message
           }>
         ) {
           res(ev.data.msg)

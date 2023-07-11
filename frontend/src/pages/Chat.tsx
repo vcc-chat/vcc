@@ -39,7 +39,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: RequestW
           msg: req.msg
         })
       )
-      ev.dataTransfer!.setData("text/plain", `${req.usrname}: ${req.msg}`)
+      ev.dataTransfer!.setData("text/plain", `${req.username}: ${req.msg}`)
     },
     [req.msg]
   )
@@ -48,7 +48,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: RequestW
   const markdownChildren = savedHTML === undefined ? req.msg : ""
   const html = savedHTML === undefined ? null : savedHTML
   const { t, i18n } = useTranslation()
-  const username = useNickname(req.uid, req.user_id!, { initialData: req.usrname })
+  const username = useNickname(req.chat, req.user_id!, { initialData: req.username })
   const savePlugin: any = useCallback(() => {
     return (transformer: any) => {
       if (html) {
@@ -68,10 +68,10 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: RequestW
     return () => clearInterval(interval)
   }, [])
   return (
-    <li key={nowMsg.time} className={clsx("chat", req.usrname == selfUsername ? "chat-end" : "chat-start")}>
+    <li key={nowMsg.time} className={clsx("chat", req.username == selfUsername ? "chat-end" : "chat-start")}>
       <MessageAvatar name={username} />
       <div
-        className={clsx("chat-header flex space-x-2", req.usrname == selfUsername ? "flex-row-reverse" : "flex-row")}
+        className={clsx("chat-header flex space-x-2", req.username == selfUsername ? "flex-row-reverse" : "flex-row")}
       >
         {username!}
         <div className="text-xs opacity-50 mx-2 my-auto" draggable onDragStart={dragStartHandler}>
@@ -91,7 +91,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: RequestW
             "chat-bubble-success",
             "chat-bubble-warning",
             "chat-bubble-error"
-          ][stringToNumber(req.usrname) % 6]
+          ][stringToNumber(req.username) % 6]
         )}
       >
         {(!!markdownChildren || !!html) && (
@@ -173,13 +173,11 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: RequestW
 })
 
 function MessageComponent({ nowMsg }: { nowMsg: RequestWithTime }) {
-  return nowMsg.req.usrname == "system" ? (
+  return nowMsg.req.username == "system" ? (
     <div className="flex">
       <div className="alert alert-info mx-auto w-auto">
-        <div>
-          <InfoIcon />
-          <span>{nowMsg.req.msg}</span>
-        </div>
+        <InfoIcon />
+        <span>{nowMsg.req.msg}</span>
       </div>
     </div>
   ) : (
@@ -294,7 +292,7 @@ export const Component = memo(function Chat() {
       <div className="flex flex-col overflow-hidden p-2 h-full flex-1">
         <ul ref={ref} className="flex flex-col m-0 p-0 overflow-auto no-scrollbar flex-1 space-y-1 py-2">
           {messagesShow.map(nowMsg => (
-            <MessageComponent nowMsg={nowMsg} key={`${nowMsg.time}-${nowMsg.req.usrname}-${nowMsg.req.msg}`} />
+            <MessageComponent nowMsg={nowMsg} key={`${nowMsg.time}-${nowMsg.req.username}-${nowMsg.req.msg}`} />
           ))}
         </ul>
         <fetcher.Form

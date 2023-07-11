@@ -71,12 +71,10 @@ function Alert() {
           className={`alert ${type === "success" ? "alert-success" : "alert-error"} shadow-lg w-auto p-5 z-50`}
           key={`${type} ${content} ${index}`}
         >
-          <div>
-            {type === "success" ? <DoneIcon /> : <ErrorIcon />}
-            <span>
-              {t(type[0].toUpperCase() + type.slice(1))}: {content}
-            </span>
-          </div>
+          {type === "success" ? <DoneIcon /> : <ErrorIcon />}
+          <span>
+            {t(type[0].toUpperCase() + type.slice(1))}: {content}
+          </span>
         </div>
       ))}
     </div>

@@ -58,9 +58,9 @@ async def recv_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
                 {
                     "method": "message",
                     "params": {
-                        "uid": chat,
+                        "chat": chat,
                         "user_id": uid,
-                        "usrname": username,
+                        "username": username,
                         "msg": msg,
                         "session": session,
                     },

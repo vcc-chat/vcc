@@ -1,17 +1,17 @@
 import { StateCreator } from "zustand"
-import type { Request } from "../config"
+import type { Message } from "../config"
 
 interface PluginState {
   pluginLinks: string[]
-  sendHook: ((req: Request) => Promise<Request>) | null
-  receiveHook: ((req: Request) => Promise<Request>) | null
+  sendHook: ((req: Message) => Promise<Message>) | null
+  receiveHook: ((req: Message) => Promise<Message>) | null
   appHook:
     | ((name: string) => Promise<{
         html: string
       } | null>)
     | null
-  setSendHook: (sendHook: (req: Request) => Promise<Request>) => void
-  setReceiveHook: (receiveHook: (req: Request) => Promise<Request>) => void
+  setSendHook: (sendHook: (req: Message) => Promise<Message>) => void
+  setReceiveHook: (receiveHook: (req: Message) => Promise<Message>) => void
   setAppHook: (
     appHook: (name: string) => Promise<{
       html: string

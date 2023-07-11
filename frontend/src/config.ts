@@ -30,10 +30,10 @@ export type RequestType =
   | "push_get_vapid_public_key"
   | "push_register"
 
-export type Request = {
+export type Message = {
   type: RequestType
-  uid: number
-  usrname: string
+  chat: number
+  username: string
   msg: string
   uuid?: string
   session?: string
@@ -42,7 +42,7 @@ export type Request = {
 
 export interface RequestWithTime {
   time: number
-  req: Request
+  req: Message
 }
 
 export const MESSAGE_MIME_TYPE = "application/x-web-vcc.message+json"

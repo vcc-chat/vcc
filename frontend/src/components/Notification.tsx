@@ -35,26 +35,24 @@ export function Notification() {
       })}
     >
       <div className="alert alert-info mb-16">
-        <div>
-          <span>{t("Would you like to get messages via notifications?")}</span>
-          <button
-            className="btn btn-ghost"
-            onClick={async () => {
-              await window.Notification.requestPermission()
-              setOpen(false)
-            }}
-          >
-            {t("Sure")}
-          </button>
-          <button
-            className="btn btn-square btn-ghost z-50"
-            onClick={() => {
-              setOpen(false)
-            }}
-          >
-            <CloseIcon />
-          </button>
-        </div>
+        <span>{t("Would you like to get messages via notifications?")}</span>
+        <button
+          className="btn btn-ghost"
+          onClick={async () => {
+            await window.Notification.requestPermission()
+            setOpen(false)
+          }}
+        >
+          {t("Sure")}
+        </button>
+        <button
+          className="btn btn-square btn-ghost z-50"
+          onClick={() => {
+            setOpen(false)
+          }}
+        >
+          <CloseIcon />
+        </button>
       </div>
     </div>
   )

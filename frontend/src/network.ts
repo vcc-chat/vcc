@@ -1,8 +1,8 @@
 import { JSONRPCClient, JSONRPCServer, JSONRPCServerAndClient } from "json-rpc-2.0"
-import { useEffect } from "preact/hooks"
+import { useEffect, useState } from "preact/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 
-import type { RequestType, Request, RequestWithTime } from "./config"
+import type { RequestType, Message, RequestWithTime } from "./config"
 import useStore from "./store"
 import { responseToChatList } from "./tools"
 import { wait } from "./loaders"
@@ -18,27 +18,27 @@ export async function useWebSocketConnection() {
   const queryClient = useQueryClient()
   useEffect(() => {
     if (!backendAddress) return
-    const webSocket = new WebSocket(backendAddress)
-    webSocket.addEventListener("open", () => setReady(true))
-    webSocket.addEventListener("error", () => setReady(false))
+    const ws = new WebSocket(backendAddress)
+    ws.addEventListener("open", () => setReady(true))
+    ws.addEventListener("error", () => setReady(false))
     const serverAndClient = new JSONRPCServerAndClient(
       new JSONRPCServer(),
       new JSONRPCClient(async request => {
-        if (webSocket.readyState == WebSocket.CLOSING || webSocket.readyState == WebSocket.CLOSED) return
-        while (webSocket.readyState == WebSocket.CONNECTING) await wait()
-        webSocket.send(JSON.stringify(request))
+        if (ws.readyState == WebSocket.CLOSING || ws.readyState == WebSocket.CLOSED) return
+        while (ws.readyState == WebSocket.CONNECTING) await wait()
+        ws.send(JSON.stringify(request))
       })
     )
-    webSocket.addEventListener("message", event => {
+    ws.addEventListener("message", event => {
       serverAndClient.receiveAndSend(JSON.parse(event.data.toString()))
     })
 
-    webSocket.addEventListener("close", event => {
+    ws.addEventListener("close", event => {
       serverAndClient.rejectAllPendingRequests(`Connection is closed (${event.reason}).`)
       setReady(false)
       errorAlert("Oh No! The connection between server and client is interupted.")
     })
-    serverAndClient.addMethod("message", async (message: Request) => {
+    serverAndClient.addMethod("message", async (message: Message) => {
       changeLastMessageTime()
       if (message.msg == "") return
       const newMessage = {
@@ -50,11 +50,11 @@ export async function useWebSocketConnection() {
       addMessage(newMessage)
       // notify(chatNames[chatValues.indexOf(request.uid)], `${request.usrname}: ${request.msg}`)
       if (
-        request.usrname == "system" &&
+        request.username == "system" &&
         (request.msg.includes("join") || request.msg.includes("quit") || request.msg.includes("kick"))
       ) {
         queryClient.invalidateQueries({
-          queryKey: ["user-list", request.uid]
+          queryKey: ["user-list", request.chat]
         })
       }
     })
@@ -69,6 +69,10 @@ export async function useWebSocketConnection() {
         })
       }
     })
+    return () => {
+      ws.close()
+      setSendJsonMessageRaw(null)
+    }
   }, [backendAddress])
 }
 
@@ -258,23 +262,23 @@ const rpc = {
   record: {
     async query(chat: number, lastMessageTime: number) {
       return []
-      const { msg } = await makeRequest("record_query", {
-        uid: chat,
-        msg: lastMessageTime as any
-      })
-      return (msg as unknown as string[]).map<RequestWithTime>((dataString, index) => {
-        const data = JSON.parse(dataString)
-        return {
-          req: {
-            msg: data.msg,
-            usrname: data.username,
-            uid: data.chat,
-            type: "message"
-          },
-          // need to be changed
-          time: Date.now() + index
-        }
-      })
+      // const { msg } = await makeRequest("record_query", {
+      //   uid: chat,
+      //   msg: lastMessageTime as any
+      // })
+      // return (msg as unknown as string[]).map<RequestWithTime>((dataString, index) => {
+      //   const data = JSON.parse(dataString)
+      //   return {
+      //     req: {
+      //       msg: data.msg,
+      //       usrname: data.username,
+      //       uid: data.chat,
+      //       type: "message"
+      //     },
+      //     // need to be changed
+      //     time: Date.now() + index
+      //   }
+      // })
     }
   },
   push: {

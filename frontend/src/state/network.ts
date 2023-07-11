@@ -1,5 +1,5 @@
 import { StateCreator } from "zustand"
-import type { Request, RequestType } from "../config"
+import type { Message, RequestType } from "../config"
 import { wait } from "../loaders"
 
 interface NetworkState {
@@ -7,14 +7,14 @@ interface NetworkState {
   setBackendAddress: (address: string) => void
   ready: boolean
   setReady: (ready: boolean) => void
-  handleFunctionList: Record<string, (value: Request) => void>
-  sendJsonMessageRaw: ((method: string, request: Request) => void) | null
-  setSendJsonMessageRaw: (func: (method: string, request: Request) => void) => void
-  sendJsonMessage: (method: string, request: Request) => Promise<void>
+  handleFunctionList: Record<string, (value: Message) => void>
+  sendJsonMessageRaw: ((method: string, request: Message) => void) | null
+  setSendJsonMessageRaw: (func: null | ((method: string, request: Message) => void)) => void
+  sendJsonMessage: (method: string, request: Message) => Promise<void>
   makeRequest: (
     method: string,
     request: { type: RequestType; uid?: number; usrname?: string; msg?: string }
-  ) => Promise<Request>
+  ) => Promise<Message>
 }
 
 const createNetworkSlice: StateCreator<NetworkState> = (set, get) => ({
@@ -47,7 +47,7 @@ const createNetworkSlice: StateCreator<NetworkState> = (set, get) => ({
       ...request,
       uuid
     } as any)
-    const result = await new Promise<Request>(res => {
+    const result = await new Promise<Message>(res => {
       set(state => ({
         handleFunctionList: {
           ...state.handleFunctionList,

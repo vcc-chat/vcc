@@ -15,7 +15,7 @@ const createMessageSlice: StateCreator<MessageState> = set => ({
   markdownToHTML: {},
   lastMessageTime: Infinity,
   addMessage(message: RequestWithTime) {
-    const chat = message.req.uid
+    const chat = message.req.chat
     set(value => {
       const values = value.messages
       return {

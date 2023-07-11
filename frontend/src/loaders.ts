@@ -194,10 +194,10 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
   console.log(parsedResult)
   if (parsedResult.type == "message" || parsedResult.type == "error") {
     const rawRequest = {
-      uid: chat,
+      chat,
       type: "message" as const,
-      usrname: store.getState().username,
-      msg: msg,
+      username: store.getState().username,
+      msg,
       session: (session || null) as unknown as string
     }
     const sendHook = store.getState().sendHook

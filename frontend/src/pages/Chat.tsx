@@ -290,7 +290,10 @@ export const Component = memo(function Chat() {
     <>
       <FileUploadDialog id={fileUploadDialogID} />
       <div className="flex flex-col overflow-hidden p-2 h-full flex-1">
-        <ul ref={ref} className="flex flex-col m-0 p-0 overflow-auto no-scrollbar flex-1 space-y-1 py-2">
+        <ul
+          ref={ref}
+          className="flex flex-col m-0 p-0 overflow-auto overflow-x-hidden no-scrollbar flex-1 space-y-1 py-2"
+        >
           {messagesShow.map(nowMsg => (
             <MessageComponent nowMsg={nowMsg} key={`${nowMsg.time}-${nowMsg.req.username}-${nowMsg.req.msg}`} />
           ))}

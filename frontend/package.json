@@ -21,7 +21,7 @@
     "character-entities-legacy": "^3.0.0",
     "character-reference-invalid": "^2.0.1",
     "clsx": "^1.2.1",
-    "daisyui": "^2.46.1",
+    "daisyui": "^3.2.1",
     "date-fns": "^2.29.3",
     "dompurify": "^2.4.3",
     "i18next": "^22.4.9",

@@ -1,6 +1,6 @@
 import type { TargetedEvent } from "preact/compat"
 import { useCallback, useEffect } from "preact/hooks"
-import { useNavigate, Form } from "react-router-dom"
+import { useNavigate, Form, useSearchParams } from "react-router-dom"
 import clsx from "clsx"
 import { useTranslation } from "react-i18next"
 

@@ -206,10 +206,10 @@ export async function syncMessages() {
   })
   const records = (await Promise.all(chats.map(getChatRecord))).flat()
   const addMessage = useStore.getState().addMessage
-  console.debug(
-    "records: ",
-    records.map(a => a.req)
-  )
+  // console.debug(
+  //   "records: ",
+  //   records.map(a => a.req)
+  // )
   for (const record of records) {
     addMessage(record)
   }

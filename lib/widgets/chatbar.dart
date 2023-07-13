@@ -6,7 +6,9 @@ class ChatBar extends StatelessWidget {
   ChatBar({this.send}) {}
   Widget build(BuildContext context) {
     var controler = TextEditingController();
+    var node = FocusNode();
     Widget field = TextField(
+      focusNode: node,
       controller: controler,
       decoration: InputDecoration(
         suffixIcon: IconButton(
@@ -26,9 +28,9 @@ class ChatBar extends StatelessWidget {
           this.send!(msg);
         }
         controler.clear();
+        node.requestFocus();
       },
     );
-
     return Container(
         padding: EdgeInsets.only(left: 6, bottom: 2),
         alignment: Alignment(0, 0),

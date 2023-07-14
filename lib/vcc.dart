@@ -15,6 +15,8 @@ getToken() async {
 
 class VccClient {
   late WebSocketChannel connection;
+  String token = "";
+  String username = "";
   late Peer peer;
   late StreamController _messages;
   late Stream message;
@@ -31,7 +33,9 @@ class VccClient {
     this.server = server;
     Uri url = Uri.parse(server);
     this.connection = WebSocketChannel.connect(url);
-    this.peer = Peer(this.connection.cast());
+    this.peer = Peer(this.connection.cast(), onUnhandledError: (e, ee) {
+      print("oh no!");
+    });
     this.peer.registerMethod("message", (Parameters message) {
       this._messages.add(message.asMap);
     });
@@ -40,9 +44,15 @@ class VccClient {
   }
 
   login(String username, String password) async {
-    return await this
+    Map result = await this
         .peer
         .sendRequest("login", {"username": username, "password": password});
+    print(result);
+    if (result['success']) {
+      this.username = username;
+      this.token = result['token'];
+      return true;
+    }
   }
 
   list_chat() async {
@@ -50,7 +60,9 @@ class VccClient {
   }
 
   send_message(int chat, String message) {
-    return this.peer.sendNotification("message", {"chat": chat, "msg": message});
+    return this
+        .peer
+        .sendNotification("message", {"chat": chat, "msg": message});
   }
 }
 

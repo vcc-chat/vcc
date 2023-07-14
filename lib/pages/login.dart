@@ -64,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
               child: const Text("Login"),
               onPressed: () async {
                 await vccClient.connect("ws://vcc.siliconbio.org.cn/ws");
-                if ((await vccClient.login(username, password))["success"]) {
+                if ((await vccClient.login(username, password))) {
                   print("ok");
                   Navigator.pushNamedAndRemoveUntil(context, "/chat", (_) {
                     return false;

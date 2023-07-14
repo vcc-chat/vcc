@@ -4,7 +4,7 @@ import 'package:chat_bubbles/chat_bubbles.dart';
 import 'package:vcc/vcc.dart';
 import 'package:vcc/widgets/chatbar.dart';
 
-int MAX_MESSAGES = 10;
+int MAX_MESSAGES = 1000;
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -35,6 +35,15 @@ class _ChatPageState extends State<ChatPage> {
     setState(() {});
   }
 
+  genFakeMessages() {
+    for (var i = 0; i < 10; i = i + 1) {
+      this
+          .messages
+          .add({'uid': 1, "chat": this.currentChat[0], "msg": "hello $i","username":"Dummy user $i"});
+    }
+    setState(() {});
+  }
+
   List currentChat = [0, "", ""];
   Widget build(BuildContext context) {
     var shortestSide = MediaQuery.of(context).size.shortestSide;
@@ -44,7 +53,7 @@ class _ChatPageState extends State<ChatPage> {
     List<Widget> messages = [];
     for (var i in this.chats) {
       chatsItem.add(ListTile(
-        selected:i[0]==this.currentChat[0],
+        selected: i[0] == this.currentChat[0],
         title: Text(i[1]),
         onTap: () {
           setState(() {
@@ -56,29 +65,57 @@ class _ChatPageState extends State<ChatPage> {
     }
     Widget chatList = ListView(children: chatsItem);
     for (var i in this.messages) {
-      messages.add(BubbleNormal(
-        text: i['msg'],
-        color: Color(0xFF1B97F3),
-      ));
+      bool isSender = i['username'] == vccClient.username;
+      Widget avs = CircleAvatar(child: Text("${i['username'][0]}"));
+      messages.add(
+        Row(children: [
+          isSender
+              ? SizedBox.shrink()
+              : Align(alignment: Alignment.topLeft, child: avs),
+          Expanded(
+              child: Column(children: [
+            SizedBox.shrink(),
+            Align(
+                alignment: isSender ? Alignment.topRight : Alignment.topLeft,
+                child: Text("    ${i['username']}    ")),
+            BubbleNormal(
+              text: i['msg'],
+              isSender: isSender,
+              color: Color(0xFF1B97F3),
+            ),
+            SizedBox(
+              height: 9,
+            )
+          ])),
+          isSender ? avs : SizedBox.shrink(),
+        ]),
+      );
     }
     late ChatBar chatBar;
     chatBar = ChatBar(send: (msg) {
       vccClient.send_message(this.currentChat[0], msg);
     });
     return Scaffold(
-      drawer: useMobileLayout ? Drawer(child: chatList,backgroundColor: Theme.of(context).drawerTheme.backgroundColor) : null,
+      drawer: useMobileLayout
+          ? Drawer(
+              child: chatList,
+              backgroundColor: Theme.of(context).drawerTheme.backgroundColor)
+          : null,
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text("Chat - ${currentChat[1]}"),
         actions: [
-          IconButton(
-            icon: Icon(Icons.expand_more),
-            onPressed: () {},
+          PopupMenuButton(
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                  onTap: this.genFakeMessages,
+                  child: Text("Generate fake messages (developer only)"))
+            ],
           )
         ],
       ),
       body: Container(
-          margin: EdgeInsets.only(bottom: 8, right: 5),
+          margin: useMobileLayout?EdgeInsets.only(left:8, right: 5):null,
           child: Row(
             children: [
               (!useMobileLayout)
@@ -91,10 +128,10 @@ class _ChatPageState extends State<ChatPage> {
               Expanded(
                   child: Column(children: [
                 Expanded(
-                    child: ListView(
-                  children: messages,
-                )),
-                Container(margin:EdgeInsets.only(left:7),child:chatBar)
+                    child: ListView(reverse: true, children: [
+                  for (final element in messages.reversed.toList()) element
+                ])),
+                Container(margin: EdgeInsets.only(left: 7,right:7,bottom: 5,top:8), child: chatBar)
               ]))
             ],
           )),

@@ -1,8 +1,11 @@
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 
 bool isDesktop() {
+  if (kIsWeb){return false;}
   return Platform.isLinux | Platform.isMacOS | Platform.isWindows;
 }
 

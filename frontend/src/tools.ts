@@ -142,7 +142,7 @@ export function useNickname(
           initialData: initialData
         })
   })
-  return data ?? initialData
+  return uid == -1 ? initialData : data ?? initialData
 }
 
 export function useTitle(title: string) {

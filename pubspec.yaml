@@ -39,6 +39,7 @@ dependencies:
   web_socket_channel: ^2.4.0
   json_rpc_2: ^3.0.2
   chat_bubbles: ^1.4.1
+  bitsdojo_window: ^0.1.5
 
 dev_dependencies:
   flutter_test:

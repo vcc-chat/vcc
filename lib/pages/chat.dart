@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:chat_bubbles/chat_bubbles.dart';
 import 'package:vcc/vcc.dart';
 import 'package:vcc/widgets/chatbar.dart';
+import 'package:vcc/widgets/movewindow.dart';
 
 int MAX_MESSAGES = 1000;
 
@@ -37,9 +38,12 @@ class _ChatPageState extends State<ChatPage> {
 
   genFakeMessages() {
     for (var i = 0; i < 10; i = i + 1) {
-      this
-          .messages
-          .add({'uid': 1, "chat": this.currentChat[0], "msg": "hello $i","username":"Dummy user $i"});
+      this.messages.add({
+        'uid': 1,
+        "chat": this.currentChat[0],
+        "msg": "hello $i",
+        "username": "Dummy user $i"
+      });
     }
     setState(() {});
   }
@@ -101,21 +105,22 @@ class _ChatPageState extends State<ChatPage> {
               child: chatList,
               backgroundColor: Theme.of(context).drawerTheme.backgroundColor)
           : null,
-      appBar: AppBar(
+      appBar: PreferredSizedMoveWindow(AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text("Chat - ${currentChat[1]}"),
-        actions: [
-          PopupMenuButton(
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                  onTap: this.genFakeMessages,
-                  child: Text("Generate fake messages (developer only)"))
-            ],
-          )
-        ],
-      ),
+        actions: <Widget>[
+              PopupMenuButton(
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                      onTap: this.genFakeMessages,
+                      child: Text("Generate fake messages (developer only)")),
+                ],
+              )
+            ] +
+            generateWindowButtons(),
+      )),
       body: Container(
-          margin: useMobileLayout?EdgeInsets.only(left:8, right: 5):null,
+          margin: useMobileLayout ? EdgeInsets.only(left: 8, right: 5) : null,
           child: Row(
             children: [
               (!useMobileLayout)
@@ -131,7 +136,10 @@ class _ChatPageState extends State<ChatPage> {
                     child: ListView(reverse: true, children: [
                   for (final element in messages.reversed.toList()) element
                 ])),
-                Container(margin: EdgeInsets.only(left: 7,right:7,bottom: 5,top:8), child: chatBar)
+                Container(
+                    margin:
+                        EdgeInsets.only(left: 7, right: 7, bottom: 5, top: 8),
+                    child: chatBar)
               ]))
             ],
           )),

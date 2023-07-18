@@ -80,15 +80,15 @@ class _LoginPageState extends State<LoginPage> {
                       border: OutlineInputBorder(),
                       labelText: 'Password',
                     ))),
-            SizedBox(
-              height: 10,
-            ),
             this.registering
                 ? IntrinsicHeight(
                     child: SizedBox(
                         width: 300,
-                        child: Row(
+                        child: Column(
                           children: [
+                            SizedBox(
+                              height: 10,
+                            ),
                             SizedBox(
                                 width: 300,
                                 child: TextField(

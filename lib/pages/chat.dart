@@ -67,8 +67,15 @@ class _ChatPageState extends State<ChatPage> {
         },
       ));
     }
-    Widget chatList =
-        Column(children: [Expanded(child: ListView(children: chatsItem))]);
+    Widget chatList = Column(children: [
+      Expanded(child: ListView(children: chatsItem)),
+      ListTile(
+        title: Center(child: Text("Join chat")),
+        onTap: () {
+          print("a");
+        },
+      )
+    ]);
     for (var i in this.messages) {
       bool isSender = i['username'] == vccClient.username;
       Widget avs = CircleAvatar(child: Text("${i['username'][0]}"));
@@ -96,18 +103,20 @@ class _ChatPageState extends State<ChatPage> {
         ]),
       );
     }
+    print(Theme.of(context).colorScheme.surface);
+    //print(Colors.red);
     late ChatBar chatBar;
     chatBar = ChatBar(send: (msg) {
       vccClient.send_message(this.currentChat[0], msg);
     });
+
     return Scaffold(
       drawer: useMobileLayout
           ? Drawer(
-              child: chatList,
-              backgroundColor: Theme.of(context).drawerTheme.backgroundColor)
+              child: chatList)
           : null,
       appBar: PreferredSizedMoveWindow(AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        //backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text("Chat - ${currentChat[1]}"),
         actions: <Widget>[
               PopupMenuButton(
@@ -127,16 +136,18 @@ class _ChatPageState extends State<ChatPage> {
               (!useMobileLayout)
                   ? (SizedBox(
                       width: 180,
-                      child: Container(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          child: chatList)))
+                      child: Material(
+                        elevation: 1,
+                        color:Theme.of(context).colorScheme.surface,
+                        surfaceTintColor: Theme.of(context).colorScheme.surfaceTint,
+                        child: chatList)))
                   : Container(),
               Expanded(
                   child: Column(children: [
                 Expanded(
-                    child: ListView(reverse: true, children: [
+                    child: Container(margin:EdgeInsets.only(left: 7, right: 7), child:ListView(reverse: true, children: [
                   for (final element in messages.reversed.toList()) element
-                ])),
+                ]))),
                 Container(
                     margin:
                         EdgeInsets.only(left: 7, right: 7, bottom: 5, top: 8),

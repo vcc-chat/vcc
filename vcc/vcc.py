@@ -523,7 +523,7 @@ class RpcRobotExchangerClient(RpcExchangerBaseClient):
         return uid
 
     @check(joined="chat")
-    async def send(self, uid: int, username: str, msg: str, chat: int, session: str | None) -> None:
+    async def send(self, username: str, msg: str, chat: int, session: str | None) -> None:
         if not await self._rpc.bot.check_send(chat_id=chat, bot_id=self._id):
             raise PermissionDeniedError()
         # -1 means system or robot

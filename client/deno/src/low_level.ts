@@ -24,13 +24,23 @@ type Any = ReturnType<JSON["parse"]>
 export type UserPermissions = "kick" | "rename" | "invite" | "modify_permission" | "send" | "banned"
 export type ChatPermissions = "public"
 
+export interface Message {
+  uid: number
+  chat: number
+  session: string | null
+  username: string
+  msg: string
+}
+
 class WebSocketWrapper {
-  websocket: WebSocket
-  IDFuncMap: Record<string, (response: Response<Any>) => void>
-  constructor(url: string | URL) {
+  private websocket: WebSocket
+  private IDFuncMap: Record<string, (response: Response<Any>) => void> = {}
+  onMessage: (message: Message) => void | Promise<void>
+  constructor(url: string | URL, onMessage: (message: Message) => void | Promise<void> = () => {}) {
     this.websocket = new WebSocket(url)
-    this.IDFuncMap = {}
+    this.onMessage = onMessage
   }
+  
   async waitOpen() {
     await new Promise<void>(res => {
       this.websocket.addEventListener("open", () => {
@@ -43,6 +53,10 @@ class WebSocketWrapper {
       const data = msg.data
       if (typeof data != "string") return
       const response: Response = JSON.parse(data)
+      if (response.ok && response.type == "message") {
+        this.onMessage(response.response as Message)
+        return 
+      }
       this.IDFuncMap[response.id]?.(response)
       delete this.IDFuncMap[response.id]
     })
@@ -66,6 +80,7 @@ class WebSocketWrapper {
       return response.response
     } else {
       console.error({ type, requestData, response })
+      // deno-lint-ignore no-explicit-any
       throw new VCCError((response as any).error)
     }
   }
@@ -188,6 +203,14 @@ export class RawConnection {
     await this.rpc.register({
       name, token
     })
+  }
+
+  get onMessage() {
+    return this.websocket.onMessage
+  }
+
+  set onMessage(onMessage) {
+    this.websocket.onMessage = onMessage
   }
 }
 

@@ -105,6 +105,14 @@ export class Builder {
   async updateChats() {
     this.updateChatsFromValues(await this._conn.chat.list())
   }
+  
+  get onMessage() {
+    return this._conn.onMessage
+  }
+
+  set onMessage(onMessage) {
+    this._conn.onMessage = onMessage
+  }
 }
 
 function sleep(milliseconds: number) {

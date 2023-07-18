@@ -96,12 +96,13 @@ async def recv_message_loop(client: RpcRobotExchangerClient, websocket: websocke
         async for i in client:
             if i[0] != "message":
                 continue
-            _, username, msg, chat, session = i
+            _, uid, username, msg, chat, session = i
             await websocket.send(json.dumps({
                 "type": "message",
                 "ok": True,
                 "id": str(uuid4()),
                 "response": {
+                    "uid": uid,
                     "username": username,
                     "msg": msg,
                     "chat": chat,

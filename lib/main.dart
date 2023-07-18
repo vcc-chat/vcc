@@ -3,15 +3,19 @@ import 'package:flutter/cupertino.dart';
 import 'pages/login.dart';
 import 'pages/chat.dart';
 import 'dart:async';
+import 'package:bitsdojo_window/bitsdojo_window.dart';
+import 'package:vcc/widgets/movewindow.dart' show isDesktop;
 
 void main() {
   runApp(App());
+  if (isDesktop()) {
+    appWindow.minSize = Size(400, 300);
+    appWindow.size = Size(800, 600);
+  }
 }
 
 class App extends StatelessWidget {
-  App() {
-    var key = super.key;
-  }
+  App() {}
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {

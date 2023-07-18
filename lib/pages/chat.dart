@@ -67,7 +67,7 @@ class _ChatPageState extends State<ChatPage> {
         },
       ));
     }
-    Widget chatList = ListView(children: chatsItem);
+    Widget chatList = Column( children:[Expanded(child:ListView(children: chatsItem))]);
     for (var i in this.messages) {
       bool isSender = i['username'] == vccClient.username;
       Widget avs = CircleAvatar(child: Text("${i['username'][0]}"));

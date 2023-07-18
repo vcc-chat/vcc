@@ -55,6 +55,13 @@ class VccClient {
     }
   }
 
+  register(String username, String password) async {
+    bool result = await this
+        .peer
+        .sendRequest("register", {"username": username, "password": password});
+    return result;
+  }
+
   list_chat() async {
     return await this.peer.sendRequest("chat_list");
   }

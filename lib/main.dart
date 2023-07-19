@@ -41,7 +41,7 @@ class App extends StatelessWidget {
         }
       },
       theme: useAdwita
-          ? AdwaitaThemeData.dark()
+          ? MediaQuery.platformBrightnessOf(context) == Brightness.dark?AdwaitaThemeData.dark():AdwaitaThemeData.light()
           : ThemeData(
               colorScheme:
                   MediaQuery.platformBrightnessOf(context) == Brightness.dark

@@ -15,20 +15,34 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
+mapGetDefault(Map map, dynamic key, dynamic def) {
+  if (map.containsKey(key)) {
+    return map[key];
+  }
+  return def;
+}
+
 class _ChatPageState extends State<ChatPage> {
   var chats = [];
-  var messages = [];
+  Map<int, List> messages = {};
   _ChatPageState() {
     vccClient.message.listen((message) {
-      print(message);
-      if (message['chat'] == this.currentChat[0]) {
-        setState(() {
-          if (this.messages.length > MAX_MESSAGES) {
-            this.messages = this.messages.skip(1).toList();
-          }
-          this.messages.add(message);
-        });
-      }
+      setState(() {
+        int chat = message['chat'];
+        if (!this.messages.containsKey(chat)) {
+          this.messages[chat] = [];
+        }
+
+        this.messages[chat]!.add(message);
+      });
+      //   if (message['chat'] == this.currentChat[0]) {
+      //     setState(() {
+      //       if (this.messages.length > MAX_MESSAGES) {
+      //         this.messages = this.messages.skip(1).toList();
+      //       }
+      //       this.messages.add(message);
+      //     });
+      //   }
     });
     unawaited(this.updateChats());
   }
@@ -38,13 +52,17 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   genFakeMessages() {
+    if (!this.messages.containsKey(this.currentChat[0])) {
+      this.messages[this.currentChat[0]] = [];
+    }
     for (var i = 0; i < 10; i = i + 1) {
-      this.messages.add({
-        'uid': 1,
-        "chat": this.currentChat[0],
-        "msg": "hello $i",
-        "username": "Dummy user $i"
-      });
+      this.messages[this.currentChat[0]] ??
+          [].add({
+            'uid': 1,
+            "chat": this.currentChat[0],
+            "msg": "hello $i",
+            "username": "Dummy user $i"
+          });
     }
     setState(() {});
   }
@@ -53,17 +71,25 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     var shortestSide = MediaQuery.of(context).size.shortestSide;
     bool useMobileLayout = shortestSide < 600;
-
     List<Widget> chatsItem = [];
     List<Widget> messages = [];
     for (var i in this.chats) {
       chatsItem.add(ListTile(
         selected: i[0] == this.currentChat[0],
         title: Text(i[1]),
+        subtitle: Text(
+          mapGetDefault(
+              List.from(mapGetDefault(this.messages, i[0], [
+                    {"msg": ""}
+                  ])).lastOrNull ??
+                  {},
+              "msg",
+              ""),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         onTap: () {
           setState(() {
             this.currentChat = i;
-            this.messages.clear();
           });
         },
       ));
@@ -76,13 +102,15 @@ class _ChatPageState extends State<ChatPage> {
           showDialog(
               context: context,
               builder: (BuildContext context) =>
-                  TextInputDialog("Join Chat", "Join", (String a) {
-                    print(a);
+                  TextInputDialog("Join Chat", "Join", (String chatid) {
+                    unawaited(() async {
+                      var res = await vccClient.join_chat(int.parse(chatid));
+                    }());
                   }));
         },
       )
     ]);
-    for (var i in this.messages) {
+    for (var i in this.messages[this.currentChat[0]] ?? []) {
       bool isSender = i['username'] == vccClient.username;
       Widget avs = CircleAvatar(child: Text("${i['username'][0]}"));
       messages.add(

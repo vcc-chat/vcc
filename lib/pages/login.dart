@@ -55,6 +55,8 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            Text("Vcc",style: TextStyle(fontSize: 50) ,),
+            Text("The opensoure chat platform",style: TextStyle(fontSize: 20) ),
             SizedBox(
               height: 10,
             ),
@@ -115,7 +117,8 @@ class _LoginPageState extends State<LoginPage> {
                 : SizedBox.shrink(),
             SizedBox(
               height: 10,
-            ),
+            ),Row(mainAxisAlignment: MainAxisAlignment.center,
+              children:[
             FilledButton(
                 child: const Text("Login"),
                 onPressed: () async {
@@ -127,7 +130,7 @@ class _LoginPageState extends State<LoginPage> {
                     await this.login();
                   }
                 }),
-            SizedBox(height: 10),
+            SizedBox(width: 10),
             FilledButton(
                 child: const Text("Register"),
                 onPressed: () async {
@@ -150,7 +153,7 @@ class _LoginPageState extends State<LoginPage> {
                       this.registering = true;
                     });
                   }
-                })
+                })]),
           ],
         ),
       ), // This trailing comma makes auto-formatting nicer for build methods.

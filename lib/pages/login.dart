@@ -48,7 +48,6 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSizedMoveWindow(AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text("Login"),
         actions: generateWindowButtons(),
       )),

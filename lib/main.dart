@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'utils.dart';
 import 'pages/login.dart';
 import 'pages/chat.dart';
 import 'dart:async';
+import 'dart:io';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:vcc/widgets/movewindow.dart' show isDesktop;
+import 'package:adwaita/adwaita.dart';
 
 void main() {
   runApp(App());
@@ -19,6 +22,9 @@ class App extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    bool useAdwita = isDesktop() &
+        mapGetDefault(Platform.environment, "DESKTOP_SESSION", "")
+            .startsWith("gnome");
     print(MediaQuery.platformBrightnessOf(context));
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -34,10 +40,15 @@ class App extends StatelessWidget {
           return ChatPage();
         }
       },
-      theme: ThemeData(
-        colorScheme: MediaQuery.platformBrightnessOf(context)==Brightness.dark?ColorScheme.dark():ColorScheme.light(),
-        useMaterial3: true,
-      ),
+      theme: useAdwita
+          ? AdwaitaThemeData.dark()
+          : ThemeData(
+              colorScheme:
+                  MediaQuery.platformBrightnessOf(context) == Brightness.dark
+                      ? ColorScheme.dark()
+                      : ColorScheme.light(),
+              useMaterial3: true,
+            ),
     );
   }
 }

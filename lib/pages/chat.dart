@@ -5,6 +5,7 @@ import 'package:vcc/vcc.dart';
 import 'package:vcc/widgets/chatbar.dart';
 import 'package:vcc/widgets/movewindow.dart';
 import 'package:vcc/widgets/dialog.dart';
+import 'package:vcc/utils.dart';
 
 int MAX_MESSAGES = 1000;
 
@@ -15,12 +16,7 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-mapGetDefault(Map map, dynamic key, dynamic def) {
-  if (map.containsKey(key)) {
-    return map[key];
-  }
-  return def;
-}
+
 
 class _ChatPageState extends State<ChatPage> {
   var chats = [];

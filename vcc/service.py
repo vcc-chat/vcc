@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 import os
 import asyncio
@@ -10,6 +9,7 @@ import logging
 import traceback
 import enum
 import uuid
+
 try:
     from . import tools
 except ImportError:
@@ -18,11 +18,12 @@ except ImportError:
 # from twisted.internet.defer import Deferred
 # from twisted.internet.protocol import ClientFactory
 # from twisted.protocols.basic import LineReceiver
-call_verbose=bool(os.getenv("VCC_CALL_VERBOSE"))
+call_verbose = bool(os.getenv("VCC_CALL_VERBOSE"))
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 RpcServiceRole = enum.Enum("RpcServiceRole", ["SERVER", "CLIENT"])
-request_context=tools.ContextObject()
+request_context = tools.ContextObject()
+
 
 class ServiceExport:
     def __init__(self, func=None, async_mode=False, thread=False, instance=None):
@@ -50,9 +51,10 @@ class ServiceExport:
             return asyncio.get_running_loop().run_in_executor(
                 None, lambda: self.func(*args, **kwargs)
             )
-        future=asyncio.Future()
+        future = asyncio.Future()
         future.set_result(self.func(*args, **kwargs))
         return future
+
     def __get__(self, instance, _):
         self.instance = instance
         return self
@@ -62,13 +64,15 @@ class RemoteExport:
     def __init__(self, service: Service, namespace: str):
         self.service = service
         self.namespace = namespace
-        self.connection=[]
-        self.alive=0
-    def add_connection(self,connection:service):
+        self.connection = []
+        self.alive = 0
+
+    def add_connection(self, connection: Service):
         self.connection.append(connection)
-        self.alive+=1
+        self.alive += 1
+
     def __getitem__(self, name):
-        return lambda **x:self.service.call(self.namespace, name,x)
+        return lambda **x: self.service.call(self.namespace, name, x)
 
 
 class SuperService:
@@ -121,12 +125,13 @@ class Service(lineReceiver):
         self.transport = transport
         if self.role == RpcServiceRole.SERVER:
             if "rpc" in self.factory.services:
-                capacity=list(self.factory.services["rpc"].keys())
+                capacity = list(self.factory.services["rpc"].keys())
             else:
-                capacity=[]
-            self.send(type="connect",  capacity=capacity)
+                capacity = []
+            self.send(type="connect", capacity=capacity)
         else:
             self.factory.connections.append(self)
+
     def connection_lost(self, exc: Exception | None):
         if self.role == RpcServiceRole.CLIENT:
             self.factory.on_con_lost.set_result(True)
@@ -137,11 +142,11 @@ class Service(lineReceiver):
         future = asyncio.Future()
         self.jobs[jobid] = future
         if call_verbose:
-            print(f'Call {namespace}.{service}({kwargs}) with jobid {jobid}')
+            print(f"Call {namespace}.{service}({kwargs}) with jobid {jobid}")
         self.send(
             type="call", jobid=jobid, namespace=namespace, service=service, data=kwargs
         )
-        ret= await future
+        ret = await future
         del self.jobs[jobid]
         return ret
 
@@ -149,8 +154,10 @@ class Service(lineReceiver):
         service = data["service"]
         namespace = data["namespace"]
         if call_verbose:
-            print(f'Call {namespace}.{service}({data["data"]}) with jobid {data["jobid"]}')
-        request_context.Service=self
+            print(
+                f'Call {namespace}.{service}({data["data"]}) with jobid {data["jobid"]}'
+            )
+        request_context.Service = self
         try:
             func = self.factory.services[namespace][service]
         except KeyError:
@@ -183,6 +190,7 @@ class Service(lineReceiver):
             self.jobs[jobid].set_result(data)
         except:
             return
+
     def line_received(self, data):
         try:
             data = json.loads(data)
@@ -199,7 +207,11 @@ class Service(lineReceiver):
                 if self.role == RpcServiceRole.CLIENT:
                     if "register" in data["capacity"]:
                         print(self.factory.services.rpc)
-                        asyncio.get_running_loop().create_task(self.factory.services.rpc.register(namespace=list(self.factory.services.keys())))
+                        asyncio.get_running_loop().create_task(
+                            self.factory.services.rpc.register(
+                                namespace=list(self.factory.services.keys())
+                            )
+                        )
             case "respond":
                 self.make_respond(data["jobid"], data["data"])
 
@@ -207,10 +219,13 @@ class Service(lineReceiver):
 class ServiceTable(dict):
     def __init__(self, factory):
         self.factory = factory
-    def _get(self,name):
+
+    def _get(self, name):
         if name in self:
             return self.get(name)
-        if self.factory.superservice and request_context.Service!=(superservice:=self.factory.superservice):
+        if self.factory.superservice and request_context.Service != (
+            superservice := self.factory.superservice
+        ):
             superservice: Service = self.factory.superservice
             return type(
                 name,
@@ -221,13 +236,14 @@ class ServiceTable(dict):
                     ),
                     "__getattr__": lambda self, n: lambda **x: superservice.call(
                         name, n, x
-                    )
-
+                    ),
                 },
             )()
         raise KeyError()
+
     def __getitem__(self, name):
         return self._get(name)
+
     def __setitem__(self, name, value):
         dict.__setitem__(self, name, value)
 
@@ -236,12 +252,21 @@ class ServiceTable(dict):
             return object.__getattribute__(self, name)
         return self._get(name)
 
+
 class RpcServiceFactory:
-    superservice: Service | None = property(lambda self: tools.list_get_default(self.connections,0) if len(self.connections) else None)
+    superservice: Service | None = typing.cast(
+        typing.Any,
+        property(
+            lambda self: tools.list_get_default(self.connections, 0)
+            if len(self.connections)
+            else None
+        ),
+    )
+
     def __init__(self):
         self.services = ServiceTable(self)
-        self.connections=[]
-        # service={<namespace>:{<service>:[<annoations>,<ServiceExport>/<RemoteExport>]}}
+        self.connections = []
+        # service={<namespace>:{<service>:[<annotations>,<ServiceExport>/<RemoteExport>]}}
 
     # def clientConnectionFailed(self, connector, reason):
     #     log.debug(reason)
@@ -251,7 +276,21 @@ class RpcServiceFactory:
     #     log.debug(reason)
     #     self.done.callback(None)
 
-    def register(self, instance, name=None,async_mode=False):
+    @staticmethod
+    def create_meta_info(func_map: dict[str, typing.Callable[..., typing.Any]]):
+        return {
+            key: {
+                "params": [
+                    param.name
+                    for param in inspect.signature(func).parameters.values()
+                ],
+                "alias": getattr(func, "alias", []),
+                "auth_required": getattr(func, "auth_required", True)
+            }
+            for key, func in [(key, (value.func if isinstance(value, ServiceExport) else value)) for key, value in func_map.items()]
+        }
+
+    def register(self, instance, name=None, async_mode=False):
         if name is None:
             name = type(instance).__name__.lower()
         if hasattr(instance, "exports") or hasattr(instance, "exports_async"):
@@ -269,6 +308,13 @@ class RpcServiceFactory:
                 for i in dir(instance)
                 if i[0] != "_" and callable(getattr(instance, i))
             }
+
+        meta_info = self.create_meta_info(func)
+
+        def get_meta_info(): return meta_info
+
+        func["get_meta_info"] = get_meta_info # type: ignore
+        
         annotations = {
             key1: {
                 key2: str(value2) if str(value2)[0] != "<" else value2.__name__
@@ -298,10 +344,24 @@ class RpcServiceFactory:
         loop = asyncio.get_running_loop()
         return await (
             await loop.create_server(
-                functools.partial(Service, self, RpcServiceRole.SERVER),
-                *host
+                functools.partial(Service, self, RpcServiceRole.SERVER), *host
             )
         ).serve_forever()
 
     def connect(self, *args, **kwargs):
         asyncio.run(self.aconnect(*args, **kwargs))
+
+# Following are some decorators
+
+def auth_required(auth_required: bool = True):
+    def func(func):
+        func.auth_required = auth_required
+        return func
+    return func
+
+
+def alias(alias: str | list[str]):
+    def func(func):
+        func.alias = alias if isinstance(alias, list) else [alias]
+        return func
+    return func

@@ -4,6 +4,7 @@ import 'package:chat_bubbles/chat_bubbles.dart';
 import 'package:vcc/vcc.dart';
 import 'package:vcc/widgets/chatbar.dart';
 import 'package:vcc/widgets/movewindow.dart';
+import 'package:vcc/widgets/dialog.dart';
 
 int MAX_MESSAGES = 1000;
 
@@ -72,7 +73,12 @@ class _ChatPageState extends State<ChatPage> {
       ListTile(
         title: Center(child: Text("Join chat")),
         onTap: () {
-          print("a");
+          showDialog(
+              context: context,
+              builder: (BuildContext context) =>
+                  TextInputDialog("Join Chat", "Join", (String a) {
+                    print(a);
+                  }));
         },
       )
     ]);

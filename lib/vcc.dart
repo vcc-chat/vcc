@@ -66,6 +66,9 @@ class VccClient {
     return await this.peer.sendRequest("chat_list");
   }
 
+  create_chat() async {
+//    return await this.peer.sendRequest()
+  }
   send_message(int chat, String message) {
     return this
         .peer

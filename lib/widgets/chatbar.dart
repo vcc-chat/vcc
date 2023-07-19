@@ -11,6 +11,12 @@ class ChatBar extends StatelessWidget {
       focusNode: node,
       controller: controler,
       decoration: InputDecoration(
+        enabledBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.transparent),
+        ),
+        focusedBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.transparent),
+        ),
         suffixIcon: IconButton(
           icon: Icon(Icons.send),
           onPressed: () {
@@ -32,12 +38,15 @@ class ChatBar extends StatelessWidget {
       },
     );
     return Container(
-        padding: EdgeInsets.only(left: 6, bottom: 2),
         alignment: Alignment(0, 0),
-        decoration: new BoxDecoration(
-          color: Theme.of(context).colorScheme.primary,
-          borderRadius: BorderRadius.all(Radius.circular(4.0)),
-        ),
-        child: field);
+        child: Material(
+            elevation: double.infinity,
+            color: Theme.of(context).colorScheme.background,
+            surfaceTintColor: Theme.of(context).colorScheme.primary,
+            borderRadius: BorderRadius.all(Radius.circular(4.0)),
+            child: Padding(
+              padding: EdgeInsets.only(left: 6, bottom: 2),
+              child: field,
+            )));
   }
 }

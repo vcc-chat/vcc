@@ -103,7 +103,6 @@ class _ChatPageState extends State<ChatPage> {
         ]),
       );
     }
-    print(Theme.of(context).colorScheme.surface);
     //print(Colors.red);
     late ChatBar chatBar;
     chatBar = ChatBar(send: (msg) {
@@ -111,10 +110,7 @@ class _ChatPageState extends State<ChatPage> {
     });
 
     return Scaffold(
-      drawer: useMobileLayout
-          ? Drawer(
-              child: chatList)
-          : null,
+      drawer: useMobileLayout ? Drawer(child: chatList) : null,
       appBar: PreferredSizedMoveWindow(AppBar(
         //backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text("Chat - ${currentChat[1]}"),
@@ -137,17 +133,21 @@ class _ChatPageState extends State<ChatPage> {
                   ? (SizedBox(
                       width: 180,
                       child: Material(
-                        elevation: 1,
-                        color:Theme.of(context).colorScheme.surface,
-                        surfaceTintColor: Theme.of(context).colorScheme.surfaceTint,
-                        child: chatList)))
+                          elevation: 1,
+                          color: Theme.of(context).colorScheme.surface,
+                          surfaceTintColor:
+                              Theme.of(context).colorScheme.surfaceTint,
+                          child: chatList)))
                   : Container(),
               Expanded(
                   child: Column(children: [
                 Expanded(
-                    child: Container(margin:EdgeInsets.only(left: 7, right: 7), child:ListView(reverse: true, children: [
-                  for (final element in messages.reversed.toList()) element
-                ]))),
+                    child: Container(
+                        margin: EdgeInsets.only(left: 7, right: 7),
+                        child: ListView(reverse: true, children: [
+                          for (final element in messages.reversed.toList())
+                            element
+                        ]))),
                 Container(
                     margin:
                         EdgeInsets.only(left: 7, right: 7, bottom: 5, top: 8),

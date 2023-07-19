@@ -19,6 +19,7 @@ class App extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    print(MediaQuery.platformBrightnessOf(context));
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Vcc',
@@ -34,7 +35,7 @@ class App extends StatelessWidget {
         }
       },
       theme: ThemeData(
-        colorScheme: ColorScheme.dark(),
+        colorScheme: MediaQuery.platformBrightnessOf(context)==Brightness.dark?ColorScheme.dark():ColorScheme.light(),
         useMaterial3: true,
       ),
     );

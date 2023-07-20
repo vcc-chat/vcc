@@ -50,8 +50,8 @@ class _ChatPageState extends State<ChatPage> {
       this.messages[this.currentChat[0]] = [];
     }
     for (var i = 0; i < 10; i = i + 1) {
-      this.messages[this.currentChat[0]] ??
-          [].add({
+      (this.messages[this.currentChat[0]] ??
+          []).add({
             'uid': 1,
             "chat": this.currentChat[0],
             "msg": "hello $i",

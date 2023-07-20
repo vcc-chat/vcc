@@ -16,8 +16,6 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-
-
 class _ChatPageState extends State<ChatPage> {
   var chats = [];
   Map<int, List> messages = {};
@@ -70,17 +68,22 @@ class _ChatPageState extends State<ChatPage> {
     List<Widget> chatsItem = [];
     List<Widget> messages = [];
     for (var i in this.chats) {
+      Map lastmessage = List.from(mapGetDefault(this.messages, i[0], [
+            {"msg": ""}
+          ])).lastOrNull ??
+          {};
+
+      var username = mapGetDefault(lastmessage, "username", null);
+      if (username != null) {
+        username = username + ": ";
+      } else {
+        username = "";
+      }
       chatsItem.add(ListTile(
         selected: i[0] == this.currentChat[0],
         title: Text(i[1]),
         subtitle: Text(
-          mapGetDefault(
-              List.from(mapGetDefault(this.messages, i[0], [
-                    {"msg": ""}
-                  ])).lastOrNull ??
-                  {},
-              "msg",
-              ""),
+          "${username}${mapGetDefault(lastmessage, "msg", "")}",
           style: Theme.of(context).textTheme.bodySmall,
         ),
         onTap: () {

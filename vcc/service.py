@@ -353,15 +353,9 @@ class RpcServiceFactory:
 
 # Following are some decorators
 
-def auth_required(auth_required: bool = True):
+def metadata(*, auth_required: bool = True, alias: str | list[str]):
     def func(func):
         func.auth_required = auth_required
-        return func
-    return func
-
-
-def alias(alias: str | list[str]):
-    def func(func):
         func.alias = alias if isinstance(alias, list) else [alias]
         return func
     return func

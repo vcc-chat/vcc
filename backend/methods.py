@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 from datetime import datetime, timedelta, timezone
 import functools
+from typing import Any, Never, NotRequired, TypedDict
 from uuid import uuid4
 from vcc import (
     PermissionDeniedError,
@@ -44,16 +43,29 @@ class Methods:
     def __init__(self, client: RpcExchangerClient):
         self._client = client
 
-    async def login(self, username, password):
+    class LoginReturnType(TypedDict):
+        success: bool
+        token: str | None
+        username: str
+
+    async def login(self, username: str, password: str) -> LoginReturnType:
         client = self._client
         login_result = await client.login(username, password)
         if login_result is not None:
             token = login_result[1]
         else:
             token = None
-        return {"success": login_result is not None, "token": token}
+        return {
+            "success": login_result is not None,
+            "token": token,
+            "username": username,
+        }
 
-    async def token_login(self, token):
+    class TokenLoginReturnType(TypedDict):
+        success: bool
+        username: str
+
+    async def token_login(self, token: str) -> TokenLoginReturnType:
         client = self._client
         login_result = await client.token_login(token)
         if login_result is not None:
@@ -69,12 +81,20 @@ class Methods:
         except (jwt.DecodeError, KeyError):
             return {"success": False, "username": ""}
 
-    async def request_oauth(self, platform):
+    class RequestOauthReturnType(TypedDict):
+        request_id: str
+        url: str
+
+    async def request_oauth(self, platform: str) -> RequestOauthReturnType:
         client = self._client
         url, request_id = await client.request_oauth(platform)
         return {"request_id": request_id, "url": url}
 
-    async def login_oauth(self, platform, request_id):
+    class LoginOauthReturnType(TypedDict):
+        username: str | None
+        token: str
+
+    async def login_oauth(self, platform: str, request_id: str) -> LoginOauthReturnType:
         client = self._client
         login_result = await client.login_oauth(platform, request_id)
         if login_result is not None:
@@ -95,16 +115,19 @@ class Methods:
             "token": token,
         }
 
-    async def is_online(self, users):
+    async def is_online(self, users: list[int]) -> list[bool]:
         client = self._client
         return await client.is_online(users)
 
-    async def register(self, username, password):
+    async def register(self, username: str, password: str) -> bool:
         client = self._client
         return await client.register(username, password)
 
+    class MessageKwargsType(TypedDict):
+        session: NotRequired[str]
+
     @notification
-    async def message(self, chat, msg, **kwargs):
+    async def message(self, chat: int, msg: str, **kwargs: str) -> None:
         client = self._client
         try:
             await client.send(
@@ -113,7 +136,7 @@ class Methods:
         except PermissionDeniedError:
             pass  # FIXME: feedback to frontend
 
-    async def session_join(self, name: str, parent: int):
+    async def session_join(self, name: str, parent: int) -> bool:
         client = self._client
         return await client.session_join(name, parent)
 
@@ -127,27 +150,27 @@ class Methods:
         client = self._client
         return await client.chat_join(chat)
 
-    async def chat_quit(self, chat: int):
+    async def chat_quit(self, chat: int) -> bool:
         client = self._client
         return await client.chat_quit(chat)
 
-    async def chat_get_name(self, chat: int):
+    async def chat_get_name(self, chat: int) -> str:
         client = self._client
         return await client.chat_get_name(chat)
 
-    async def chat_list(self):
+    async def chat_list(self) -> list[tuple[int, str, int | None]]:
         client = self._client
         return await client.chat_list()
 
-    async def chat_get_users(self, chat: int):
+    async def chat_get_users(self, chat: int) -> list[tuple[int, str]]:
         client = self._client
         return await client.chat_get_users(chat)
 
-    async def chat_rename(self, chat: int, name: str):
+    async def chat_rename(self, chat: int, name: str) -> bool:
         client = self._client
         return await client.chat_rename(chat, name)
 
-    async def chat_kick(self, chat: int, user: int):
+    async def chat_kick(self, chat: int, user: int) -> bool:
         return await self._client.chat_kick(chat, user)
 
     async def chat_modify_user_permission(
@@ -156,7 +179,7 @@ class Methods:
         modified_user_id: int,
         name: ChatUserPermissionName,
         value: bool,
-    ):
+    ) -> bool:
         client = self._client
         return await client.chat_modify_user_permission(
             chat_id,
@@ -165,21 +188,23 @@ class Methods:
             value,
         )
 
-    async def chat_get_all_permission(self, chat: int):
+    async def chat_get_all_permission(
+        self, chat: int
+    ) -> dict[int, dict[ChatUserPermissionName, bool]]:
         client = self._client
         return await client.chat_get_all_permission(chat)
 
-    async def chat_get_permission(self, chat: int):
+    async def chat_get_permission(self, chat: int) -> dict[ChatPermissionName, bool]:
         client = self._client
         return await client.chat_get_permission(chat)
 
     async def chat_modify_permission(
         self, chat: int, name: ChatPermissionName, value: bool
-    ):
+    ) -> bool:
         client = self._client
         return await client.chat_modify_permission(chat, name, value)
 
-    async def chat_generate_invite(self, chat: int):
+    async def chat_generate_invite(self, chat: int) -> str:
         client = self._client
         if chat not in client._chat_list:
             raise PermissionDeniedError()
@@ -192,14 +217,18 @@ class Methods:
             "HS256",
         )
 
-    async def chat_check_invite(self, token: str):
+    class ChatCheckReturnType(TypedDict):
+        inviter: int | None
+        chat: int | None
+
+    async def chat_check_invite(self, token: str) -> ChatCheckReturnType:
         try:
             result = jwt.decode(token, key, ["HS256"])
             return {"inviter": result[""][1], "chat": result[""][0]}
         except (jwt.DecodeError, KeyError):
             return {"inviter": None, "chat": None}
 
-    async def chat_invite(self, token: str):
+    async def chat_invite(self, token: str) -> bool:
         client = self._client
         try:
             result = jwt.decode(token, key, ["HS256"])
@@ -210,38 +239,48 @@ class Methods:
         except (jwt.DecodeError, KeyError):
             return False
 
-    async def file_upload(self, name: str):
+    class FileUploadReturnType(TypedDict):
+        id: str
+        url: str
+
+    async def file_upload(self, name: str) -> FileUploadReturnType:
         client = self._client
         url, id = await client.file_new_object(name)
         return {"id": id, "url": url}
 
-    async def file_download(self, id: str):
+    class FileDownloadReturnType(TypedDict):
+        url: str
+        name: str
+
+    async def file_download(self, id: str) -> FileDownloadReturnType:
         client = self._client
         url, name = await client.file_get_object(id)
         return {"name": name, "url": url}
 
-    async def record_query(self, **kwargs):
+    class RecordQueryReturnType(TypedDict):
+        msg: list[Never]
+
+    async def record_query(self) -> RecordQueryReturnType:
         # client.check_authorized()
         # client.check_joined(uid)
         # result = await client._exchanger.rpc.record.query_record(chatid=uid, time=int(msg))
         # return {"record_query", "msg": result)
         # FIXME: Temporily disable support for chat record
-        return {"msg": ([])}
+        return {"msg": []}
 
-    async def chat_get_nickname(self, chat: int, user: int):
+    async def chat_get_nickname(self, chat: int, user: int) -> str:
         client = self._client
         return await client.chat_get_nickname(chat, user)
 
-    async def chat_change_nickname(self, chat: int, user: int, name: str):
+    async def chat_change_nickname(self, chat: int, user: int, name: str) -> bool:
         client = self._client
         return await client.chat_change_nickname(chat, user, name)
 
-    async def push_get_vapid_public_key(self):
+    async def push_get_vapid_public_key(self) -> str:
         return application_server_key
 
-    async def push_register(self, subscription):
+    async def push_register(self, subscription: Any) -> None:
         client = self._client
         if client.id is None:
             raise CloseException(1008)
         push_register(client.id, subscription)
-        return {}

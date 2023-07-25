@@ -38,15 +38,13 @@ class ChatBar extends StatelessWidget {
       },
     );
     return Container(
+        decoration:BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(20.0)),),
         alignment: Alignment(0, 0),
         child: Material(
-            elevation: double.infinity,
+            elevation: 100000,
             color: Theme.of(context).colorScheme.background,
             surfaceTintColor: Theme.of(context).colorScheme.primary,
-            borderRadius: BorderRadius.all(Radius.circular(4.0)),
-            child: Padding(
-              padding: EdgeInsets.only(left: 6, bottom: 2),
-              child: field,
-            )));
+            child:field
+                ));
   }
 }

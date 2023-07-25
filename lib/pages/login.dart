@@ -153,7 +153,8 @@ class _LoginPageState extends State<LoginPage> {
                       this.registering = true;
                     });
                   }
-                })]),
+                }),SizedBox(height: 90,)
+              ]),
           ],
         ),
       ), // This trailing comma makes auto-formatting nicer for build methods.

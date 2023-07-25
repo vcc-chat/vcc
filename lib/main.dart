@@ -27,9 +27,11 @@ class App extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    bool useAdwita = isDesktop() &
-        mapGetDefault(Platform.environment, "DESKTOP_SESSION", "")
-            .startsWith("gnome");
+    bool useAdwita = false;
+    if (isDesktop()) {
+      useAdwita = mapGetDefault(Platform.environment, "DESKTOP_SESSION", "")
+          .startsWith("gnome");
+    }
     print(MediaQuery.platformBrightnessOf(context));
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -46,7 +48,9 @@ class App extends StatelessWidget {
         }
       },
       theme: useAdwita
-          ? MediaQuery.platformBrightnessOf(context) == Brightness.dark?AdwaitaThemeData.dark():AdwaitaThemeData.light()
+          ? MediaQuery.platformBrightnessOf(context) == Brightness.dark
+              ? AdwaitaThemeData.dark()
+              : AdwaitaThemeData.light()
           : ThemeData(
               colorScheme:
                   MediaQuery.platformBrightnessOf(context) == Brightness.dark

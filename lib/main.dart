@@ -12,8 +12,13 @@ import 'package:adwaita/adwaita.dart';
 void main() {
   runApp(App());
   if (isDesktop()) {
-    appWindow.minSize = Size(400, 300);
-    appWindow.size = Size(800, 600);
+    doWhenWindowReady(() {
+    const initialSize = Size(600, 450);
+    appWindow.minSize = initialSize;
+    appWindow.size = initialSize;
+    appWindow.alignment = Alignment.center;
+    appWindow.show();
+  });
   }
 }
 

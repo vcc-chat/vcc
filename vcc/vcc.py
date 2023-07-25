@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 class RpcExchanger:
     """Low-level api which is hard to use"""
     _redis: redis.Redis[bytes]
-    recv_hook: Callable[[RedisMessage], None | Awaitable[None]] | None
+    recv_hook: Callable[[RedisMessage], None | Awaitable[None]] | None = None
     
     def __init__(self, *, rpc_host: str | None=None, rpc_port: int | None=None, redis_url: str | None=None) -> None:
         host_env=get_host()

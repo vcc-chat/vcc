@@ -162,6 +162,6 @@ class Main:
 
 if __name__ == "__main__":
     db.create_tables([User, Chat, ChatUser, Bot, ChatBot])
-    server = RpcServiceFactory("bot")
-    server.register(Main())
+    server = RpcServiceFactory()
+    server.register(Main(), "bot")
     server.connect()

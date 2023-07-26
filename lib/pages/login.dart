@@ -20,7 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   }
   @override
   initState(){
-    unawaited(vccClient.connect("ws://vcc.siliconbio.org.cn/ws"));
+    unawaited(vccClient.connect("wss://vcc.siliconbio.org.cn/ws"));
   }
   setUsername(username) {
     setState(() {

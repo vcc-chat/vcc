@@ -54,7 +54,8 @@ class WebSocketWrapper {
       if (typeof data != "string") return
       const response: Response = JSON.parse(data)
       if (response.ok && response.type == "message") {
-        this.onMessage(response.response as Message)
+        if (response.response != null)
+          this.onMessage(response.response as Message)
         return 
       }
       this.IDFuncMap[response.id]?.(response)

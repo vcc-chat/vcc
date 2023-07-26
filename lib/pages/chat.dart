@@ -26,7 +26,6 @@ class _ChatPageState extends State<ChatPage> {
         if (!this.messages.containsKey(chat)) {
           this.messages[chat] = [];
         }
-
         this.messages[chat]!.add(message);
       });
       //   if (message['chat'] == this.currentChat[0]) {
@@ -151,7 +150,8 @@ class _ChatPageState extends State<ChatPage> {
       vccClient.send_message(this.currentChat[0], msg);
     });
     return Scaffold(
-      backgroundColor: useMobileLayout ?Theme.of(context).backgroundColor:Colors.transparent ,
+      backgroundColor:
+          isDesktop() ?  Colors.transparent:Theme.of(context).backgroundColor ,
       drawer: useMobileLayout ? Drawer(child: chatList) : null,
       appBar: PreferredSizedMoveWindow(AppBar(
         title: Text("Chat - ${currentChat[1]}"),
@@ -176,27 +176,32 @@ class _ChatPageState extends State<ChatPage> {
                   ? (SizedBox(
                       width: 180,
                       child: Material(
-
                           elevation: 1,
-                          color: Theme.of(context).colorScheme.surface.withAlpha(200),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surface
+                              .withAlpha(200),
                           surfaceTintColor:
                               Theme.of(context).colorScheme.surfaceTint,
                           child: chatList)))
                   : Container(),
               Expanded(
-                  child: Container(color: Theme.of(context).backgroundColor,child:Column(children: [
-                Expanded(
-                    child: Container(
-                        margin: EdgeInsets.only(left: 7, right: 7),
-                        child: ListView(reverse: true, children: [
-                          for (final element in messages.reversed.toList())
-                            element
-                        ]))),
-                Container(
-                    margin:
-                        EdgeInsets.only(left: 7, right: 7, bottom: 5, top: 8),
-                    child: chatBar)
-              ])))
+                  child: Container(
+                      color: Theme.of(context).backgroundColor,
+                      child: Column(children: [
+                        Expanded(
+                            child: Container(
+                                margin: EdgeInsets.only(left: 7, right: 7),
+                                child: ListView(reverse: true, children: [
+                                  for (final element
+                                      in messages.reversed.toList())
+                                    element
+                                ]))),
+                        Container(
+                            margin: EdgeInsets.only(
+                                left: 7, right: 7, bottom: 5, top: 8),
+                            child: chatBar)
+                      ])))
             ],
           )),
     );

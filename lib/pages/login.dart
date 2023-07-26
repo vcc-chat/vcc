@@ -17,6 +17,9 @@ class _LoginPageState extends State<LoginPage> {
   bool register_password_match = false;
   bool registering = false;
   _LoginPageState() {
+  }
+  @override
+  initState(){
     unawaited(vccClient.connect("ws://vcc.siliconbio.org.cn/ws"));
   }
   setUsername(username) {

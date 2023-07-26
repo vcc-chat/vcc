@@ -27,13 +27,15 @@ class App extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    bool useAdwita = false;
-    if (isDesktop()) {
-      useAdwita = mapGetDefault(Platform.environment, "DESKTOP_SESSION", "")
-          .startsWith("gnome");
-    }
+    bool useAdwita = true;
+    //if (isDesktop()) {
+    //  useAdwita = mapGetDefault(Platform.environment, "DESKTOP_SESSION", "")
+    //      .startsWith("gnome");
+    //}
+    // Disable adwita theme since it is buggy
     print(MediaQuery.platformBrightnessOf(context));
     return MaterialApp(
+
       debugShowCheckedModeBanner: false,
       title: 'Vcc',
       routes: {
@@ -47,17 +49,20 @@ class App extends StatelessWidget {
           return ChatPage();
         }
       },
-      theme: useAdwita
-          ? MediaQuery.platformBrightnessOf(context) == Brightness.dark
-              ? AdwaitaThemeData.dark()
-              : AdwaitaThemeData.light()
+      theme: (useAdwita
+          ? ThemeData(
+              colorScheme:
+                  MediaQuery.platformBrightnessOf(context) == Brightness.dark
+                      ? AdwaitaThemeData.dark().colorScheme
+                      : AdwaitaThemeData.light().colorScheme,
+              useMaterial3: true)
           : ThemeData(
               colorScheme:
                   MediaQuery.platformBrightnessOf(context) == Brightness.dark
                       ? ColorScheme.dark()
                       : ColorScheme.light(),
               useMaterial3: true,
-            ),
+            )),
     );
   }
 }

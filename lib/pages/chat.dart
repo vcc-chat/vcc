@@ -50,13 +50,12 @@ class _ChatPageState extends State<ChatPage> {
       this.messages[this.currentChat[0]] = [];
     }
     for (var i = 0; i < 10; i = i + 1) {
-      (this.messages[this.currentChat[0]] ??
-          []).add({
-            'uid': 1,
-            "chat": this.currentChat[0],
-            "msg": "hello $i",
-            "username": "Dummy user $i"
-          });
+      (this.messages[this.currentChat[0]] ?? []).add({
+        'uid': 1,
+        "chat": this.currentChat[0],
+        "msg": "hello $i",
+        "username": "Dummy user $i"
+      });
     }
     setState(() {});
   }
@@ -100,10 +99,20 @@ class _ChatPageState extends State<ChatPage> {
         onTap: () {
           showDialog(
               context: context,
-              builder: (BuildContext context) =>
+              builder: (BuildContext ctx) =>
                   TextInputDialog("Join Chat", "Join", (String chatid) {
                     unawaited(() async {
                       var res = await vccClient.join_chat(int.parse(chatid));
+                      if (res) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text("Join success"),
+                        ));
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(
+                              "Failed to join, are you already in the chat?"),
+                        ));
+                      }
                     }());
                   }));
         },
@@ -141,11 +150,10 @@ class _ChatPageState extends State<ChatPage> {
     chatBar = ChatBar(send: (msg) {
       vccClient.send_message(this.currentChat[0], msg);
     });
-
     return Scaffold(
+      backgroundColor: useMobileLayout ?Theme.of(context).backgroundColor:Colors.transparent ,
       drawer: useMobileLayout ? Drawer(child: chatList) : null,
       appBar: PreferredSizedMoveWindow(AppBar(
-        //backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text("Chat - ${currentChat[1]}"),
         actions: <Widget>[
               PopupMenuButton(
@@ -153,6 +161,8 @@ class _ChatPageState extends State<ChatPage> {
                   PopupMenuItem(
                       onTap: this.genFakeMessages,
                       child: Text("Generate fake messages (developer only)")),
+                  PopupMenuItem(
+                      onTap: vccClient.reconnect, child: Text("Reconnect")),
                 ],
               )
             ] +
@@ -166,14 +176,15 @@ class _ChatPageState extends State<ChatPage> {
                   ? (SizedBox(
                       width: 180,
                       child: Material(
+
                           elevation: 1,
-                          color: Theme.of(context).colorScheme.surface,
+                          color: Theme.of(context).colorScheme.surface.withAlpha(200),
                           surfaceTintColor:
                               Theme.of(context).colorScheme.surfaceTint,
                           child: chatList)))
                   : Container(),
               Expanded(
-                  child: Column(children: [
+                  child: Container(color: Theme.of(context).backgroundColor,child:Column(children: [
                 Expanded(
                     child: Container(
                         margin: EdgeInsets.only(left: 7, right: 7),
@@ -185,7 +196,7 @@ class _ChatPageState extends State<ChatPage> {
                     margin:
                         EdgeInsets.only(left: 7, right: 7, bottom: 5, top: 8),
                     child: chatBar)
-              ]))
+              ])))
             ],
           )),
     );

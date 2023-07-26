@@ -43,6 +43,14 @@ class VccClient {
     this.connected = true;
   }
 
+  reconnect() async {
+    this.peer.close();
+    this.connected = false;
+    this.connect(this.server);
+    Map result =
+        await this.peer.sendRequest("token_login", {"token": this.token});
+  }
+
   login(String username, String password) async {
     Map result = await this
         .peer
@@ -67,12 +75,14 @@ class VccClient {
   }
 
   join_chat(int chatid) async {
-    return await this.peer.sendRequest("chat_join", chatid);
+    return await this.peer.sendRequest("chat_join", {"chat":chatid});
   }
 
-  create_chat() async {
-//    return await this.peer.sendRequest()
+  create_chat(String name) async {
+    int chatid = await this.peer.sendRequest("chat_create", {'name': name});
+    await this.join_chat(chatid);
   }
+
   send_message(int chat, String message) {
     return this
         .peer

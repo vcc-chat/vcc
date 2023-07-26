@@ -60,6 +60,7 @@ class Main:
             ChatBot.get_or_create(chat=chat, bot=bot)
             return True
         except:
+            traceback.print_exc()
             return False
 
     @db.atomic()

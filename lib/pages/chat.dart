@@ -16,10 +16,16 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
+//class CreateChatDialog extends
+
 class _ChatPageState extends State<ChatPage> {
   var chats = [];
+  late Widget chatbar;
   Map<int, List> messages = {};
   _ChatPageState() {
+    this.chatbar = ChatBar(send: (msg) {
+      vccClient.send_message(this.currentChat[0], msg);
+    });
     vccClient.message.listen((message) {
       setState(() {
         int chat = message['chat'];
@@ -101,7 +107,15 @@ class _ChatPageState extends State<ChatPage> {
               builder: (BuildContext ctx) =>
                   TextInputDialog("Join Chat", "Join", (String chatid) {
                     unawaited(() async {
-                      var res = await vccClient.join_chat(int.parse(chatid));
+                      var res = false;
+                      try {
+                        var res = await vccClient.join_chat(int.parse(chatid));
+                      } catch (error) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content:
+                              Text("Failed to join, is your chatid a number?"),
+                        ));
+                      }
                       if (res) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                           content: Text("Join success"),
@@ -145,13 +159,10 @@ class _ChatPageState extends State<ChatPage> {
       );
     }
     //print(Colors.red);
-    late ChatBar chatBar;
-    chatBar = ChatBar(send: (msg) {
-      vccClient.send_message(this.currentChat[0], msg);
-    });
     return Scaffold(
-      backgroundColor:
-          isDesktop() ?  Colors.transparent:Theme.of(context).backgroundColor ,
+      backgroundColor: (!useMobileLayout & isDesktop())
+          ? Colors.transparent
+          : Theme.of(context).backgroundColor,
       drawer: useMobileLayout ? Drawer(child: chatList) : null,
       appBar: PreferredSizedMoveWindow(AppBar(
         title: Text("Chat - ${currentChat[1]}"),
@@ -200,7 +211,7 @@ class _ChatPageState extends State<ChatPage> {
                         Container(
                             margin: EdgeInsets.only(
                                 left: 7, right: 7, bottom: 5, top: 8),
-                            child: chatBar)
+                            child: this.chatbar)
                       ])))
             ],
           )),

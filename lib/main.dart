@@ -13,12 +13,12 @@ void main() {
   runApp(App());
   if (isDesktop()) {
     doWhenWindowReady(() {
-    const initialSize = Size(600, 450);
-    appWindow.minSize = initialSize;
-    appWindow.size = initialSize;
-    appWindow.alignment = Alignment.center;
-    appWindow.show();
-  });
+      const initialSize = Size(600, 450);
+      appWindow.minSize = initialSize;
+      appWindow.size = initialSize;
+      appWindow.alignment = Alignment.center;
+      appWindow.show();
+    });
   }
 }
 
@@ -33,37 +33,36 @@ class App extends StatelessWidget {
     //      .startsWith("gnome");
     //}
     // Disable adwita theme since it is buggy
-    print(MediaQuery.platformBrightnessOf(context));
-    return MaterialApp(
-
-      debugShowCheckedModeBanner: false,
-      title: 'Vcc',
-      routes: {
-        "/": (context) {
-          return IndexPage();
-        },
-        "/login": (context) {
-          return LoginPage();
-        },
-        "/chat": (context) {
-          return ChatPage();
-        }
-      },
-      theme: (useAdwita
-          ? ThemeData(
-              colorScheme:
-                  MediaQuery.platformBrightnessOf(context) == Brightness.dark
+    return ClipRRect(borderRadius: isDesktop()?BorderRadius.all(Radius.circular(12.0)):BorderRadius.zero,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Vcc',
+          routes: {
+            "/": (context) {
+              return IndexPage();
+            },
+            "/login": (context) {
+              return LoginPage();
+            },
+            "/chat": (context) {
+              return ChatPage();
+            }
+          },
+          theme: (useAdwita
+              ? ThemeData(
+                  colorScheme: MediaQuery.platformBrightnessOf(context) ==
+                          Brightness.dark
                       ? AdwaitaThemeData.dark().colorScheme
                       : AdwaitaThemeData.light().colorScheme,
-              useMaterial3: true)
-          : ThemeData(
-              colorScheme:
-                  MediaQuery.platformBrightnessOf(context) == Brightness.dark
+                  useMaterial3: true)
+              : ThemeData(
+                  colorScheme: MediaQuery.platformBrightnessOf(context) ==
+                          Brightness.dark
                       ? ColorScheme.dark()
                       : ColorScheme.light(),
-              useMaterial3: true,
-            )),
-    );
+                  useMaterial3: true,
+                )),
+        ));
   }
 }
 

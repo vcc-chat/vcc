@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, useId, useReducer, useMemo } from "preact/hooks"
+import { useEffect, useState, useRef, useCallback, useId, useReducer, useMemo, useLayoutEffect } from "preact/hooks"
 import { memo, type TargetedEvent, createPortal } from "preact/compat"
 import type { ComponentChildren } from "preact"
 import { useParams, useFetcher, Link, useBeforeUnload } from "react-router-dom"
@@ -264,11 +264,11 @@ export const Component = memo(function Chat() {
 
   useTitle(session ?? chatNames[chats.indexOf(chat!)])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (ref.current == null) return
     ref.current.scrollTo(0, ref.current!.scrollHeight)
   }, [chat])
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (ref.current == null) return
     if (ref.current.scrollHeight - ref.current.clientHeight - ref.current.scrollTop < 150) {
       ref.current.scrollTo(0, ref.current.scrollHeight)

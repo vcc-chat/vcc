@@ -129,8 +129,8 @@ export function useNickname(
     initialData
   }: {
     enabled?: boolean
-    initialData?: string
-  } = {}
+    initialData: string
+  }
 ) {
   const { data } = useQuery({
     queryKey: ["get-nickname", chat, uid],
@@ -142,7 +142,7 @@ export function useNickname(
           initialData: initialData
         })
   })
-  return uid == -1 ? initialData : data ?? initialData
+  return uid == -1 ? initialData : (data === "system" ? initialData : data) ?? initialData
 }
 
 export function useTitle(title: string) {

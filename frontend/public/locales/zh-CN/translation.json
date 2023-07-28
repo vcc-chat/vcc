@@ -76,6 +76,7 @@
   "create_sub_chat": "创建子聊天",
   "create_session": "创建会话",
   "banned": "被屏蔽",
+  "change_nickname": "修改他人的昵称",
 
   "Logout": "注销",
   "No such chat. ": "该聊天不存在",
@@ -95,10 +96,16 @@
   "Modify Permission": "修改权限",
   "Chat": "聊天",
   
-  "Enter the chat number you want to join": "输入你想加入的聊天的ID",
+  "Enter the chat number you want to join.": "输入你想加入的聊天的ID",
   "Join": "加入",
   "Chat id": "聊天ID",
   "modify-permission-dialog-description": "修改{{username}}用户的权限",
   "Modify permission": "修改权限",
-  "Permission has successfully been modified.": "权限已成功修改"
+  "Permission has successfully been modified.": "权限已成功修改",
+
+  "Change Nickname": "修改昵称",
+  "Change nickname": "修改昵称",
+  "Enter the new nickname you want to change.": "输入希望修改为的昵称",
+  "New nickname": "新昵称",
+  "Change": "修改"
 }

@@ -75,12 +75,12 @@ class VccClient {
   }
 
   join_chat(int chatid) async {
-    return await this.peer.sendRequest("chat_join", {"chat":chatid});
+    return await this.peer.sendRequest("chat_join", {"chat": chatid});
   }
 
-  create_chat(String name) async {
-    int chatid = await this.peer.sendRequest("chat_create", {'name': name});
-    await this.join_chat(chatid);
+  create_chat(String name, bool public) async {
+    int chatid = await this.peer.sendRequest("chat_create", {'name': name,'parent':-1});
+    await this.peer.sendRequest("chat_modify_permission", {'chat': chatid,'name':"public","value":public});
   }
 
   send_message(int chat, String message) {

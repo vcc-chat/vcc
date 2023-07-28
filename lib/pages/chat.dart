@@ -16,7 +16,43 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-//class CreateChatDialog extends
+class CreateChatDialog extends StatelessWidget {
+  late String value;
+  late bool public = true;
+  Widget build(BuildContext context) {
+    return DialogBase(
+      title: "Create chat",
+      child: Column(
+        children: [
+          SizedBox(
+              width: 300,
+              child: TextField(
+                onChanged: (value) {
+                  this.value = value;
+                },
+              )),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text("Public"),
+              Checkbox(
+                value: this.public,
+                onChanged: (_) {
+                  this.public = !this.public;
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+      submitted_text: "Create chat",
+      onSubmitted: () {
+        vccClient.create_chat(this.value, this.public);
+        Navigator.pop(context);
+      },
+    );
+  }
+}
 
 class _ChatPageState extends State<ChatPage> {
   var chats = [];
@@ -76,18 +112,35 @@ class _ChatPageState extends State<ChatPage> {
             {"msg": ""}
           ])).lastOrNull ??
           {};
-
+      String message = mapGetDefault(lastmessage, "msg", "");
+      if (message.length >= 10) {
+        message = message.substring(0, 10) + "...";
+      }
       var username = mapGetDefault(lastmessage, "username", null);
       if (username != null) {
         username = username + ": ";
       } else {
         username = "";
       }
-      chatsItem.add(ListTile(
+      late ListTile tile;
+      Text chatId = Text("Chat id: ${i[0]}",
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color:
+                    Theme.of(context).textTheme.bodySmall?.color?.withAlpha(50),
+              ));
+
+      tile = ListTile(
         selected: i[0] == this.currentChat[0],
-        title: Text(i[1]),
+        trailing: IconButton(
+          onPressed: () {},
+          icon: Icon(Icons.output),
+        ),
+        title: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          children: [Text(i[1]), chatId],
+        ),
         subtitle: Text(
-          "${username}${mapGetDefault(lastmessage, "msg", "")}",
+          "${username}$message",
           style: Theme.of(context).textTheme.bodySmall,
         ),
         onTap: () {
@@ -95,7 +148,8 @@ class _ChatPageState extends State<ChatPage> {
             this.currentChat = i;
           });
         },
-      ));
+      );
+      chatsItem.add(tile);
     }
     Widget chatList = Column(children: [
       Expanded(child: ListView(children: chatsItem)),
@@ -126,8 +180,19 @@ class _ChatPageState extends State<ChatPage> {
                               "Failed to join, are you already in the chat?"),
                         ));
                       }
+                      unawaited(this.updateChats());
                     }());
                   }));
+        },
+      ),
+      ListTile(
+        title: Center(
+          child: Text("Create chat"),
+        ),
+        onTap: () {
+          showDialog(
+              context: context,
+              builder: (BuildContext context) => CreateChatDialog());
         },
       )
     ]);
@@ -185,7 +250,7 @@ class _ChatPageState extends State<ChatPage> {
             children: [
               (!useMobileLayout)
                   ? (SizedBox(
-                      width: 180,
+                      width: 230,
                       child: Material(
                           elevation: 1,
                           color: Theme.of(context)

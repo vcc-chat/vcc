@@ -1,6 +1,7 @@
 FROM node:latest AS frontend_build
 ADD ./frontend ./
-RUN npm i&&npm run build
+# FIXME: generate methodtype.ts first if possible
+RUN npm i&&./node_modules/.bin/vite build
 
 FROM alpine:edge
 RUN apk add py3-pip git

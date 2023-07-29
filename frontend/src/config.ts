@@ -31,16 +31,14 @@ export type RequestType =
   | "push_register"
 
 export type Message = {
-  type: RequestType
   chat: number
   username: string
   msg: string
-  uuid?: string
   session?: string
   user_id?: number
 }
 
-export interface RequestWithTime {
+export interface MessageWithTime {
   time: number
   req: Message
 }

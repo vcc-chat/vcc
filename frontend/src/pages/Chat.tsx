@@ -18,14 +18,14 @@ import FileUploadIcon from "@material-design-icons/svg/outlined/file_upload.svg"
 import InfoIcon from "@material-design-icons/svg/outlined/info.svg"
 import SendIcon from "@material-design-icons/svg/filled/send.svg"
 
-import { type RequestWithTime, MESSAGE_MIME_TYPE } from "../config"
+import { type MessageWithTime, MESSAGE_MIME_TYPE } from "../config"
 import { MessageAvatar, MessageLink } from "../components/Messages"
 import useStore from "../store"
 import { stringToNumber, useChatList, useAlert, useNickname, useTitle } from "../tools"
 import { useChatActionData } from "../loaders"
 import rpc from "../network"
 
-const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: RequestWithTime }) {
+const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: MessageWithTime }) {
   const req = nowMsg.req
   const date = new Date(nowMsg.time)
   const markdownToHTML = useMemo(() => useStore.getState().markdownToHTML, [])
@@ -172,7 +172,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: RequestW
   )
 })
 
-function MessageComponent({ nowMsg }: { nowMsg: RequestWithTime }) {
+function MessageComponent({ nowMsg }: { nowMsg: MessageWithTime }) {
   return nowMsg.req.username == "system" ? (
     <div className="flex">
       <div className="alert alert-info mx-auto w-auto">

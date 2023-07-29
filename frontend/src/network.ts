@@ -1,11 +1,20 @@
-import { JSONRPCClient, JSONRPCServer, JSONRPCServerAndClient } from "json-rpc-2.0"
+import { JSONRPCClient, JSONRPCServer, JSONRPCServerAndClient, TypedJSONRPCServerAndClient } from "json-rpc-2.0"
 import { useEffect, useState } from "preact/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 
-import type { RequestType, Message, RequestWithTime } from "./config"
+import type { RequestType, Message, MessageWithTime } from "./config"
 import useStore from "./store"
 import { responseToChatList } from "./tools"
 import { wait } from "./loaders"
+import type { MethodType } from "./methodtype"
+import { PermissionKey } from "./components/Settings"
+
+type RPCType = TypedJSONRPCServerAndClient<
+  {
+    message: (msg: Message) => void
+  },
+  MethodType
+>
 
 export async function useWebSocketConnection() {
   const backendAddress = useStore(state => state.backendAddress)
@@ -21,7 +30,7 @@ export async function useWebSocketConnection() {
     const ws = new WebSocket(backendAddress)
     ws.addEventListener("open", () => setReady(true))
     ws.addEventListener("error", () => setReady(false))
-    const serverAndClient = new JSONRPCServerAndClient(
+    const serverAndClient: RPCType = new JSONRPCServerAndClient(
       new JSONRPCServer(),
       new JSONRPCClient(async request => {
         if (ws.readyState == WebSocket.CLOSING || ws.readyState == WebSocket.CLOSED) return
@@ -38,7 +47,7 @@ export async function useWebSocketConnection() {
       setReady(false)
       errorAlert("Oh No! The connection between server and client is interupted.")
     })
-    serverAndClient.addMethod("message", async (message: Message) => {
+    serverAndClient.addMethod("message", async message => {
       changeLastMessageTime()
       if (message.msg == "") return
       const newMessage = {
@@ -58,26 +67,32 @@ export async function useWebSocketConnection() {
         })
       }
     })
-    setSendJsonMessageRaw((method, request) => {
-      const { uuid, ...other } = request
-      console.log(method, other)
-      if (method == "message") {
-        serverAndClient.notify(method, other)
-      } else {
-        serverAndClient.request(method, other).then(result => {
-          useStore.getState().handleFunctionList[uuid!](result)
-        })
+    useStore.setState({
+      makeRequestRaw(method, request) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        return Promise.resolve(serverAndClient.request(method, request))
+      },
+      sendJsonMessageRaw(method, request) {
+        if (method == "message") {
+          serverAndClient.notify(method, request)
+        } else {
+          throw TypeError("method type should only be message")
+        }
       }
     })
     return () => {
       ws.close()
-      setSendJsonMessageRaw(null)
+      useStore.setState({
+        makeRequestRaw: null,
+        sendJsonMessageRaw: null
+      })
     }
   }, [backendAddress])
 }
 
-async function makeRequest(method: RequestType, request: Record<string, any> = {}): Promise<any> {
-  return await useStore.getState().makeRequest(method, request as any)
+async function makeRequest<K extends keyof MethodType>(method: K, request: Parameters<MethodType[K]>[0]) {
+  return (await useStore.getState().makeRequest(method, request as any)) as unknown as ReturnType<MethodType[K]>
 }
 
 const rpc = {
@@ -99,7 +114,12 @@ const rpc = {
         name
       })
     },
-    async modifyUserPermission(chat: number, modifiedUser: number, name: string, value: boolean): Promise<boolean> {
+    async modifyUserPermission(
+      chat: number,
+      modifiedUser: number,
+      name: PermissionKey,
+      value: boolean
+    ): Promise<boolean> {
       return await makeRequest("chat_modify_user_permission", {
         chat_id: chat,
         modified_user_id: modifiedUser,
@@ -107,7 +127,7 @@ const rpc = {
         value
       })
     },
-    async modifyPermission(chat: number, name: string, value: boolean): Promise<boolean> {
+    async modifyPermission(chat: number, name: "public", value: boolean): Promise<boolean> {
       return await makeRequest("chat_modify_permission", {
         chat,
         name,
@@ -152,16 +172,7 @@ const rpc = {
         token
       })
     },
-    async checkInvite(token: string): Promise<
-      | {
-          inviter: number
-          chat: number
-        }
-      | {
-          inviter: null
-          chat: null
-        }
-    > {
+    async checkInvite(token: string) {
       return await makeRequest("chat_check_invite", {
         token
       })
@@ -196,10 +207,7 @@ const rpc = {
     }
   },
   user: {
-    async login(
-      username: string,
-      password: string
-    ): Promise<{ success: true; token: string } | { success: false; token: null }> {
+    async login(username: string, password: string) {
       return await makeRequest("login", {
         username,
         password
@@ -283,7 +291,7 @@ const rpc = {
   },
   push: {
     async getVapidPublicKey() {
-      return await makeRequest("push_get_vapid_public_key")
+      return await makeRequest("push_get_vapid_public_key", {})
     },
     async register(subscription: PushSubscriptionJSON) {
       await makeRequest("push_register", {

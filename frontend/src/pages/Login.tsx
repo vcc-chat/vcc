@@ -48,7 +48,7 @@ export function Component() {
     window.open(url, "_blank", "noopener,noreferrer,popup")
     const { username, token } = await rpc.oauth.login(requestID)
     setToken(token)
-    changeUsername(username)
+    changeUsername(username!)
     success()
     navigate("/")
   }, [])

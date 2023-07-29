@@ -70,9 +70,10 @@ class RpcExchanger:
                         uid = int(json_message["uid"])
                         if "session" in json_message:
                             session = json_message["session"]
+                        id = json_message["id"]
                         for client in self.client_list:
                             if chat in client._chat_list and (session is None or isinstance(client, RpcRobotExchangerClient) or (chat, session) in client._session_list):
-                                client._recv_future.set_result(("message", uid, username, msg, chat, session))
+                                client._recv_future.set_result(("message", uid, username, msg, chat, session, id))
                         if "session" in json_message:
                             session = json_message["session"]
                         log.debug(f"{username=} {msg=} {chat=} {session=}")
@@ -115,8 +116,9 @@ class RpcExchanger:
         await self._pubsub_raw.__aexit__(*args)
         await self._redis.close()
 
-    async def send_msg(self, uid: int, username: str, msg: str, chat: int, session: str | None=None) -> None:
+    async def send_msg(self, uid: int, username: str, msg: str, chat: int, session: str | None=None) -> str:
         log.debug(f"messages")
+        id = str(uuid.uuid4())
         await self._redis.publish(f"messages", json.dumps({
             "uid": uid,
             "username": username,
@@ -125,6 +127,7 @@ class RpcExchanger:
             **({} if session is None else {"session": session})
         }))
         log.debug(f"{username=} {msg=} {chat=}")
+        return id
     async def send_event(self, type:str,data:Any, chat: int, session: str | None=None) -> None:
         log.debug(f"event")
         await self._redis.publish(f"events", json.dumps({
@@ -157,7 +160,7 @@ class RpcExchangerBaseClient:
     _id: int | None
     _name: str | None
     _pubsub: PubSub
-    _recv_future: asyncio.Future[tuple[Literal["message"], int, str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]]
+    _recv_future: asyncio.Future[tuple[Literal["message"], int, str, str, int, str | None, str] | tuple[Literal["event"], Event, Any, int]]
     _chat_list_inited: bool
 
     _msg_callback: MessageCallback | None
@@ -214,7 +217,7 @@ class RpcExchangerBaseClient:
             raise PermissionDeniedError()
         await self._exchanger.send_msg(uid, username, msg, chat, session)  
     
-    async def recv(self) -> tuple[Literal["message"], int, str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
+    async def recv(self) -> tuple[Literal["message"], int, str, str, int, str | None, str] | tuple[Literal["event"], Event, Any, int]:
         content = await self._recv_future
         if content[0] == "event":
             data = content[2]
@@ -279,7 +282,7 @@ class RpcExchangerBaseClient:
     def __aiter__(self) -> RpcExchangerBaseClient:
         return self
 
-    async def __anext__(self) -> tuple[Literal["message"], int, str, str, int, str | None] | tuple[Literal["event"], Event, Any, int]:
+    async def __anext__(self) -> tuple[Literal["message"], int, str, str, int, str | None, str] | tuple[Literal["event"], Event, Any, int]:
         return await self.recv()
 
     async def __aenter__(self):
@@ -311,11 +314,12 @@ class RpcExchangerBaseClient:
             raise TypeError("Wrong usage")
 
     async def run_forever(self) -> None:
+        warnings.warn(DeprecationWarning("This function is deprecated, use recv instead"))
         async for result in self:
             if result[0] == "message":
-                _, uid, username, msg, chat, session = result
+                _, uid, username, msg, chat, session, id = result
                 if self._msg_callback is not None:
-                    returned = self._msg_callback(uid, username, msg, chat, session)
+                    returned = self._msg_callback(uid, username, msg, chat, session, id)
                     if isinstance(returned, Awaitable):
                         await returned
             else:
@@ -382,12 +386,12 @@ class RpcExchangerClient(RpcExchangerBaseClient):
     
 
     @check(joined="chat")
-    async def send(self, msg: str, chat: int, session: str | None) -> None:
+    async def send(self, msg: str, chat: int, session: str | None) -> str:
         if session is not None and (chat, session) not in self._session_list:
             raise ChatNotJoinedError()
         if not await self._rpc.chat.check_send(chat_id=chat, user_id=self._id):
             raise PermissionDeniedError()
-        await self._exchanger.send_msg(cast(int, self._id), cast(str, self._name), msg, chat, session)   
+        return await self._exchanger.send_msg(cast(int, self._id), cast(str, self._name), msg, chat, session)   
     @check(joined="chat")
     async def send_typing_event(self,status:bool,chat:int,session: str|None) -> None:
         self.check_authorized()
@@ -402,13 +406,13 @@ class RpcExchangerClient(RpcExchangerBaseClient):
         }, chat, session)
 
     @check(joined="chat")
-    async def send_with_another_username(self, uid: int, msg: str, chat: int, session: str | None) -> None:
+    async def send_with_another_username(self, uid: int, msg: str, chat: int, session: str | None) -> str:
         if session is not None and (chat, session) not in self._session_list:
             raise ChatNotJoinedError()
         if not await self._rpc.chat.check_send_with_another_username(chat_id=chat, user_id=self._id):
             raise PermissionDeniedError()
         username = await self._rpc.chat.get_nickname(chat_id=chat, user_id=uid)
-        await self._exchanger.send_msg(uid, username, msg, chat, session)  
+        return await self._exchanger.send_msg(uid, username, msg, chat, session)  
 
     @check(joined="chat_id", error_return=False)
     async def session_join(self, name: str, chat_id: int) -> bool:
@@ -523,11 +527,11 @@ class RpcRobotExchangerClient(RpcExchangerBaseClient):
         return uid
 
     @check(joined="chat")
-    async def send(self, username: str, msg: str, chat: int, session: str | None) -> None:
+    async def send(self, username: str, msg: str, chat: int, session: str | None) -> str:
         if not await self._rpc.bot.check_send(chat_id=chat, bot_id=self._id):
             raise PermissionDeniedError()
         # -1 means system or robot
-        await self._exchanger.send_msg(-1, f"{username}[{cast(str, self.name)}]", msg, chat, session)
+        return await self._exchanger.send_msg(-1, f"{username}[{cast(str, self.name)}]", msg, chat, session)
     
     @check(not_joined="id", error_return=False)
     async def chat_join(self, id: int) -> bool:

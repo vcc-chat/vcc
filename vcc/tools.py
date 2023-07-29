@@ -16,29 +16,47 @@ T = TypeVar("T", bound=Callable)
 log = logging.getLogger("vcc")
 log.addHandler(logging.NullHandler())
 
-ChatUserPermissionName = Literal["kick", "rename", "invite", "modify_permission", "send"]
+ChatUserPermissionName = Literal[
+    "kick",
+    "rename",
+    "invite",
+    "modify_permission",
+    "send",
+    "create_sub_chat",
+    "create_session",
+    "banned",
+    "change_nickname",
+]
 ChatPermissionName = Literal["public"]
+
 
 class RpcException(Exception):
     pass
 
+
 class ChatAlreadyJoinedError(RpcException):
     pass
+
 
 class ChatNotJoinedError(RpcException):
     pass
 
+
 class UnknownError(RpcException):
     pass
+
 
 class NotAuthorizedError(RpcException):
     pass
 
+
 class PermissionDeniedError(RpcException):
     pass
 
+
 class ProviderNotFoundError(RpcException):
     pass
+
 
 class RedisMessage(TypedDict):
     username: str
@@ -48,18 +66,22 @@ class RedisMessage(TypedDict):
     chat: int
     uid: int
 
+
 Event = Literal["join", "quit", "kick", "rename", "invite"]
 
 MessageCallback = Callable[[int, str, str, int, str | None], None | Awaitable[None]]
 EventCallback = Callable[[Event, Any, int], None | Awaitable[None]]
+
 
 class RedisEvent(TypedDict):
     type: Event
     data: Any
     chat: int
 
+
 log = logging.getLogger("vcc")
 log.addHandler(logging.NullHandler())
+
 
 class ContextObject(object):
     def __init__(self):
@@ -74,9 +96,16 @@ class ContextObject(object):
         self._context.set(self._context.get() | {name: value})
 
 
-def check(*, auth: bool=True, joined: str | None=None, not_joined: str | None=None, error_return: Any=Exception):
+def check(
+    *,
+    auth: bool = True,
+    joined: str | None = None,
+    not_joined: str | None = None,
+    error_return: Any = Exception,
+):
     def decorator(func: T) -> T:
         signature = inspect.signature(func)
+
         @wraps(func)
         async def wrapper(self: RpcExchangerBaseClient, *args, **kwargs):
             bound_signature = signature.bind(self, *args, **kwargs)
@@ -93,13 +122,21 @@ def check(*, auth: bool=True, joined: str | None=None, not_joined: str | None=No
                     raise
                 return copy.deepcopy(error_return)
             return await func(self, *args, **kwargs)
-        return wrapper # type: ignore
+
+        return wrapper  # type: ignore
+
     return decorator
 
-def rpc_request(_service: str | None=None, *, id_arg: str | None=None):
+
+def rpc_request(_service: str | None = None, *, id_arg: str | None = None):
     def decorator(func: T) -> T:
-        namespace, service = _service.split("/", 1) if _service is not None else func.__name__.split("_", 1)
+        namespace, service = (
+            _service.split("/", 1)
+            if _service is not None
+            else func.__name__.split("_", 1)
+        )
         signature = inspect.signature(func)
+
         @wraps(func)
         def wrapper(self: RpcExchangerBaseClient, *args, **kwargs):
             log.debug(f"{namespace=} {service=} {id_arg=} {args=} {kwargs=}")
@@ -107,15 +144,19 @@ def rpc_request(_service: str | None=None, *, id_arg: str | None=None):
             bound_signature.apply_defaults()
             arguments = bound_signature.arguments
             if id_arg is not None:
-                arguments.update({
-                    id_arg: self._id
-                })
+                arguments.update({id_arg: self._id})
             del arguments["self"]
             return self._exchanger.rpc_request(namespace, service, arguments)
-        return wrapper # type: ignore
+
+        return wrapper  # type: ignore
+
     return decorator
-def list_get_default(l,index,default=None):
+
+
+def list_get_default(l, index, default=None):
     return l[index] if index < len(l) else default
+
+
 def get_host() -> tuple[str, int]:
     if "RPCHOST" in os.environ:
         host = os.environ["RPCHOST"].split(":")
@@ -123,12 +164,13 @@ def get_host() -> tuple[str, int]:
     else:
         return ("localhost", 2474)
 
+
 __all__ = [
-    "check", 
-    "rpc_request", 
+    "check",
+    "rpc_request",
     "get_host",
     "RpcException",
-    "ChatAlreadyJoinedError", 
+    "ChatAlreadyJoinedError",
     "ChatNotJoinedError",
     "UnknownError",
     "NotAuthorizedError",
@@ -141,6 +183,5 @@ __all__ = [
     "MessageCallback",
     "EventCallback",
     "RedisEvent",
-    "RedisMessage"
+    "RedisMessage",
 ]
-

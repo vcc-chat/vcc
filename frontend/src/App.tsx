@@ -13,7 +13,7 @@ import { useWebSocketConnection } from "./network"
 const ErrorElement = lazy(() => import("./pages/ErrorElement"))
 
 const Loading = memo(() => {
-  return <div className="radial-progress m-auto animate-spin" style={{ "--value": 60, "--size": "3rem" } as any} />
+  return <div className="loading loading-spinner loading-lg m-auto" />
 })
 
 const router = createBrowserRouter(

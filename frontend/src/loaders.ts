@@ -171,7 +171,6 @@ function parseCommand(msg: string) {
 }
 
 export async function chatAction({ params, request }: ActionFunctionArgs) {
-  const { sendJsonMessage } = store.getState()
   const { id: chatString } = params
   const { msg, session } = Object.fromEntries(await request.formData())
   console.log({ chatString, msg, session })
@@ -195,19 +194,13 @@ export async function chatAction({ params, request }: ActionFunctionArgs) {
   if (parsedResult.type == "message" || parsedResult.type == "error") {
     const rawRequest = {
       chat,
-      type: "message" as const,
-      username: store.getState().username,
       msg,
       session: (session || null) as unknown as string
     }
     const sendHook = store.getState().sendHook
-    if (sendHook) {
-      const newRequest = await sendHook(rawRequest)
-      if (newRequest != null) {
-        await sendJsonMessage("message", newRequest)
-      }
-    } else {
-      await sendJsonMessage("message", rawRequest)
+    const newRequest = sendHook ? await sendHook(rawRequest) : rawRequest
+    if (newRequest) {
+      return { ok: !!(await rpc.send(newRequest.chat, newRequest.msg, newRequest.session)) }
     }
     return { ok: true }
   } else if (parsedResult.type == "kick") {

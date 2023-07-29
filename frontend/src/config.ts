@@ -36,6 +36,13 @@ export type Message = {
   msg: string
   session?: string
   user_id?: number
+  id?: string
+}
+
+export type SendMessage = {
+  chat: number
+  session: string | null
+  msg: string
 }
 
 export interface MessageWithTime {

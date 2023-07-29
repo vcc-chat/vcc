@@ -13,10 +13,7 @@ interface NetworkState {
   setBackendAddress: (address: string) => void
   ready: boolean
   setReady: (ready: boolean) => void
-  sendJsonMessageRaw: ((method: string, request: Message) => void) | null
   makeRequestRaw: MakeRequestType | null
-  setSendJsonMessageRaw: (func: null | ((method: string, request: Message) => void)) => void
-  sendJsonMessage: (method: string, request: Message) => Promise<void>
   makeRequest: MakeRequestType
 }
 
@@ -31,18 +28,7 @@ const createNetworkSlice: StateCreator<NetworkState> = (set, get) => ({
       ready
     })
   },
-  sendJsonMessageRaw: null,
   makeRequestRaw: null,
-  setSendJsonMessageRaw(func) {
-    set(() => ({
-      sendJsonMessageRaw: func
-    }))
-  },
-  async sendJsonMessage(method, request) {
-    let sendJsonMessageRaw
-    while (!(sendJsonMessageRaw = get().sendJsonMessageRaw)) await wait()
-    sendJsonMessageRaw(method, request)
-  },
   async makeRequest(method, request) {
     let makeRequestRaw
     while (!(makeRequestRaw = get().makeRequestRaw)) await wait()

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "preact/hooks"
 import type { ComponentChildren } from "preact"
 import { useQueries } from "@tanstack/react-query"
 
-import { Message } from "../config"
+import type { Message, SendMessage } from "../config"
 import useStore from "../store"
 
 async function getMetaInfo(urlString: string) {
@@ -416,7 +416,7 @@ export function PluginProvider({ children }: { children: ComponentChildren }) {
         callbacksRef.current[id] = callback
       })
     })
-    setSendHook(async (req: Message) => {
+    setSendHook(async (req: SendMessage) => {
       const id = generateUUID()
       iframeRef.current!.contentWindow!.postMessage(
         {
@@ -426,10 +426,10 @@ export function PluginProvider({ children }: { children: ComponentChildren }) {
         },
         "*"
       )
-      return await new Promise<Message>(res => {
+      return await new Promise<SendMessage>(res => {
         function callback(
           ev: MessageEvent<{
-            msg: Message
+            msg: SendMessage
           }>
         ) {
           res(ev.data.msg)

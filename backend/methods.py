@@ -126,15 +126,12 @@ class Methods:
     class MessageKwargsType(TypedDict):
         session: NotRequired[str]
 
-    @notification
-    async def message(self, chat: int, msg: str, **kwargs: str) -> None:
+    async def message(self, chat: int, msg: str, session: str | None) -> str | None:
         client = self._client
         try:
-            await client.send(
-                msg, chat, kwargs["session"] if "session" in kwargs else None
-            )
+            return await client.send(msg, chat, session)
         except PermissionDeniedError:
-            pass  # FIXME: feedback to frontend
+            return None
 
     async def session_join(self, name: str, parent: int) -> bool:
         client = self._client

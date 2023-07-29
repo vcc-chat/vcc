@@ -18,7 +18,6 @@ type RPCType = TypedJSONRPCServerAndClient<
 
 export async function useWebSocketConnection() {
   const backendAddress = useStore(state => state.backendAddress)
-  const setSendJsonMessageRaw = useStore(state => state.setSendJsonMessageRaw)
   const setReady = useStore(state => state.setReady)
   const changeLastMessageTime = useStore(state => state.changeLastMessageTime)
   const receiveHook = useStore(state => state.receiveHook)
@@ -72,20 +71,12 @@ export async function useWebSocketConnection() {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         return Promise.resolve(serverAndClient.request(method, request))
-      },
-      sendJsonMessageRaw(method, request) {
-        if (method == "message") {
-          serverAndClient.notify(method, request)
-        } else {
-          throw TypeError("method type should only be message")
-        }
       }
     })
     return () => {
       ws.close()
       useStore.setState({
-        makeRequestRaw: null,
-        sendJsonMessageRaw: null
+        makeRequestRaw: null
       })
     }
   }, [backendAddress])
@@ -298,6 +289,13 @@ const rpc = {
         subscription
       })
     }
+  },
+  async send(chat: number, msg: string, session: string | null) {
+    return await makeRequest("message", {
+      chat,
+      msg,
+      session
+    })
   }
 } as const
 

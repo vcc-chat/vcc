@@ -7,3 +7,4 @@ __pycache__
 config.json
 services/migrations/
 migrations/
+.vscode

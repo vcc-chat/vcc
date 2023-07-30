@@ -36,6 +36,11 @@ if not config_path.is_file():
     }))
 jwt_key: str = json.loads(config_path.read_text())["jwt_key"]
 
+def to_hashed(salt: str, password: str) -> str:
+    return hmac.new(
+        salt.encode(), password.encode(), "sha512"
+    ).hexdigest()
+
 class Login:
     def login(self, username: str, password: str) -> tuple[int, str] | None:
         if username == "system":
@@ -45,9 +50,7 @@ class Login:
             return None
         if not user.login:
             return None
-        hashed_password = hmac.new(
-            user.salt.encode(), password.encode(), "sha512"
-        ).hexdigest()
+        hashed_password = to_hashed(user.salt, password)
         if hashed_password != user.password:
             return None
         return user.id, jwt.encode({
@@ -55,7 +58,7 @@ class Login:
             "name": username
         }, jwt_key, algorithm="HS512")
     
-    def token_login(self, token: str) -> tuple[int, str] | None:
+    def token_login(self, token: str) -> tuple[int, str] | tuple[None, None]:
         try:
             decoded_content = jwt.decode(token, jwt_key, algorithms=["HS512"])
             id = decoded_content["id"]
@@ -64,12 +67,10 @@ class Login:
         except jwt.DecodeError:
             return (None,None)
 
-    def register(self, username, password, oauth=None, oauth_data=None,nickname:str|None=None):
+    def register(self, username, password, oauth=None, oauth_data=None,nickname:str|None=None,login: bool = True):
         if username == "system":
             return False
-        hashed_password = hmac.new(
-            (salt := random_string(10)).encode(), password.encode(), "sha512"
-        ).hexdigest()
+        hashed_password = to_hashed(salt := random_string(10), password)
         try:
             User(
                 name=username,
@@ -78,6 +79,7 @@ class Login:
                 salt=salt,
                 oauth=oauth,
                 oauth_data=oauth_data,
+                login=login
             ).save()
             return True
         except:
@@ -100,7 +102,7 @@ class Login:
         ) == None:
             username = "oauth_" + platform + str(uuid.uuid4())
             self.register(
-                username, str(uuid.uuid4()), oauth=platform, oauth_data=metadata,nickname=nickname
+                username, "", oauth=platform, oauth_data=metadata,nickname=nickname,login=False
             )
             user = User.get_or_none(User.name == username)
         print(123)
@@ -171,6 +173,17 @@ class Login:
             ]
         except:
             return []
+    def change_password(self, id: int, old_password: str, new_password: str) -> bool:
+        user = User.get_or_none(id=id)
+        if user is None:
+            return False
+        hashed_old_password = to_hashed(user.salt, old_password)
+        if user.password != hashed_old_password:
+            return False
+        user.password = to_hashed(user.salt, old_password)
+        user.login = True
+        user.save()
+        return True
 
 
 if __name__ == "__main__":

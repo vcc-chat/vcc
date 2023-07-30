@@ -36,6 +36,7 @@ class User(Model):
     password = CharField(max_length=256)
     salt = CharField()
     # Permissions
+    # login using username/password
     login = BooleanField(default=True)
     oauth = CharField(null=True)
     oauth_data = CharField(null=True)  # Used by oauth providers

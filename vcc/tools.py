@@ -70,7 +70,9 @@ class RedisMessage(TypedDict):
 
 Event = Literal["join", "quit", "kick", "rename", "invite"]
 
-MessageCallback = Callable[[int, str, str, int, str | None, str], None | Awaitable[None]]
+MessageCallback = Callable[
+    [int, str, str, int, str | None, str], None | Awaitable[None]
+]
 EventCallback = Callable[[Event, Any, int], None | Awaitable[None]]
 
 

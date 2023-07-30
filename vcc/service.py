@@ -281,13 +281,15 @@ class RpcServiceFactory:
         return {
             key: {
                 "params": [
-                    param.name
-                    for param in inspect.signature(func).parameters.values()
+                    param.name for param in inspect.signature(func).parameters.values()
                 ],
                 "alias": getattr(func, "alias", []),
-                "auth_required": getattr(func, "auth_required", True)
+                "auth_required": getattr(func, "auth_required", True),
             }
-            for key, func in [(key, (value.func if isinstance(value, ServiceExport) else value)) for key, value in func_map.items()]
+            for key, func in [
+                (key, (value.func if isinstance(value, ServiceExport) else value))
+                for key, value in func_map.items()
+            ]
         }
 
     def register(self, instance, name=None, async_mode=False):
@@ -311,10 +313,11 @@ class RpcServiceFactory:
 
         meta_info = self.create_meta_info(func)
 
-        def get_meta_info(): return meta_info
+        def get_meta_info():
+            return meta_info
 
-        func["get_meta_info"] = get_meta_info # type: ignore
-        
+        func["get_meta_info"] = get_meta_info  # type: ignore
+
         annotations = {
             key1: {
                 key2: str(value2) if str(value2)[0] != "<" else value2.__name__
@@ -351,11 +354,29 @@ class RpcServiceFactory:
     def connect(self, *args, **kwargs):
         asyncio.run(self.aconnect(*args, **kwargs))
 
+
 # Following are some decorators
 
-def metadata(*, auth_required: bool = True, alias: str | list[str]):
+
+def metadata(
+    *,
+    auth_required: bool = True,
+    alias: str | list[str] = [],
+    chat_id: int | None = None,
+    user_id: int | None = None,
+):
+    """
+    :param auth_required: Declare if the method must be called after authenticating
+    :param alias: Declare an alias of the method so that you can call the method using the alias (e.g. chat/list_somebody_joined -> chat/list)
+    :param chat_id: The name of the argument and make sure caller joined the chat
+    :param user_id: Autocomplete the user_id if possible
+    """
+
     def func(func):
         func.auth_required = auth_required
         func.alias = alias if isinstance(alias, list) else [alias]
+        func.chat_id = chat_id
+        func.user_id = user_id
         return func
+
     return func

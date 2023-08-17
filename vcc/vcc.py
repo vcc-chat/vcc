@@ -27,7 +27,7 @@ from typing import (
 )
 from os import getenv
 
-from .service import RpcServiceFactory, Service
+from .service import RpcServiceFactory
 from .tools import *
 
 if TYPE_CHECKING:

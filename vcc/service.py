@@ -380,14 +380,16 @@ class RpcServiceFactory:
         }
         self.services.update({name: func})
         # self.funcs.update(services)
-    async def aconnect(self, host=tools.get_host(),protocol="tcp"):
+    async def aconnect(self, host=tools.get_host(),protocol="tcp",block=False):
         transport=self.transports[protocol](self)
         await transport.aconnecct(host=host,)
+        if block:
+            await asyncio.Future()
     async def alisten(self, host=tools.get_host(),protocol="tcp"):
         return await self.transports[protocol].alisten(self,host)
 
     def connect(self, *args, **kwargs):
-        asyncio.run(self.aconnect(*args, **kwargs))
+        asyncio.run(self.aconnect(*args,block=True,**kwargs))
 
 
 # Following are some decorators

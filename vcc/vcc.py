@@ -27,7 +27,7 @@ from typing import (
 )
 from os import getenv
 
-from .service import RpcServiceFactory
+from .service import RpcServiceFactory,Transport
 from .tools import *
 
 if TYPE_CHECKING:
@@ -202,7 +202,7 @@ class RpcExchanger:
         self, namespace: str, service: str, data: dict[str, Any]
     ) -> Any:
         log.debug(f"{service=} {data=}")
-        result = await cast(Service, self._rpc_factory.superservice).call(
+        result = await cast(Transport, self._rpc_factory.superservice).call(
             namespace, service, data
         )
         log.debug(f"{result=}")

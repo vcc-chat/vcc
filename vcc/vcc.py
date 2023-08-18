@@ -768,3 +768,19 @@ class RpcRobotExchangerClient(RpcExchangerBaseClient):
         self, chat_id: int, name: ChatPermissionName, value: bool
     ) -> bool:
         ...
+def generate_msg(
+        uid: int, username: str, msg: str, chat: int, session: str | None = None,id:str|None=None
+    ) -> tuple[str,str]:
+        id = id or str(uuid.uuid4())
+
+        return id,json.dumps(
+                {
+                    "id":id,
+                    "uid": uid,
+                    "username": username,
+                    "msg": msg,
+                    "chat": chat,
+                    **({} if session is None else {"session": session}),
+                }
+            ),
+

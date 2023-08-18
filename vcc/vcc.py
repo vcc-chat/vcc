@@ -170,6 +170,7 @@ class RpcExchanger:
             f"messages",
             json.dumps(
                 {
+                    "id":id,
                     "uid": uid,
                     "username": username,
                     "msg": msg,

@@ -7,7 +7,7 @@ FROM alpine:edge
 RUN apk add py3-pip git
 RUN mkdir /app
 ADD ./backend /app/
-RUN pip3 install git+https://github.com/vcc-chat/vcc_lib.git;pip3 install -r /app/requirements.txt
+RUN pip3 install git+https://github.com/vcc-chat/vcc_lib.git  --break-system-packages ;pip3 install -r /app/requirements.txt  --break-system-packages
 COPY --from=frontend_build dist /app/static
 
 

@@ -117,6 +117,6 @@ if __name__ == "__main__":
     server = base.RpcServiceFactory()
     service = oauthGithub()
     server.register(service, name="oauth_github")
-    loop.create_task(server.aconnect())
+    loop.create_task(server.aconnect(block=True))
     loop.create_task(service.http_server())
     loop.run_forever()

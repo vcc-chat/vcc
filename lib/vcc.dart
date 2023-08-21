@@ -55,12 +55,12 @@ class VccClient {
     Map result = await this
         .peer
         .sendRequest("login", {"username": username, "password": password});
-    print(result);
     if (result['success']) {
       this.username = username;
       this.token = result['token'];
       return true;
     }
+    return false;
   }
 
   register(String username, String password) async {
@@ -79,14 +79,17 @@ class VccClient {
   }
 
   create_chat(String name, bool public) async {
-    int chatid = await this.peer.sendRequest("chat_create", {'name': name,'parent':-1});
-    await this.peer.sendRequest("chat_modify_permission", {'chat': chatid,'name':"public","value":public});
+    int chatid = await this
+        .peer
+        .sendRequest("chat_create", {'name': name, 'parent': -1});
+    await this.peer.sendRequest("chat_modify_permission",
+        {'chat': chatid, 'name': "public", "value": public});
   }
 
   send_message(int chat, String message) {
     return this
         .peer
-        .sendNotification("message", {"chat": chat, "msg": message});
+        .sendRequest("message", {"chat": chat, "msg": message,"session":null});
   }
 }
 

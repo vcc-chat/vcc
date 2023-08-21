@@ -57,9 +57,11 @@ class CreateChatDialog extends StatelessWidget {
 class _ChatPageState extends State<ChatPage> {
   var chats = [];
   late Widget chatbar;
+  bool drawerOpened = false;
   Map<int, List> messages = {};
   _ChatPageState() {
     this.chatbar = ChatBar(send: (msg) {
+      print(msg);
       vccClient.send_message(this.currentChat[0], msg);
     });
     vccClient.message.listen((message) {
@@ -105,6 +107,9 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     var shortestSide = MediaQuery.of(context).size.shortestSide;
     bool useMobileLayout = shortestSide < 600;
+    if (!useMobileLayout) {
+      this.drawerOpened = false;
+    }
     List<Widget> chatsItem = [];
     List<Widget> messages = [];
     for (var i in this.chats) {
@@ -115,6 +120,10 @@ class _ChatPageState extends State<ChatPage> {
       String message = mapGetDefault(lastmessage, "msg", "");
       if (message.length >= 10) {
         message = message.substring(0, 10) + "...";
+      }
+      String chatName = i[1];
+      if (chatName.length >= 17) {
+        chatName = chatName.substring(0, 17) + "...";
       }
       var username = mapGetDefault(lastmessage, "username", null);
       if (username != null) {
@@ -132,12 +141,37 @@ class _ChatPageState extends State<ChatPage> {
       tile = ListTile(
         selected: i[0] == this.currentChat[0],
         trailing: IconButton(
-          onPressed: () {},
-          icon: Icon(Icons.output),
+          onPressed: () {
+            //if (DrawerController.of(context)) {
+            if (this.drawerOpened) {
+              Navigator.pop(context);
+            }
+            showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return SimpleDialog(
+                    title: Text("Chat"),
+                    children: [
+                      Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [Text("Chatname: ${i[1]}")],
+                          ))
+                    ],
+                  );
+                });
+          },
+          icon: Icon(Icons.more_vert),
         ),
         title: Wrap(
           alignment: WrapAlignment.spaceBetween,
-          children: [Text(i[1]), chatId],
+          children: [
+            Text(
+              chatName,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            chatId
+          ],
         ),
         subtitle: Text(
           "${username}$message",
@@ -225,10 +259,18 @@ class _ChatPageState extends State<ChatPage> {
     }
     //print(Colors.red);
     return Scaffold(
+      onDrawerChanged: (val) {
+        this.drawerOpened = val;
+        print(val);
+      },
       backgroundColor: (!useMobileLayout & isDesktop())
           ? Colors.transparent
           : Theme.of(context).backgroundColor,
-      drawer: useMobileLayout ? Drawer(child: chatList) : null,
+      drawer: useMobileLayout
+          ? Drawer(
+              child: chatList,
+            )
+          : null,
       appBar: PreferredSizedMoveWindow(AppBar(
         title: Text("Chat - ${currentChat[1]}"),
         actions: <Widget>[

@@ -35,6 +35,7 @@ class App extends StatelessWidget {
     // Disable adwita theme since it is buggy
     return ClipRRect(borderRadius: isDesktop()?BorderRadius.all(Radius.circular(12.0)):BorderRadius.zero,
         child: MaterialApp(
+
           debugShowCheckedModeBanner: false,
           title: 'Vcc',
           routes: {

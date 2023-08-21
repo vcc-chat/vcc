@@ -25,13 +25,14 @@ class ChatBarState extends State<ChatBar> {
           borderSide: BorderSide(color: Colors.transparent),
         ),
         suffixIcon: IconButton(
-          icon: Icon(Icons.send),
-          onPressed: () {
-            if (this.message != "") {
-              widget.send!(this.message);
-            }
-          },
-        ),
+            icon: Icon(Icons.send),
+            onPressed: () {
+              if (this.message != "") {
+                widget.send!(this.message);
+                controler.clear();
+                setState(() {});
+              }
+            }),
       ),
       onChanged: (String str) {
         this.message = str;
@@ -41,6 +42,7 @@ class ChatBarState extends State<ChatBar> {
           widget.send!(msg);
         }
         controler.clear();
+        setState(() {});
         node.requestFocus();
       },
     );

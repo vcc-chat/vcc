@@ -14,14 +14,15 @@ class _LoginPageState extends State<LoginPage> {
   var username = "";
   var password = "";
 
+  bool buttomDisabled = false;
   bool register_password_match = false;
   bool registering = false;
-  _LoginPageState() {
-  }
+  _LoginPageState() {}
   @override
-  initState(){
+  initState() {
     unawaited(vccClient.connect("wss://vcc.siliconbio.org.cn/ws"));
   }
+
   setUsername(username) {
     setState(() {
       this.username = username;
@@ -41,7 +42,9 @@ class _LoginPageState extends State<LoginPage> {
         return false;
       });
     } else {
-      print("no ok");
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Worng username or password "),
+      ));
     }
     print(2);
     print(this.username + "," + this.password);
@@ -58,8 +61,11 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text("Vcc",style: TextStyle(fontSize: 50) ,),
-            Text("The opensoure chat platform",style: TextStyle(fontSize: 20) ),
+            Text(
+              "Vcc",
+              style: TextStyle(fontSize: 50),
+            ),
+            Text("The opensoure chat platform", style: TextStyle(fontSize: 20)),
             SizedBox(
               height: 10,
             ),
@@ -120,44 +126,51 @@ class _LoginPageState extends State<LoginPage> {
                 : SizedBox.shrink(),
             SizedBox(
               height: 10,
-            ),Row(mainAxisAlignment: MainAxisAlignment.center,
-              children:[
-            FilledButton(
-                child: const Text("Login"),
-                onPressed: () async {
-                  if (this.registering) {
-                    setState(() {
-                      this.registering = false;
-                    });
-                  } else {
-                    await this.login();
-                  }
-                }),
-            SizedBox(width: 10),
-            FilledButton(
-                child: const Text("Register"),
-                onPressed: () async {
-                  if (this.registering) {
-                    if (!this.register_password_match) {
-                      return;
-                    }
-                    if (await vccClient.register(
-                        this.username, this.password)) {
-                      if (await vccClient.login(username, password)) {
-                        Navigator.pushNamedAndRemoveUntil(context, "/chat",
-                            (_) {
-                          return false;
-                        });
-                        return;
-                      }
-                    }
-                  } else {
-                    setState(() {
-                      this.registering = true;
-                    });
-                  }
-                }),SizedBox(height: 90,)
-              ]),
+            ),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              FilledButton(
+                  child: const Text("Login"),
+                  onPressed: this.buttomDisabled
+                      ? null
+                      : () async {
+                          if (this.registering) {
+                            setState(() {
+                              this.registering = false;
+                            });
+                          } else {
+                            await this.login();
+                          }
+                        }),
+              SizedBox(width: 10),
+              FilledButton(
+                  child: const Text("Register"),
+                  onPressed: this.buttomDisabled
+                      ? null
+                      : () async {
+                          if (this.registering) {
+                            if (!this.register_password_match) {
+                              return;
+                            }
+                            if (await vccClient.register(
+                                this.username, this.password)) {
+                              if (await vccClient.login(username, password)) {
+                                Navigator.pushNamedAndRemoveUntil(
+                                    context, "/chat", (_) {
+                                  return false;
+                                });
+                                return;
+                              }
+                            }
+                          } else {
+                            setState(() {
+                              this.registering = true;
+                            });
+                          }
+                        }),
+              SizedBox(
+                height: 90,
+              )
+            ]),
           ],
         ),
       ), // This trailing comma makes auto-formatting nicer for build methods.

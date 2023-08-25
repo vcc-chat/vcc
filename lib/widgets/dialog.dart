@@ -25,7 +25,6 @@ class TextInputDialog extends StatelessWidget {
       submitted_text: this.submitted_text,
       onSubmitted: () {
         this.onSubmitted!(this.value);
-        Navigator.pop(context);
       },
     );
   }

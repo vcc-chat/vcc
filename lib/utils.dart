@@ -8,9 +8,9 @@ bool isDesktop() {
   return Platform.isLinux | Platform.isMacOS | Platform.isWindows;
 }
 
-mapGetDefault(Map map, dynamic key, dynamic def) {
+Tv mapGetDefault<Tk,Tv>(Map<Tk,Tv> map, Tk key, Tv def) {
   if (map.containsKey(key)) {
-    return map[key];
+    return map[key]!;
   }
   return def;
 }

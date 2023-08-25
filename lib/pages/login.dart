@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../vcc.dart';
 import '../widgets/movewindow.dart';
 
@@ -167,6 +168,27 @@ class _LoginPageState extends State<LoginPage> {
                             });
                           }
                         }),
+              SizedBox(
+                width: 10,
+              ),
+              FilledButton(
+                child: Text("Oauth github"),
+                onPressed: () {
+                  unawaited(() async {
+                    var url = "";
+                    var wait = null;
+                    var ret = await vccClient.request_oauth("github");
+                    url = ret[1];
+                    print(url);
+                    launchUrl(Uri.parse(url));
+                    wait = ret[0];
+                    print((await wait));
+                    Navigator.pushNamedAndRemoveUntil(context, "/chat", (_) {
+                      return false;
+                    });
+                  }());
+                },
+              ),
               SizedBox(
                 height: 90,
               )

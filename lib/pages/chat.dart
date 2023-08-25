@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:chat_bubbles/chat_bubbles.dart';
 import 'package:vcc/vcc.dart';
@@ -6,6 +7,8 @@ import 'package:vcc/widgets/chatbar.dart';
 import 'package:vcc/widgets/movewindow.dart';
 import 'package:vcc/widgets/dialog.dart';
 import 'package:vcc/utils.dart';
+
+import 'package:dual_screen/dual_screen.dart';
 
 int MAX_MESSAGES = 1000;
 
@@ -16,7 +19,17 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
+/*
+class ChatProperties extends StatefulWidget {
+  @override
+  State<ChatPage> createState() => _ChatPropertiesState();
+}
+
+class _ChatPropertiesState extends State<ChatProperties> {}
+*/
 class CreateChatDialog extends StatelessWidget {
+  Future<Null> Function() updateChats;
+  CreateChatDialog({required this.updateChats});
   late String value;
   late bool public = true;
   Widget build(BuildContext context) {
@@ -47,8 +60,10 @@ class CreateChatDialog extends StatelessWidget {
       ),
       submitted_text: "Create chat",
       onSubmitted: () {
-        vccClient.create_chat(this.value, this.public);
-        Navigator.pop(context);
+        unawaited(() async {
+          await vccClient.create_chat(this.value, this.public);
+          await this.updateChats();
+        }());
       },
     );
   }
@@ -58,6 +73,7 @@ class _ChatPageState extends State<ChatPage> {
   var chats = [];
   late Widget chatbar;
   bool drawerOpened = false;
+  bool shownChat = false;
   Map<int, List> messages = {};
   _ChatPageState() {
     this.chatbar = ChatBar(send: (msg) {
@@ -83,7 +99,7 @@ class _ChatPageState extends State<ChatPage> {
     });
     unawaited(this.updateChats());
   }
-  updateChats() async {
+  Future<Null> updateChats() async {
     this.chats = await (vccClient.list_chat());
     setState(() {});
   }
@@ -105,19 +121,21 @@ class _ChatPageState extends State<ChatPage> {
 
   List currentChat = [0, "", ""];
   Widget build(BuildContext context) {
-    var shortestSide = MediaQuery.of(context).size.shortestSide;
-    bool useMobileLayout = shortestSide < 600;
-    if (!useMobileLayout) {
-      this.drawerOpened = false;
+    var query = MediaQuery.of(context);
+    bool useMobileLayout = query.size.shortestSide < 600;
+    bool isFlod = false;
+    if (query.displayFeatures.isNotEmpty) {
+      isFlod = query.displayFeatures.first.type == DisplayFeatureType.fold;
     }
     List<Widget> chatsItem = [];
     List<Widget> messages = [];
+
     for (var i in this.chats) {
-      Map lastmessage = List.from(mapGetDefault(this.messages, i[0], [
-            {"msg": ""}
-          ])).lastOrNull ??
-          {};
-      String message = mapGetDefault(lastmessage, "msg", "");
+      Map<String,dynamic> lastmessage =
+          mapGetDefault<int, List>(this.messages, i[0], [
+                {"msg": ""}
+              ]).lastOrNull ??{};
+      String message = mapGetDefault<dynamic,dynamic>(lastmessage, "msg", "");
       if (message.length >= 10) {
         message = message.substring(0, 10) + "...";
       }
@@ -154,8 +172,12 @@ class _ChatPageState extends State<ChatPage> {
                     children: [
                       Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: Row(
-                            children: [Text("Chatname: ${i[1]}")],
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text("Chatname: ${i[1]}"),
+                              Text("Chat id: ${i[0]}"),
+                            ],
                           ))
                     ],
                   );
@@ -179,6 +201,7 @@ class _ChatPageState extends State<ChatPage> {
         ),
         onTap: () {
           setState(() {
+            this.shownChat = true;
             this.currentChat = i;
           });
         },
@@ -197,7 +220,7 @@ class _ChatPageState extends State<ChatPage> {
                     unawaited(() async {
                       var res = false;
                       try {
-                        var res = await vccClient.join_chat(int.parse(chatid));
+                        res = await vccClient.join_chat(int.parse(chatid));
                       } catch (error) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                           content:
@@ -226,7 +249,8 @@ class _ChatPageState extends State<ChatPage> {
         onTap: () {
           showDialog(
               context: context,
-              builder: (BuildContext context) => CreateChatDialog());
+              builder: (BuildContext context) => CreateChatDialog(
+                  updateChats: this.updateChats as Future<Null> Function()));
         },
       )
     ]);
@@ -266,12 +290,21 @@ class _ChatPageState extends State<ChatPage> {
       backgroundColor: (!useMobileLayout & isDesktop())
           ? Colors.transparent
           : Theme.of(context).backgroundColor,
-      drawer: useMobileLayout
-          ? Drawer(
-              child: chatList,
-            )
-          : null,
+      // drawer: useMobileLayout
+      //     ? Drawer(
+      //         child: chatList,
+      //       )
+      //     : null,
       appBar: PreferredSizedMoveWindow(AppBar(
+        leading: (!(isFlod | !useMobileLayout) & this.shownChat)
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  setState(() {
+                    this.shownChat = false;
+                  });
+                })
+            : null,
         title: Text("Chat - ${currentChat[1]}"),
         actions: <Widget>[
               PopupMenuButton(
@@ -287,41 +320,34 @@ class _ChatPageState extends State<ChatPage> {
             generateWindowButtons(),
       )),
       body: Container(
-          margin: useMobileLayout ? EdgeInsets.only(left: 8, right: 5) : null,
-          child: Row(
-            children: [
-              (!useMobileLayout)
-                  ? (SizedBox(
-                      width: 230,
-                      child: Material(
-                          elevation: 1,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surface
-                              .withAlpha(200),
-                          surfaceTintColor:
-                              Theme.of(context).colorScheme.surfaceTint,
-                          child: chatList)))
-                  : Container(),
-              Expanded(
-                  child: Container(
-                      color: Theme.of(context).backgroundColor,
-                      child: Column(children: [
-                        Expanded(
-                            child: Container(
-                                margin: EdgeInsets.only(left: 7, right: 7),
-                                child: ListView(reverse: true, children: [
-                                  for (final element
-                                      in messages.reversed.toList())
-                                    element
-                                ]))),
-                        Container(
-                            margin: EdgeInsets.only(
-                                left: 7, right: 7, bottom: 5, top: 8),
-                            child: this.chatbar)
-                      ])))
-            ],
-          )),
+          //margin: useMobileLayout ? EdgeInsets.only(left: 8, right: 5) : null,
+          child: TwoPane(
+              paneProportion: 300 / query.size.width,
+              panePriority: useMobileLayout
+                  ? (this.shownChat
+                      ? TwoPanePriority.end
+                      : TwoPanePriority.start)
+                  : TwoPanePriority.both,
+              startPane: Material(
+                  elevation: 1,
+                  color: Theme.of(context).colorScheme.surface.withAlpha(200),
+                  surfaceTintColor: Theme.of(context).colorScheme.surfaceTint,
+                  child: chatList),
+              endPane: Container(
+                  color: Theme.of(context).backgroundColor,
+                  child: Column(children: [
+                    Expanded(
+                        child: Container(
+                            margin: EdgeInsets.only(left: 7, right: 7),
+                            child: ListView(reverse: true, children: [
+                              for (final element in messages.reversed.toList())
+                                element
+                            ]))),
+                    Container(
+                        margin: EdgeInsets.only(
+                            left: 7, right: 7, bottom: 5, top: 8),
+                        child: this.chatbar)
+                  ])))),
     );
   }
 }

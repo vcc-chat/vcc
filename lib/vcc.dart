@@ -87,9 +87,21 @@ class VccClient {
   }
 
   send_message(int chat, String message) {
-    return this
-        .peer
-        .sendRequest("message", {"chat": chat, "msg": message,"session":null});
+    return this.peer.sendRequest(
+        "message", {"chat": chat, "msg": message, "session": null});
+  }
+
+  request_oauth(String platform) async {
+    Map ret = await this.peer.sendRequest("request_oauth", {platform});
+    return [this.login_oauth(platform, ret['request_id']), ret['url']];
+
+  }
+
+  login_oauth(String platform, String requestid) async {
+    Map ret = await this.peer.sendRequest("login_oauth", {platform, requestid});
+    this.token = ret["token"];
+    print(ret);
+    return [this.token, ret["username"]];
   }
 }
 

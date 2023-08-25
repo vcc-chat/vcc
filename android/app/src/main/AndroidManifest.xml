@@ -3,6 +3,7 @@
     <application
         android:label="fluttervcc"
         android:name="${applicationName}"
+        android:resizeableActivity="true"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

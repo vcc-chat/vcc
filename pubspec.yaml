@@ -41,6 +41,8 @@ dependencies:
   chat_bubbles: ^1.4.1
   bitsdojo_window: ^0.1.5
   adwaita: ^1.0.1
+  dual_screen: ^1.0.4
+  url_launcher: ^6.1.12
 
 dev_dependencies:
   flutter_test:

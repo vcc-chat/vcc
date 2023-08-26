@@ -27,7 +27,7 @@ class App extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    bool useAdwita = true;
+    bool useAdwita = false;
     //if (isDesktop()) {
     //  useAdwita = mapGetDefault(Platform.environment, "DESKTOP_SESSION", "")
     //      .startsWith("gnome");
@@ -50,12 +50,10 @@ class App extends StatelessWidget {
             }
           },
           theme: (useAdwita
-              ? ThemeData(
-                  colorScheme: MediaQuery.platformBrightnessOf(context) ==
+              ?( MediaQuery.platformBrightnessOf(context) ==
                           Brightness.dark
-                      ? AdwaitaThemeData.dark().colorScheme
-                      : AdwaitaThemeData.light().colorScheme,
-                  useMaterial3: true)
+                      ? AdwaitaThemeData.dark()
+                      : AdwaitaThemeData.light())
               : ThemeData(
                   colorScheme: MediaQuery.platformBrightnessOf(context) ==
                           Brightness.dark

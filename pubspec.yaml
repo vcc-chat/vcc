@@ -40,7 +40,8 @@ dependencies:
   json_rpc_2: ^3.0.2
   chat_bubbles: ^1.4.1
   bitsdojo_window: ^0.1.5
-  adwaita: ^1.0.1
+  adwaita:
+    git: https://github.com/gtk-flutter/adwaita.git
   dual_screen: ^1.0.4
   url_launcher: ^6.1.12
 

@@ -44,6 +44,7 @@ dependencies:
     git: https://github.com/gtk-flutter/adwaita.git
   dual_screen: ^1.0.4
   url_launcher: ^6.1.12
+  flutter_launcher_icons: ^0.13.1
 
 dev_dependencies:
   flutter_test:
@@ -97,3 +98,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  web:
+    generate: true
+  image_path: "assets/icon/icon.png"

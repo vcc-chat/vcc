@@ -4,7 +4,7 @@
         android:label="fluttervcc"
         android:name="${applicationName}"
         android:resizeableActivity="true"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
         <activity
             android:name=".MainActivity"
             android:exported="true"

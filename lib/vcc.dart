@@ -37,7 +37,6 @@ class VccClient {
       print("oh no!");
     });
     this.peer.registerMethod("message", (Parameters message) {
-
       this._messages.add(message.asMap);
     });
     unawaited(this.peer.listen());
@@ -107,11 +106,18 @@ class VccClient {
     return [this.token, ret["username"]];
   }
 
-  file_upload(String name)async {
+  file_upload(String name) async {
     Map ret = await this.peer.sendRequest("file_upload", {name});
     var url = ret["url"];
-    var id= ret["id"];
-    return [id,Uri.parse(url)];
+    var id = ret["id"];
+    return [id, Uri.parse(url)];
+  }
+
+  file_download(String id) async {
+    Map ret = await this.peer.sendRequest("file_download", {id});
+    var url = ret["url"];
+    var name = ret["name"];
+    return [name, Uri.parse(url)];
   }
 }
 

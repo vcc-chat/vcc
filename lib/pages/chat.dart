@@ -3,10 +3,12 @@ import 'dart:ui';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
-import 'package:chat_bubbles/chat_bubbles.dart';
+//import 'package:chat_bubbles/chat_bubbles.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:vcc/vcc.dart';
 import 'package:vcc/widgets/chatbar.dart';
+import 'package:vcc/widgets/vccimage.dart';
+import 'package:vcc/widgets/chatbubble.dart';
 import 'package:vcc/widgets/movewindow.dart';
 import 'package:vcc/widgets/dialog.dart';
 import 'package:vcc/utils.dart';
@@ -20,6 +22,57 @@ class ChatPage extends StatefulWidget {
 
   @override
   State<ChatPage> createState() => _ChatPageState();
+}
+
+class ChatMessage extends StatelessWidget {
+  String username;
+  String message;
+  ChatMessage({required this.username, required this.message});
+  Widget build(BuildContext context) {
+    bool isSender = this.username == vccClient.username;
+    Widget avs = CircleAvatar(child: Text("${username[0]}"));
+    late Widget content;
+    if (RegExp(r"::file{#(.+)}").hasMatch(message)) {
+      RegExpMatch match = RegExp(r"::file{#(.+)}").firstMatch(message)!;
+      // content = Text("File ${match.group(1)}",
+      //     style: TextStyle(
+      //       color: Colors.black87,
+      //       fontSize: 16,
+      //     ));
+      // print("File ${match.group(1)}");
+      content=VccImage(id:match.group(1)!);
+    } else {
+      print(1);
+      content = Text(
+        this.message,
+        style: TextStyle(
+          color: Colors.black87,
+          fontSize: 16,
+        ),
+      );
+    }
+    return Row(children: [
+      isSender
+          ? SizedBox.shrink()
+          : Align(alignment: Alignment.topLeft, child: avs),
+      Expanded(
+          child: Column(children: [
+        SizedBox.shrink(),
+        Align(
+            alignment: isSender ? Alignment.topRight : Alignment.topLeft,
+            child: Text("    ${this.username}    ")),
+        ChatBubble(
+          child: content,
+          isSender: isSender,
+          color: Color(0xFF1B97F3),
+        ),
+        SizedBox(
+          height: 9,
+        )
+      ])),
+      isSender ? avs : SizedBox.shrink(),
+    ]);
+  }
 }
 
 /*
@@ -78,7 +131,7 @@ class _ChatPageState extends State<ChatPage> {
   bool drawerOpened = false;
   bool shownChat = false;
   Map<int, List> messages = {};
-  //Map<int, List> messagesWidgets = {};
+  Map<int, List<Widget>> messageWidgets = {};
   _ChatPageState() {
     this.chatbar = ChatBar(
         additionButtons: [
@@ -122,26 +175,34 @@ class _ChatPageState extends State<ChatPage> {
           print(msg);
           vccClient.send_message(this.currentChat[0], msg);
         });
-    vccClient.message.listen((message) {
-      print(message);
+
+    //   if (message['chat'] == this.currentChat[0]) {
+    //     setState(() {
+    //       if (this.messages.length > MAX_MESSAGES) {
+    //         this.messages = this.messages.skip(1).toList();
+    //       }
+    //       this.messages.add(message);
+    //     });
+    //   }
+    vccClient.message.listen((msg) {
       setState(() {
-        int chat = message['chat'];
-        if (!this.messages.containsKey(chat)) {
-          this.messages[chat] = [];
-        }
-        this.messages[chat]!.add(message);
+        this.addMessage(msg);
       });
-      //   if (message['chat'] == this.currentChat[0]) {
-      //     setState(() {
-      //       if (this.messages.length > MAX_MESSAGES) {
-      //         this.messages = this.messages.skip(1).toList();
-      //       }
-      //       this.messages.add(message);
-      //     });
-      //   }
     });
     unawaited(this.updateChats());
   }
+  addMessage(message) {
+    print(message);
+    int chat = message['chat'];
+    if (!this.messages.containsKey(chat)) {
+      this.messages[chat] = [];
+      this.messageWidgets[chat] = [];
+    }
+    this.messageWidgets[chat]!.add(
+        ChatMessage(username: message['username'], message: message['msg']));
+    this.messages[chat]!.add(message);
+  }
+
   Future<Null> updateChats() async {
     this.chats = await (vccClient.list_chat());
     setState(() {});
@@ -152,7 +213,7 @@ class _ChatPageState extends State<ChatPage> {
       this.messages[this.currentChat[0]] = [];
     }
     for (var i = 0; i < 10; i = i + 1) {
-      (this.messages[this.currentChat[0]] ?? []).add({
+      this.addMessage({
         'uid': 1,
         "chat": this.currentChat[0],
         "msg": "hello $i",
@@ -171,7 +232,8 @@ class _ChatPageState extends State<ChatPage> {
       isFlod = query.displayFeatures.first.type == DisplayFeatureType.fold;
     }
     List<Widget> chatsItem = [];
-    List<Widget> messages = [];
+    List<Widget> messages = mapGetDefault<dynamic, List<Widget>>(
+        this.messageWidgets, this.currentChat[0], <Widget>[]);
 
     for (var i in this.chats) {
       Map<String, dynamic> lastmessage =
@@ -299,33 +361,6 @@ class _ChatPageState extends State<ChatPage> {
         },
       )
     ]);
-    for (var i in this.messages[this.currentChat[0]] ?? []) {
-      bool isSender = i['username'] == vccClient.username;
-      Widget avs = CircleAvatar(child: Text("${i['username'][0]}"));
-      messages.add(
-        Row(children: [
-          isSender
-              ? SizedBox.shrink()
-              : Align(alignment: Alignment.topLeft, child: avs),
-          Expanded(
-              child: Column(children: [
-            SizedBox.shrink(),
-            Align(
-                alignment: isSender ? Alignment.topRight : Alignment.topLeft,
-                child: Text("    ${i['username']}    ")),
-            BubbleNormal(
-              text: i['msg'],
-              isSender: isSender,
-              color: Color(0xFF1B97F3),
-            ),
-            SizedBox(
-              height: 9,
-            )
-          ])),
-          isSender ? avs : SizedBox.shrink(),
-        ]),
-      );
-    }
     //print(Colors.red);
     return Scaffold(
       onDrawerChanged: (val) {

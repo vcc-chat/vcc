@@ -112,7 +112,7 @@ class _ChatPageState extends State<ChatPage> {
                 if (response.statusCode != 200) {
                   return;
                 }
-                vccClient.send_message(this.currentChat[0], "::file{$id}");
+                vccClient.send_message(this.currentChat[0], "::file{#$id}");
               }());
             },
             icon: Icon(Icons.upload),

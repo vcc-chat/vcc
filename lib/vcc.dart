@@ -37,6 +37,7 @@ class VccClient {
       print("oh no!");
     });
     this.peer.registerMethod("message", (Parameters message) {
+
       this._messages.add(message.asMap);
     });
     unawaited(this.peer.listen());
@@ -44,7 +45,9 @@ class VccClient {
   }
 
   reconnect() async {
-    this.peer.close();
+    try {
+      this.peer.close();
+    } catch (_) {}
     this.connected = false;
     this.connect(this.server);
     Map result =
@@ -94,14 +97,21 @@ class VccClient {
   request_oauth(String platform) async {
     Map ret = await this.peer.sendRequest("request_oauth", {platform});
     return [this.login_oauth(platform, ret['request_id']), ret['url']];
-
   }
 
   login_oauth(String platform, String requestid) async {
     Map ret = await this.peer.sendRequest("login_oauth", {platform, requestid});
     this.token = ret["token"];
+    this.username = ret['username'];
     print(ret);
     return [this.token, ret["username"]];
+  }
+
+  file_upload(String name)async {
+    Map ret = await this.peer.sendRequest("file_upload", {name});
+    var url = ret["url"];
+    var id= ret["id"];
+    return [id,Uri.parse(url)];
   }
 }
 

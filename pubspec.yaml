@@ -45,6 +45,8 @@ dependencies:
   dual_screen: ^1.0.4
   url_launcher: ^6.1.12
   flutter_launcher_icons: ^0.13.1
+  file_picker: ^5.2.10
+  http: ^1.1.0
 
 dev_dependencies:
   flutter_test:

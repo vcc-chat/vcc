@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 class ChatBar extends StatefulWidget {
   final void Function(String)? send;
-  ChatBar({super.key, this.send});
+  final List<Widget> additionButtons;
+  const ChatBar({super.key, this.send, this.additionButtons = const []});
 
   @override
   State<ChatBar> createState() => ChatBarState();
@@ -24,15 +25,20 @@ class ChatBarState extends State<ChatBar> {
         focusedBorder: const UnderlineInputBorder(
           borderSide: BorderSide(color: Colors.transparent),
         ),
-        suffixIcon: IconButton(
-            icon: Icon(Icons.send),
-            onPressed: () {
-              if (this.message != "") {
-                widget.send!(this.message);
-                controler.clear();
-                setState(() {});
-              }
-            }),
+
+        suffixIcon:  Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: this.widget.additionButtons+[IconButton(
+              icon: Icon(Icons.send),
+              onPressed: () {
+                if (this.message != "") {
+                  widget.send!(this.message);
+                  controler.clear();
+                  setState(() {});
+                }
+              })],
+        ),
       ),
       onChanged: (String str) {
         this.message = str;

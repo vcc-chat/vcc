@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:ui';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
 import 'package:chat_bubbles/chat_bubbles.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:vcc/vcc.dart';
 import 'package:vcc/widgets/chatbar.dart';
 import 'package:vcc/widgets/movewindow.dart';
@@ -75,12 +78,52 @@ class _ChatPageState extends State<ChatPage> {
   bool drawerOpened = false;
   bool shownChat = false;
   Map<int, List> messages = {};
+  //Map<int, List> messagesWidgets = {};
   _ChatPageState() {
-    this.chatbar = ChatBar(send: (msg) {
-      print(msg);
-      vccClient.send_message(this.currentChat[0], msg);
-    });
+    this.chatbar = ChatBar(
+        additionButtons: [
+          IconButton(
+            onPressed: () {
+              unawaited(() async {
+                FilePickerResult? pickerResult =
+                    await FilePicker.platform.pickFiles(withReadStream: true);
+                if (pickerResult == null) {
+                  return;
+                }
+                PlatformFile file = pickerResult.files.last;
+                Stream<List<int>> stream = file.readStream!;
+                int length = file.size;
+                int sent = 0;
+
+                var [id, uri] = await vccClient.file_upload(file.name);
+
+                StreamedRequest request = StreamedRequest("PUT", uri)
+                  ..contentLength = length
+                  ..headers[HttpHeaders.contentTypeHeader] = 'application/data';
+                stream.listen((data) {
+                  sent = sent + data.length;
+                  request.sink.add(data);
+                  if (sent >= length) {
+                    unawaited(request.sink.close());
+                  }
+                });
+                Response response =
+                    await request.send().then(Response.fromStream);
+                if (response.statusCode != 200) {
+                  return;
+                }
+                vccClient.send_message(this.currentChat[0], "::file{$id}");
+              }());
+            },
+            icon: Icon(Icons.upload),
+          )
+        ],
+        send: (msg) {
+          print(msg);
+          vccClient.send_message(this.currentChat[0], msg);
+        });
     vccClient.message.listen((message) {
+      print(message);
       setState(() {
         int chat = message['chat'];
         if (!this.messages.containsKey(chat)) {
@@ -131,11 +174,13 @@ class _ChatPageState extends State<ChatPage> {
     List<Widget> messages = [];
 
     for (var i in this.chats) {
-      Map<String,dynamic> lastmessage =
+      Map<String, dynamic> lastmessage =
           mapGetDefault<int, List>(this.messages, i[0], [
                 {"msg": ""}
-              ]).lastOrNull ??{};
-      String message = mapGetDefault<dynamic,dynamic>(lastmessage, "msg", "");
+              ]).lastOrNull ??
+              {};
+
+      String message = mapGetDefault<dynamic, dynamic>(lastmessage, "msg", "");
       if (message.length >= 10) {
         message = message.substring(0, 10) + "...";
       }

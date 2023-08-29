@@ -15,12 +15,17 @@ class VccImageState extends State<VccImage> {
   Widget? image;
   @override
   void initState() {
+    if (!this.mounted) {return;}
     unawaited(() async {
+      print(111);
       var [_, url] = await vccClient.file_download(widget.id);
-      url=url.toString();
-      setState(() {
-        this.image = Image.network(url,height: 100,);
-      });
+      url = url.toString();
+
+      this.image = Image.network(
+        url,
+        height: 100,
+      );
+      setState(() {});
     }());
     super.initState();
   }

@@ -25,13 +25,12 @@ class ChatPage extends StatefulWidget {
 }
 
 class ChatMessage extends StatelessWidget {
-  String username;
-  String message;
-  ChatMessage({required this.username, required this.message});
-  Widget build(BuildContext context) {
-    bool isSender = this.username == vccClient.username;
-    Widget avs = CircleAvatar(child: Text("${username[0]}"));
-    late Widget content;
+  late String username;
+  late String message;
+  late Widget content;
+  ChatMessage ({required username, required message}) {
+    this.username = username;
+    this.message = message;
     if (RegExp(r"::file{#(.+)}").hasMatch(message)) {
       RegExpMatch match = RegExp(r"::file{#(.+)}").firstMatch(message)!;
       // content = Text("File ${match.group(1)}",
@@ -40,10 +39,10 @@ class ChatMessage extends StatelessWidget {
       //       fontSize: 16,
       //     ));
       // print("File ${match.group(1)}");
-      content=VccImage(id:match.group(1)!);
+      this.content = VccImage(id: match.group(1)!);
     } else {
       print(1);
-      content = Text(
+      this.content = Text(
         this.message,
         style: TextStyle(
           color: Colors.black87,
@@ -51,6 +50,11 @@ class ChatMessage extends StatelessWidget {
         ),
       );
     }
+  }
+  Widget build(BuildContext context) {
+    bool isSender = this.username == vccClient.username;
+    Widget avs = CircleAvatar(child: Text("${username[0]}"));
+
     return Row(children: [
       isSender
           ? SizedBox.shrink()
@@ -62,7 +66,7 @@ class ChatMessage extends StatelessWidget {
             alignment: isSender ? Alignment.topRight : Alignment.topLeft,
             child: Text("    ${this.username}    ")),
         ChatBubble(
-          child: content,
+          child: this.content,
           isSender: isSender,
           color: Color(0xFF1B97F3),
         ),

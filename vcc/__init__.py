@@ -1,12 +1,4 @@
 from .vcc import *
 
-__all__ = [
-    "RpcExchanger",
-    "RpcExchangerClient",
-    "ChatAlreadyJoinedError",
-    "ChatNotJoinedError",
-    "UnknownError",
-    "NotAuthorizedError",
-    "PermissionDeniedError",
-    "Event"
-]
+__all__ = [x for x in dir(vcc) if x[0]!="_" and type(getattr(vcc,x))!=type(vcc)]
+

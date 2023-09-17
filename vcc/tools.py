@@ -60,7 +60,8 @@ class ProviderNotFoundError(RpcException):
 
 class RedisMessage(TypedDict):
     username: str
-    msg: str
+    msg_type: str
+    payload: str
     # TODO: add NotRequired after upgrading to python3.11
     session: str
     chat: int
@@ -166,17 +167,6 @@ def get_host() -> tuple[str, int]:
         return host[0], int(host[1])
     else:
         return ("localhost", 2474)
-def generate_message_string():
-    json.dumps(
-                {
-                    "id":id,
-                    "uid": uid,
-                    "username": username,
-                    "msg": msg,
-                    "chat": chat,
-                    **({} if session is None else {"session": session}),
-                }
-            ),
 
 __all__ = [
     "check",

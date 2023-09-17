@@ -95,7 +95,8 @@ class RpcExchanger:
                                 asyncio.create_task(recv_hook_return)
                         session: str | None = None
                         username = json_message["username"]
-                        msg = json_message["msg"]
+                        msg_type= json_message["msg_type"]
+                        payload = json_message["payload"]
                         chat = int(json_message["chat"])
                         uid = int(json_message["uid"])
                         if "session" in json_message:
@@ -107,8 +108,8 @@ class RpcExchanger:
                                 or isinstance(client, RpcRobotExchangerClient)
                                 or (chat, session) in client._session_list
                             ):
-                                client._recv_future.set_result(
-                                    ("message", uid, username, msg, chat, session, id)
+                                client._recv_future.set_result(("message",
+                                json_message)
                                 )
                         if "session" in json_message:
                             session = json_message["session"]
@@ -164,6 +165,8 @@ class RpcExchanger:
     async def send_msg(
         self, uid: int, username: str, msg: str, chat: int, session: str | None = None
     ) -> str:
+        return await self.send(uid,username,chat,msg,session=session)
+    async def send(self,uid: int, username: str,chat:int,payload,session: str|None=None,msg_type:str="msg"):
         log.debug(f"messages")
         id = str(uuid.uuid4())
         await self._redis.publish(
@@ -173,15 +176,15 @@ class RpcExchanger:
                     "id":id,
                     "uid": uid,
                     "username": username,
-                    "msg": msg,
+                    "payload": payload,
+                    "msg_type": msg_type,
                     "chat": chat,
                     **({} if session is None else {"session": session}),
                 }
             ),
         )
-        log.debug(f"{username=} {msg=} {chat=}")
+        log.debug(f"{username=} {chat=}")
         return id
-
     async def send_event(
         self, type: str, data: Any, chat: int, session: str | None = None
     ) -> None:
@@ -226,10 +229,7 @@ class RpcExchangerBaseClient:
     _id: int | None
     _name: str | None
     _pubsub: PubSub
-    _recv_future: asyncio.Future[
-        tuple[Literal["message"], int, str, str, int, str | None, str]
-        | tuple[Literal["event"], Event, Any, int]
-    ]
+    _recv_future: asyncio.Future
     _chat_list_inited: bool
 
     _msg_callback: MessageCallback | None
@@ -296,7 +296,7 @@ class RpcExchangerBaseClient:
 
     async def recv(
         self,
-    ) -> tuple[Literal["message"], int, str, str, int, str | None, str] | tuple[
+    ) -> tuple[Literal["message"],dict] | tuple[
         Literal["event"], Event, Any, int
     ]:
         content = await self._recv_future
@@ -522,13 +522,22 @@ class RpcExchangerClient(RpcExchangerBaseClient):
         return cast(bool, success)
 
     @check(joined="chat")
-    async def send(self, msg: str, chat: int, session: str | None) -> str:
+    async def send_msg(self, msg: str, chat: int, session: str | None) -> str:
         if session is not None and (chat, session) not in self._session_list:
             raise ChatNotJoinedError()
         if not await self._rpc.chat.check_send(chat_id=chat, user_id=self._id):
             raise PermissionDeniedError()
         return await self._exchanger.send_msg(
             cast(int, self._id), cast(str, self._name), msg, chat, session
+        )
+
+    async def send(self,chat:int,payload,session: str|None=None,msg_type:str="msg"):
+        if session is not None and (chat, session) not in self._session_list:
+            raise ChatNotJoinedError()
+        if not await self._rpc.chat.check_send(chat_id=chat, user_id=self._id):
+            raise PermissionDeniedError()
+        return await self._exchanger.send(
+            cast(int, self._id), cast(str, self._name),chat, payload, session
         )
 
     @check(joined="chat")
@@ -783,4 +792,5 @@ def generate_msg(
                     **({} if session is None else {"session": session}),
                 }
             ),
+
 

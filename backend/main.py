@@ -52,19 +52,11 @@ async def recv_loop(websocket: Websocket, client: RpcExchangerClient) -> None:
                 # )
                 # await websocket.send(json_msg)
                 continue
-            _, uid, username, msg, chat, session, id = result
-            logging.debug(f"{username=} {msg=} {chat=}")
+            _, message= result
             json_msg = json.dumps(
                 {
                     "method": "message",
-                    "params": {
-                        "chat": chat,
-                        "user_id": uid,
-                        "username": username,
-                        "msg": msg,
-                        "session": session,
-                        "id": id,
-                    },
+                    "params": message,
                     "jsonrpc": "2.0",
                 }
             )

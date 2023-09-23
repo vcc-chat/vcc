@@ -107,9 +107,9 @@ class Methods:
     class MessageKwargsType(TypedDict):
         session: NotRequired[str]
 
-    async def message(self, chat: int, msg: str, session: str | None) -> str | None:
+    async def message(self, chat: int, payload,msg_type: str="mge", session: str | None=None,) -> str | None:
         try:
-            return await self._client.send(msg, chat, session)
+            return await self._client.send( chat, payload,session,msg_type)
         except PermissionDeniedError:
             return None
 

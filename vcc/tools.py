@@ -61,7 +61,7 @@ class ProviderNotFoundError(RpcException):
 class RedisMessage(TypedDict):
     username: str
     msg_type: str
-    payload: str
+    payload: Any
     # TODO: add NotRequired after upgrading to python3.11
     session: str
     chat: int

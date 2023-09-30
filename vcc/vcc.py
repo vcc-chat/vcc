@@ -113,7 +113,7 @@ class RpcExchanger:
                                 )
                         if "session" in json_message:
                             session = json_message["session"]
-                        log.debug(f"{username=} {msg=} {chat=} {session=}")
+                        log.debug(f"{username=} {payload=} {chat=} {session=}")
                     elif raw_message["channel"] == b"events":
                         json_content: RedisEvent = json_content_untyped
                         type = json_content["type"]
@@ -166,7 +166,7 @@ class RpcExchanger:
         self, uid: int, username: str, msg: str, chat: int, session: str | None = None
     ) -> str:
         return await self.send(uid,username,chat,msg,session=session)
-    async def send(self,uid: int, username: str,chat:int,payload,session: str|None=None,msg_type:str="msg"):
+    async def send(self,uid: int, username: str,chat:int,payload: Any,session: str|None=None,msg_type:str="msg"):
         log.debug(f"messages")
         id = str(uuid.uuid4())
         await self._redis.publish(
@@ -232,8 +232,6 @@ class RpcExchangerBaseClient:
     _recv_future: asyncio.Future
     _chat_list_inited: bool
 
-    _msg_callback: MessageCallback | None
-    _event_callbacks: dict[Event, EventCallback]
 
     @property
     def id(self) -> int | None:
@@ -251,8 +249,6 @@ class RpcExchangerBaseClient:
         self._name = None
         self._rpc: ServiceTableType = self._exchanger._rpc_factory.services  # type: ignore
         self._chat_list_lock = asyncio.Lock()
-        self._msg_callback = None
-        self._event_callbacks = {}
         self._pubsub = self._exchanger.pubsub
         self._exchanger.client_list.add(self)
         self._recv_future = asyncio.Future()
@@ -389,7 +385,7 @@ class RpcExchangerBaseClient:
 
     async def __anext__(
         self,
-    ) -> tuple[Literal["message"], int, str, str, int, str | None, str] | tuple[
+    ) -> tuple[Literal["message"], dict] | tuple[
         Literal["event"], Event, Any, int
     ]:
         return await self.recv()
@@ -400,55 +396,6 @@ class RpcExchangerBaseClient:
     async def __aexit__(self, *args: Any) -> None:
         self._exchanger.client_list.discard(self)
         return None
-
-    @overload
-    def on(
-        self, type: Literal["message"]
-    ) -> Callable[[MessageCallback], MessageCallback]:
-        ...
-
-    @overload
-    def on(
-        self, type: Literal["event"], event_type: Event
-    ) -> Callable[[EventCallback], EventCallback]:
-        ...
-
-    @no_type_check_decorator
-    def on(self, type: Any, event_type: Any = None) -> Any:
-        if type == "message" and event_type is None:
-
-            def message_callback_handler(callback: MessageCallback) -> MessageCallback:
-                self._msg_callback = callback
-                return callback
-
-            return message_callback_handler
-        elif type == "event" and event_type is not None:
-
-            def event_callback_handler(callback: EventCallback) -> EventCallback:
-                self._event_callbacks[cast(Any, event_type)] = callback
-                return callback
-
-            return event_callback_handler
-        else:
-            raise TypeError("Wrong usage")
-
-    async def run_forever(self) -> None:
-        warnings.warn(
-            DeprecationWarning("This function is deprecated, use recv instead")
-        )
-        async for result in self:
-            if result[0] == "message":
-                _, uid, username, msg, chat, session, id = result
-                if self._msg_callback is not None:
-                    returned = self._msg_callback(uid, username, msg, chat, session, id)
-                    if isinstance(returned, Awaitable):
-                        await returned
-            else:
-                _, type, data, chat = result
-                if type in self._event_callbacks:
-                    returned = self._event_callbacks[type](type, data, chat)
-                    if isinstance(returned, Awaitable):
-                        await returned
 
 
 class RpcExchangerClient(RpcExchangerBaseClient):

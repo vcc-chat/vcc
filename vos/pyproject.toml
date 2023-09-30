@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "vos"
+version = "0.1.0"
+description = "SSH frontend of vcc"
+authors = ["Calvinlin"]
+license = "GPL-3"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+vcc = {path = "../vcc_lib", develop = true}
+twisted = "22.1.0"
+prompt-toolkit = "^3.0.39"
+vcc-lib = "^0.3.3"
+nest-asyncio = "^1.5.8"
+cryptography = "^41.0.4"
+bcrypt = "^4.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

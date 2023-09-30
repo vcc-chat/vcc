@@ -1,5 +1,14 @@
+[tool.poetry]
+name = "vcc"
+version = "0.3.3"
+description = "Web frontend of vcc"
+authors = ["Calvinlin","3swordman"]
+license = "GPL-3"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+redis = "^5.0.1"
 [build-system]
-requires = [
-    "setuptools >= 40.9.0",
-]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -8,7 +8,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-
+#vos = {path = "./vos", develop = true}
+#web-vcc = {path = "../web-vcc", develop = true}
+#vcc-bot = {path = "../vcc-bot", develop = true}
+#vcc_lib = {path = "../vcc_lib", develop = true}
 
 [build-system]
 requires = ["poetry-core"]

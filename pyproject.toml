@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "vcc"
+version = "0.1.0"
+description = "A opensource chat app"
+authors = ["Your Name <you@example.com>"]
+license = "GPL-3"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

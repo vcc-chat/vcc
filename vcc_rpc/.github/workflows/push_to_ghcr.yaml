@@ -1,0 +1,32 @@
+name: push to GHCR
+
+
+permissions:
+  packages: write
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+      push-store-image:
+        runs-on: ubuntu-latest
+        defaults:
+          run:
+            working-directory: './'
+        steps:
+          - name: 'Checkout GitHub Action'
+            uses: actions/checkout@master
+
+          - name: 'Login to GitHub Container Registry'
+            uses: docker/login-action@v1
+            with:
+              registry: ghcr.io
+              username: calvinweb
+              password: ${{secrets.my_gh_secret}}
+
+          - name: 'Build Inventory Image'
+            run: |
+              docker build . --tag ghcr.io/vcc-chat/vcc_rpc
+              docker push ghcr.io/vcc-chat/vcc_rpc:latest

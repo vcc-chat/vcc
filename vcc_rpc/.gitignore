@@ -1,0 +1,10 @@
+*.db
+*.db-shm
+*.db-wal
+.mypy_cache
+__pycache__
+*.pyc
+config.json
+services/migrations/
+migrations/
+.vscode

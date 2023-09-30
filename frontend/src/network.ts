@@ -1,8 +1,8 @@
 import { JSONRPCClient, JSONRPCServer, JSONRPCServerAndClient, TypedJSONRPCServerAndClient } from "json-rpc-2.0"
-import { useEffect, useState } from "preact/hooks"
+import { useEffect } from "preact/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 
-import type { RequestType, Message, MessageWithTime } from "./config"
+import type { Message, NewMessage } from "./config"
 import useStore from "./store"
 import { responseToChatList } from "./tools"
 import { wait } from "./loaders"
@@ -11,10 +11,21 @@ import { PermissionKey } from "./components/Settings"
 
 type RPCType = TypedJSONRPCServerAndClient<
   {
-    message: (msg: Message) => void
+    message: (msg: NewMessage) => void
   },
   MethodType
 >
+
+function newMessageToOldMessage({ username, payload, session, chat, uid, id }: NewMessage): Message {
+  return {
+    username,
+    msg: payload,
+    session,
+    chat,
+    user_id: uid,
+    id
+  }
+}
 
 export async function useWebSocketConnection() {
   const backendAddress = useStore(state => state.backendAddress)
@@ -46,7 +57,8 @@ export async function useWebSocketConnection() {
       setReady(false)
       errorAlert("Oh No! The connection between server and client is interupted.")
     })
-    serverAndClient.addMethod("message", async message => {
+    serverAndClient.addMethod("message", async message2 => {
+      const message = newMessageToOldMessage(message2)
       changeLastMessageTime()
       if (message.msg == "") return
       const newMessage = {
@@ -259,6 +271,7 @@ const rpc = {
     }
   },
   record: {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async query(chat: number, lastMessageTime: number) {
       return []
       // const { msg } = await makeRequest("record_query", {

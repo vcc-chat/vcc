@@ -30,6 +30,16 @@ export type RequestType =
   | "push_get_vapid_public_key"
   | "push_register"
 
+export type NewMessage = {
+  username: string
+  msg_type: string
+  payload: any
+  session: string
+  chat: number
+  uid: number
+  id: string
+}
+
 export type Message = {
   chat: number
   username: string

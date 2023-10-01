@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Bot api of vcc"
 authors = ["Calvinlin","3swordman"]
 license = "MIT"
-readme = "README.md"
+readme = "client/deno/README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"

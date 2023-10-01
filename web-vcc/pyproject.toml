@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "web-vcc"
 version = "0.1.0"
-description = "Web frontend of vcc"
+description = "The web-based gateway of vcc"
 authors = ["Calvinlin","3swordman"]
-license = "GPL-3"
+license = "AGPL-3.0-or-later"
 readme = "README.md"
 
 [tool.poetry.dependencies]

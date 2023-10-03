@@ -1,11 +1,11 @@
 import { StateCreator } from "zustand"
-import { MessageWithTime } from "../config"
+import type { NewMessageWithTime } from "../config"
 
 interface MessageState {
-  messages: Record<number, MessageWithTime[]>
+  messages: Record<number, NewMessageWithTime[]>
   markdownToHTML: Record<string, any>
   lastMessageTime: number
-  addMessage: (message: MessageWithTime) => void
+  addMessage: (message: NewMessageWithTime) => void
   addMarkdownToHTML: (msg: string, html: any) => void
   changeLastMessageTime: () => void
 }
@@ -14,7 +14,7 @@ const createMessageSlice: StateCreator<MessageState> = set => ({
   messages: {},
   markdownToHTML: {},
   lastMessageTime: Infinity,
-  addMessage(message: MessageWithTime) {
+  addMessage(message: NewMessageWithTime) {
     const chat = message.req.chat
     set(value => {
       const values = value.messages

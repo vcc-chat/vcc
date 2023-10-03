@@ -18,14 +18,14 @@ import FileUploadIcon from "@material-design-icons/svg/outlined/file_upload.svg"
 import InfoIcon from "@material-design-icons/svg/outlined/info.svg"
 import SendIcon from "@material-design-icons/svg/filled/send.svg"
 
-import { type MessageWithTime, MESSAGE_MIME_TYPE } from "../config"
+import { type NewMessageWithTime, MESSAGE_MIME_TYPE } from "../config"
 import { MessageAvatar, MessageLink } from "../components/Messages"
 import useStore from "../store"
 import { stringToNumber, useChatList, useAlert, useNickname, useTitle } from "../tools"
 import { useChatActionData } from "../loaders"
 import rpc from "../network"
 
-const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: MessageWithTime }) {
+const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: NewMessageWithTime }) {
   const req = nowMsg.req
   const date = new Date(nowMsg.time)
   const markdownToHTML = useMemo(() => useStore.getState().markdownToHTML, [])
@@ -36,30 +36,30 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: MessageW
       ev.dataTransfer!.setData(
         MESSAGE_MIME_TYPE,
         JSON.stringify({
-          msg: req.msg
+          payload: req.payload
         })
       )
-      ev.dataTransfer!.setData("text/plain", `${req.username}: ${req.msg}`)
+      ev.dataTransfer!.setData("text/plain", `${req.username}: ${req.payload}`)
     },
-    [req.msg]
+    [req.payload]
   )
   const selfUsername = useStore(state => state.username)
-  const savedHTML = markdownToHTML[req.msg]
-  const markdownChildren = savedHTML === undefined ? req.msg : ""
+  const savedHTML = markdownToHTML[req.payload]
+  const markdownChildren = savedHTML === undefined ? req.payload : ""
   const html = savedHTML === undefined ? null : savedHTML
   const { t, i18n } = useTranslation()
-  const username = useNickname(req.chat, req.user_id!, { initialData: req.username })
+  const username = useNickname(req.chat, req.uid!, { initialData: req.username })
   const savePlugin: any = useCallback(() => {
     return (transformer: any) => {
       if (html) {
         Object.assign(transformer, html)
       } else {
         setTimeout(() => {
-          addMarkdownToHTML(req.msg, transformer)
+          addMarkdownToHTML(req.payload, transformer)
         }, 0)
       }
     }
-  }, [html, req.msg, addMarkdownToHTML])
+  }, [html, req.payload, addMarkdownToHTML])
   const [, rerender] = useReducer(a => a + 1, 0)
   useEffect(() => {
     const interval = setInterval(() => {
@@ -172,12 +172,12 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: MessageW
   )
 })
 
-function MessageComponent({ nowMsg }: { nowMsg: MessageWithTime }) {
+function MessageComponent({ nowMsg }: { nowMsg: NewMessageWithTime }) {
   return nowMsg.req.username == "system" ? (
     <div className="flex">
       <div className="alert alert-info mx-auto w-auto">
         <InfoIcon />
-        <span>{nowMsg.req.msg}</span>
+        <span>{nowMsg.req.payload}</span>
       </div>
     </div>
   ) : (
@@ -295,7 +295,7 @@ export const Component = memo(function Chat() {
           className="flex flex-col m-0 p-0 overflow-auto overflow-x-hidden no-scrollbar flex-1 space-y-1 py-2"
         >
           {messagesShow.map(nowMsg => (
-            <MessageComponent nowMsg={nowMsg} key={`${nowMsg.time}-${nowMsg.req.username}-${nowMsg.req.msg}`} />
+            <MessageComponent nowMsg={nowMsg} key={`${nowMsg.time}-${nowMsg.req.username}-${nowMsg.req.payload}`} />
           ))}
         </ul>
         <fetcher.Form

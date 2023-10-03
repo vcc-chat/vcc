@@ -1,5 +1,4 @@
 import { StateCreator } from "zustand"
-import type { Message, RequestType } from "../config"
 import { wait } from "../loaders"
 import type { MethodType } from "../methodtype"
 

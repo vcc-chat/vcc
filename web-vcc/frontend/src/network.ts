@@ -2,7 +2,7 @@ import { JSONRPCClient, JSONRPCServer, JSONRPCServerAndClient, TypedJSONRPCServe
 import { useEffect } from "preact/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 
-import type { Message, NewMessage } from "./config"
+import type { NewMessage } from "./config"
 import useStore from "./store"
 import { responseToChatList } from "./tools"
 import { wait } from "./loaders"
@@ -15,17 +15,6 @@ type RPCType = TypedJSONRPCServerAndClient<
   },
   MethodType
 >
-
-function newMessageToOldMessage({ username, payload, session, chat, uid, id }: NewMessage): Message {
-  return {
-    username,
-    msg: payload,
-    session,
-    chat,
-    user_id: uid,
-    id
-  }
-}
 
 export async function useWebSocketConnection() {
   const backendAddress = useStore(state => state.backendAddress)
@@ -57,10 +46,9 @@ export async function useWebSocketConnection() {
       setReady(false)
       errorAlert("Oh No! The connection between server and client is interupted.")
     })
-    serverAndClient.addMethod("message", async message2 => {
-      const message = newMessageToOldMessage(message2)
+    serverAndClient.addMethod("message", async message => {
       changeLastMessageTime()
-      if (message.msg == "") return
+      if (message.payload == "") return
       const newMessage = {
         req: receiveHook ? await receiveHook(message) : message,
         time: +new Date()
@@ -71,7 +59,7 @@ export async function useWebSocketConnection() {
       // notify(chatNames[chatValues.indexOf(request.uid)], `${request.usrname}: ${request.msg}`)
       if (
         request.username == "system" &&
-        (request.msg.includes("join") || request.msg.includes("quit") || request.msg.includes("kick"))
+        (request.payload.includes("join") || request.payload.includes("quit") || request.payload.includes("kick"))
       ) {
         queryClient.invalidateQueries({
           queryKey: ["user-list", request.chat]
@@ -306,8 +294,9 @@ const rpc = {
   async send(chat: number, msg: string, session: string | null) {
     return await makeRequest("message", {
       chat,
-      msg,
-      session
+      payload: msg,
+      session,
+      msg_type: "msg"
     })
   }
 } as const

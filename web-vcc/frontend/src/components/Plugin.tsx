@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "preact/hooks"
 import type { ComponentChildren } from "preact"
 import { useQueries } from "@tanstack/react-query"
 
-import type { Message, SendMessage } from "../config"
+import type { NewMessage, SendMessage } from "../config"
 import useStore from "../store"
 
 async function getMetaInfo(urlString: string) {
@@ -35,9 +35,9 @@ const nonce = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(16)
 const csp = `default-src 'none'; worker-src blob:; script-src 'nonce-${nonce}';`
 
 const workerInitCode = `(${function () {
-  const receiveHooks: ((message: Message) => Message | null)[] = []
-  const sendHooks: ((message: Message) => Message | null)[] = []
-  const commandHooks: Record<string, (args: string[]) => Message | null> = {}
+  const receiveHooks: ((message: NewMessage) => NewMessage | null)[] = []
+  const sendHooks: ((message: SendMessage) => SendMessage | null)[] = []
+  const commandHooks: Record<string, (args: string[]) => SendMessage | null> = {}
   const appHooks: Record<
     string,
     () => {
@@ -50,12 +50,12 @@ const workerInitCode = `(${function () {
       ev: MessageEvent<
         | {
             type: "message"
-            msg: Message | null
+            msg: NewMessage | null
             id: string
           }
         | {
             type: "send-message"
-            msg: Message | null
+            msg: SendMessage | null
             id: string
           }
         | {
@@ -99,7 +99,7 @@ const workerInitCode = `(${function () {
       }
       if (data.type == "command") {
         const { command, arguments: args } = data
-        let msg: Message | null = null
+        let msg: SendMessage | null = null
         if (command in commandHooks) {
           msg = commandHooks[command](args)
         }
@@ -130,9 +130,14 @@ const workerInitCode = `(${function () {
     throw new Error("createObjectURL is not allowed")
   }
 
+  function on(event: "receive", func: (message: NewMessage) => NewMessage | null): void
+  function on(event: "send", func: (message: SendMessage) => SendMessage | null): void
+  function on(event: `command:${string}`, func: (args: string[]) => SendMessage | null): void
+  function on(event: `app:${string}`, func: () => { html: string }): void
+
   function on(
     event: "receive" | "send" | `command:${string}` | `app:${string}`,
-    func: (...args: any) => Message | null
+    func: any
   ) {
     if (event == "receive") {
       receiveHooks.push(func)
@@ -358,7 +363,7 @@ export function PluginProvider({ children }: { children: ComponentChildren }) {
 
   useEffect(() => {
     const callbacks = callbacksRef.current
-    function callback(ev: MessageEvent<{ id: string; msg: Message }>) {
+    function callback(ev: MessageEvent<{ id: string; msg: NewMessage }>) {
       if (ev.source !== iframeRef.current?.contentWindow) return
       if (ev.data.msg == undefined) return
       callbacks[ev.data.id]?.(ev)
@@ -393,7 +398,7 @@ export function PluginProvider({ children }: { children: ComponentChildren }) {
   }, [])
 
   const onLoadHandler = useCallback(() => {
-    setReceiveHook(async (req: Message) => {
+    setReceiveHook(async (req: NewMessage) => {
       const id = generateUUID()
       iframeRef.current!.contentWindow!.postMessage(
         {
@@ -404,10 +409,10 @@ export function PluginProvider({ children }: { children: ComponentChildren }) {
         "*"
       )
 
-      return await new Promise<Message>(res => {
+      return await new Promise<NewMessage>(res => {
         function callback(
           ev: MessageEvent<{
-            msg: Message
+            msg: NewMessage
           }>
         ) {
           console.log("parent received", ev.data.msg)

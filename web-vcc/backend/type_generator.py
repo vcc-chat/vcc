@@ -18,7 +18,7 @@ def python_type_to_typescript(cls):
         None: "null",
         types.NoneType: "null",
         typing.Any: "any",
-        typing.Never: "never",
+        typing.Never: "never"
     }.get(cls)
     if simple_type_result is not None:
         return simple_type_result

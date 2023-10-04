@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "vcc_rpc"
+version = "0.3.3"
+description = "vcc rpc"
+authors = ["Calvinlin","3swordman"]
+license = "AGPL-3.0-or-later"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+redis = "^5.0.1"
+peewee = "3.15.1"
+minio = "7.1.13"
+aiohttp = "3.8.4"
+websockets = "10.4"
+pymysql = "1.1.0"
+PyJWT = "2.7.0"
+vcc_lib = {path = "../vcc_lib", develop = true}
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

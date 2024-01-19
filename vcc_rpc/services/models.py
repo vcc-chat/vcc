@@ -1,3 +1,6 @@
+import datetime
+import itertools
+import typing
 from peewee import (
     Model,
     BigAutoField,
@@ -41,16 +44,36 @@ class User(Model):
     oauth = CharField(null=True)
     oauth_data = CharField(null=True)  # Used by oauth providers
 
+    @property
+    def friends(self) -> "itertools.chain[User]":
+        return itertools.chain(self.friends1, self.friends2) # type: ignore
+
 
 class UserMetadata(Model):
     id = IntegerField(primary_key=True)
     key = CharField()
     value = CharField()
 
+class Friendship(Model):
+    id = BigAutoField(primary_key=True)
+    friend1 = ForeignKeyField(User, backref="friends1")
+    friend2 = ForeignKeyField(User, backref="friends2")
+
+class FriendRequest(Model):
+    id = BigAutoField(primary_key=True)
+    sender = ForeignKeyField(User, backref="sent_invitations")
+    receiver = ForeignKeyField(User, backref="received_invitations")
+    time = DateTimeField(default=datetime.datetime.now)
+    reason = TextField(null=True)
+
+    class Meta:
+        indexes = ((("sender", "receiver"), True),)
+
 
 class Chat(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=20)
+    friendship = ForeignKeyField(Friendship, backref="chats")
     # Parent chat
     parent = ForeignKeyField(
         "self", backref="sub_chats", null=True, on_delete="CASCADE"
@@ -61,8 +84,8 @@ class Chat(Model):
 
 class ChatUser(Model):
     id = BigAutoField(primary_key=True)
-    user = ForeignKeyField(User, backref="chat_users")
-    chat = ForeignKeyField(Chat, backref="chat_users")
+    user = ForeignKeyField(User, backref="chat_users", on_delete="CASCADE")
+    chat = ForeignKeyField(Chat, backref="chat_users", on_delete="CASCADE")
     nickname = CharField(max_length=20, null=True)
     # Permissions
     permissions = BitField(default=16 | 64)
@@ -88,7 +111,6 @@ class ChatUser(Model):
     class Meta:
         indexes = ((("user", "chat"), True),)
 
-
 class Bot(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=16, unique=True)
@@ -97,8 +119,8 @@ class Bot(Model):
 
 class ChatBot(Model):
     id = BigAutoField(primary_key=True)
-    bot = ForeignKeyField(Bot, backref="chat_bots")
-    chat = ForeignKeyField(Chat, backref="chat_bots")
+    bot = ForeignKeyField(Bot, backref="chat_bots", on_delete="CASCADE")
+    chat = ForeignKeyField(Chat, backref="chat_bots", on_delete="CASCADE")
 
     class Meta:
         indexes = ((("bot", "chat"), True),)

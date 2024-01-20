@@ -73,7 +73,7 @@ class FriendRequest(Model):
 class Chat(Model):
     id = BigAutoField(primary_key=True)
     name = CharField(max_length=20)
-    friendship = ForeignKeyField(Friendship, backref="chats", on_delete="CASCADE")
+    friendship = ForeignKeyField(Friendship, backref="chats", on_delete="CASCADE", null=True)
     # Parent chat
     parent = ForeignKeyField(
         "self", backref="sub_chats", null=True, on_delete="CASCADE"

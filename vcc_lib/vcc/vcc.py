@@ -628,6 +628,31 @@ class RpcExchangerClient(RpcExchangerBaseClient):
     async def get_nickname(self) -> str:
         ...
 
+    @check()
+    @rpc_request("friend/get_friends", id_arg="user_id")
+    async def get_friends(self) -> list[int]:
+        ...
+
+    @check()
+    @rpc_request("friend/get_chat_by_friend_id", id_arg="user_id")
+    async def get_chat_by_friend_id(self, friend_id: int) -> list[FriendRequest]:
+        ...
+
+    @check()
+    @rpc_request("friend/send_friend_request", id_arg="user_id")
+    async def send_friend_request(self, friend_id: int, reason: str | None) -> bool:
+        ...
+
+    @check()
+    @rpc_request("friend/accept_friend_request", id_arg="user_id")
+    async def accept_friend_request(self, request_id: int) -> bool:
+        ...
+
+    @check()
+    @rpc_request("friend/reject_friend_request", id_arg="user_id")
+    async def reject_friend_request(self, request_id: int) -> bool:
+        ...
+
     async def __aexit__(self, *args: Any) -> None:
         self._exchanger.client_list.discard(self)
         if self._id is not None:

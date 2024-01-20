@@ -82,6 +82,12 @@ class RedisEvent(TypedDict):
     data: Any
     chat: int
 
+class FriendRequest(TypedDict):
+    sender: int
+    receiver: int
+    time: int
+    reason: str | None
+
 
 log = logging.getLogger("vcc")
 log.addHandler(logging.NullHandler())
@@ -187,4 +193,5 @@ __all__ = [
     "EventCallback",
     "RedisEvent",
     "RedisMessage",
+    "FriendRequest"
 ]

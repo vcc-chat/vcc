@@ -5,6 +5,7 @@ import contextvars
 import copy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Literal, TypeVar, TypedDict
+from typing_extensions import NotRequired
 
 if TYPE_CHECKING:
     from .vcc import RpcExchangerBaseClient
@@ -60,11 +61,11 @@ class RedisMessage(TypedDict):
     username: str
     msg_type: str
     payload: Any
-    # TODO: add NotRequired after upgrading to python3.11
-    session: str
+    session: NotRequired[str]
     chat: int
     uid: int
     id: str
+    time: int
 
 
 Event = Literal["join", "quit", "kick", "rename", "invite"]

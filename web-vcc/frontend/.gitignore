@@ -6,3 +6,4 @@ package-lock.json
 dev-dist
 pnpm-lock.yaml
 .env.local
+methodtype.ts

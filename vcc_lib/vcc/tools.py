@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import inspect
 import logging
 import os
@@ -117,7 +115,7 @@ def check(
         signature = inspect.signature(func)
 
         @wraps(func)
-        async def wrapper(self: RpcExchangerBaseClient, *args, **kwargs):
+        async def wrapper(self: "RpcExchangerBaseClient", *args, **kwargs):
             bound_signature = signature.bind(self, *args, **kwargs)
             if auth:
                 self.check_authorized()
@@ -148,7 +146,7 @@ def rpc_request(_service: str | None = None, *, id_arg: str | None = None):
         signature = inspect.signature(func)
 
         @wraps(func)
-        def wrapper(self: RpcExchangerBaseClient, *args, **kwargs):
+        def wrapper(self: "RpcExchangerBaseClient", *args, **kwargs):
             log.debug(f"{namespace=} {service=} {id_arg=} {args=} {kwargs=}")
             bound_signature = signature.bind(self, *args, **kwargs)
             bound_signature.apply_defaults()

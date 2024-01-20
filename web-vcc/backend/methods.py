@@ -7,6 +7,7 @@ from vcc import (
     RpcExchangerClient,
     ChatUserPermissionName,
     ChatPermissionName,
+    FriendRequest
 )
 from webpush import *
 
@@ -226,7 +227,7 @@ class Methods:
         # self._client.check_joined(uid)
         # result = await self._client._exchanger.rpc.record.query_record(chatid=uid, time=int(msg))
         # return {"record_query", "msg": result)
-        # FIXME: Temporily disable support for chat record
+        # FIXME: Temporarily disable support for chat record
         return {"msg": []}
 
     async def chat_get_nickname(self, chat: int, user: int) -> str:
@@ -242,3 +243,18 @@ class Methods:
         if self._client.id is None:
             raise CloseException(1008)
         push_register(self._client.id, subscription)
+
+    async def friend_get_friends(self) -> list[int]:
+        return await self._client.get_friends()
+
+    async def friend_get_chat_by_id(self, friend_id: int) -> list[FriendRequest]:
+        return await self._client.get_chat_by_friend_id(friend_id)
+
+    async def friend_send_request(self, friend_id: int, reason: str | None) -> bool:
+        return await self._client.send_friend_request(friend_id, reason)
+
+    async def friend_accept_request(self, request_id: int) -> bool:
+        return await self._client.accept_friend_request(request_id)
+
+    async def friend_reject_request(self, request_id: int) -> bool:
+        return await self._client.reject_friend_request(request_id)

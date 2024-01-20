@@ -125,6 +125,16 @@ class ChatBot(Model):
     class Meta:
         indexes = ((("bot", "chat"), True),)
 
+class Message(Model):
+    id = UUIDField(primary_key=True)
+    user = ForeignKeyField(User, backref="messages")
+    chat = ForeignKeyField(Chat, backref="messages")
+    content = TextField()
+    time = TimestampField()
+    type = CharField(max_length=16) # msg or event
+    
+    class Meta:
+        indexes = ((("chat", "time"), False),)
 
 class Reconnect(object):
     def __init__(self, *args, **kwargs):

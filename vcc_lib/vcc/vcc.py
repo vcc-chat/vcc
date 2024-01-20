@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 import redis.asyncio as redis
 import socket
 import logging
@@ -179,6 +180,7 @@ class RpcExchanger:
                     "payload": payload,
                     "msg_type": msg_type,
                     "chat": chat,
+                    "time": int(time.time()),
                     **({} if session is None else {"session": session}),
                 }
             ),

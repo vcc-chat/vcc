@@ -421,7 +421,7 @@ class ChatService:
 
 
 if __name__ == "__main__":
-    db.create_tables([User, Chat, ChatUser])
+    db.create_tables([User, Chat, ChatUser, FriendRequest, Friendship])
     server = base.RpcServiceFactory()
     server.register(ChatService(),async_mode=True,name="chat")
     server.connect()

@@ -329,16 +329,16 @@ export const Component = memo(function Chat() {
             value={msgBody}
           />
           <input type="hidden" name="session" value={session ?? ""} />
-          <div className="btn-group absolute bottom-0 right-0">
+          <div className="join absolute bottom-0 right-0">
             <label
-              className={clsx("btn btn-ghost btn-square", {
+              className={clsx("btn btn-ghost btn-square join-item", {
                 "btn-disabled": chat == null || !ready
               })}
               htmlFor={fileUploadDialogID}
             >
               <FileUploadIcon />
             </label>
-            <button className="btn btn-ghost btn-square" disabled={chat == null || !ready} type="submit">
+            <button className="btn btn-ghost btn-square join-item" disabled={chat == null || !ready} type="submit">
               <SendIcon />
             </button>
           </div>

@@ -38,7 +38,7 @@ export function NavBar({ toggle, toggleRightSidebar }: { toggle: () => void; tog
           <label tabIndex={0} className="btn btn-square btn-ghost">
             <AccountCircle />
           </label>
-          <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+          <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10">
             <li>
               <Link to="/logout">{t("Logout")}</Link>
             </li>
@@ -76,10 +76,10 @@ function SubChatSidebarItem({
   const [fold, setFold] = useState(true)
   return (
     <>
-      <li className="py-1 px-2 flex w-full btn-group">
+      <li className="py-1 px-2 flex w-full join">
         <button
           className={clsx(
-            "flex flex-1 btn font-normal normal-case",
+            "flex flex-1 btn font-normal normal-case join-item",
             chatValue == chat && currentSession == null ? "btn-primary" : "btn-ghost"
           )}
           onClick={() => {
@@ -91,7 +91,7 @@ function SubChatSidebarItem({
         </button>
         {!!sessions.length && (
           <button
-            className="btn btn-accent"
+            className="btn btn-accent join-item"
             onClick={() => {
               setFold(!fold)
             }}
@@ -99,17 +99,17 @@ function SubChatSidebarItem({
             {fold ? <ExpandMoreIcon /> : <ExpandLessIcon />}
           </button>
         )}
-        <button className="btn btn-secondary" onClick={settingsClickHandler(chat, chatNames[chatValues.indexOf(chat)])}>
+        <button className="btn btn-secondary join-item" onClick={settingsClickHandler(chat, chatNames[chatValues.indexOf(chat)])}>
           <TuneIcon />
         </button>
       </li>
       {!!sessions.length &&
         !fold &&
         sessions.map(session => (
-          <li className="py-1 px-2 flex w-full btn-group" key={session}>
+          <li className="py-1 px-2 flex w-full join" key={session}>
             <button
               className={clsx(
-                "flex flex-1 btn font-normal normal-case",
+                "flex flex-1 btn font-normal normal-case join-item",
                 chatValue == chat && session == currentSession ? "btn-accent" : "btn-ghost"
               )}
               onClick={() => {
@@ -157,9 +157,9 @@ function SidebarItem({
   }, [])
   return (
     <>
-      <li className="py-1 px-2 flex w-full btn-group">
+      <li className="py-1 px-2 flex w-full join">
         <button
-          className={clsx("flex flex-1 btn font-normal normal-case", chatValue == value ? "btn-primary" : "btn-ghost")}
+          className={clsx("flex flex-1 btn font-normal normal-case join-item", chatValue == value ? "btn-primary" : "btn-ghost")}
           onClick={() => {
             setOpen(false)
             clickHandler(value, chatNames[chatValues.indexOf(value)])
@@ -168,7 +168,7 @@ function SidebarItem({
           <div className="text-base my-auto mr-auto">{chatNames[chatValues.indexOf(value)]}</div>
         </button>
         <button
-          className={clsx("btn btn-accent", {
+          className={clsx("btn btn-accent join-item", {
             hidden: !subChats.length
           })}
           onClick={() => {
@@ -178,7 +178,7 @@ function SidebarItem({
           {fold ? <ExpandMoreIcon /> : <ExpandLessIcon />}
         </button>
         <button
-          className="btn btn-secondary"
+          className="btn btn-secondary join-item"
           onClick={settingsClickHandler(value, chatNames[chatValues.indexOf(value)])}
         >
           <TuneIcon />
@@ -214,7 +214,7 @@ export function Sidebar({ open, setOpen }: { open: boolean; setOpen: (value: boo
       <div
         aria-hidden={!open}
         className={clsx(
-          "duration-300 overflow-x-hidden w-full transition-all no-scrollbar sm:max-w-[16rem] sm:w-[16rem]",
+          "duration-300 overflow-x-hidden w-full transition-all no-scrollbar sm:max-w-[16rem] sm:w-[16rem] mt-1",
           {
             "max-w-full w-full overflow-y-auto": open,
             "max-w-0 overflow-y-hidden": !open

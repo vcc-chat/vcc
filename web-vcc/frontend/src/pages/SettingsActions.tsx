@@ -1,5 +1,5 @@
 import { memo, type TargetedEvent } from "preact/compat"
-import { useState, useEffect } from "preact/hooks"
+import { useState, useLayoutEffect } from "preact/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
@@ -19,12 +19,12 @@ export const Component = memo(function SettingsActions() {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (chatName == null) return
     setRenameValue(chatName)
   }, [chatName])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPublic(publicRaw)
   }, [publicRaw])
 

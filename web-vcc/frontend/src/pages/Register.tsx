@@ -84,11 +84,11 @@ export function Component() {
                 />
               </div>
               <div className="form-control mt-6">
-                <div className="flex w-full btn-group">
-                  <button className="btn btn-ghost" onClick={loginCallback} type="button">
+                <div className="flex w-full join">
+                  <button className="btn btn-ghost join-item" onClick={loginCallback} type="button">
                     {t("Login")}
                   </button>
-                  <button className="flex-1 btn btn-primary" type="submit">
+                  <button className="flex-1 btn btn-primary join-item" type="submit">
                     {t("Register")}
                   </button>
                 </div>

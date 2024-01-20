@@ -22,9 +22,9 @@ export const Component = memo(function Settings() {
 
   return (
     <div className="p-8 flex flex-col">
-      <div className="tabs mb-4">
+      <div className="tabs tabs-boxed mb-4 mr-auto">
         <a
-          className={clsx("tab tab-bordered", {
+          className={clsx("tab", {
             "tab-active": showSettings == "info"
           })}
           onClick={() => {
@@ -34,7 +34,7 @@ export const Component = memo(function Settings() {
           {t("Basic Information")}
         </a>
         <a
-          className={clsx("tab tab-bordered", {
+          className={clsx("tab", {
             "tab-active": showSettings == "actions"
           })}
           onClick={() => {

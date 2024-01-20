@@ -102,9 +102,9 @@ export function Component() {
                 />
               </div>
               <div className="form-control mt-6 flex space-y-2">
-                <div className="flex w-full btn-group">
+                <div className="flex w-full join">
                   <button
-                    className="btn btn-ghost"
+                    className="btn btn-ghost join-item"
                     onClick={() => {
                       navigate("/register")
                     }}
@@ -112,7 +112,7 @@ export function Component() {
                   >
                     {t("Register")}
                   </button>
-                  <button className="flex-1 btn btn-primary" type="submit">
+                  <button className="flex-1 btn btn-primary join-item" type="submit">
                     {t("Login")}
                   </button>
                 </div>

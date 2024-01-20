@@ -28,17 +28,17 @@ export default function ChooseBackend() {
 
   return (
     <div className="form-control">
-      <label className="input-group max-sm:input-group-vertical input-group-sm">
+      <label className="join max-sm:join-vertical">
         <input
           type="text"
-          className="input input-bordered input-sm"
+          className="input input-bordered input-sm join-item"
           value={serverAddress}
           onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => {
             setServerAddress(ev.currentTarget.value)
           }}
         />
         <button
-          className="btn btn-primary btn-sm"
+          className="btn btn-primary btn-sm join-item"
           disabled={backendAddress == serverAddress || !urlCorrect(serverAddress)}
           type="button"
           onClick={() => {

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import uuid
+import json
 
 template_str = """\
 [unix_http_server]
@@ -80,7 +81,7 @@ redirect_stderr=true
 stdout_logfile=./log/service_%(program_name)s.log
 
 [group:gateways]
-programs=vwe,bot2
+programs=web,bot2
 priority=20
 
 [program:web]
@@ -105,10 +106,10 @@ def input_with_default(prompt: str, default: str):
     return text if text else default
 
 config_str = template_str.format_map({
-    "MINIO_ROOT_USER": input_with_default("The root user name of the minio", "root"),
-    "MINIO_ROOT_PASSWORD": input_with_default("The root password of the minio", str(uuid.uuid4()).replace("-", "")),
-    "MINIO_URL": input("The url that can be accessed by users: "),
-    "DATABASE": input("The python code to get the database: ")
+    "MINIO_ROOT_USER": json.dumps(input_with_default("The root user name of the minio", "root")),
+    "MINIO_ROOT_PASSWORD": json.dumps(input_with_default("The root password of the minio", str(uuid.uuid4()).replace("-", ""))),
+    "MINIO_URL": json.dumps(input("The url that can be accessed by users: ")),
+    "DATABASE": json.dumps(input("The python code to get the database: "))
 })
 
 (Path(__file__).parent / "supervisord.conf").write_text(config_str)

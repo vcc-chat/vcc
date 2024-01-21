@@ -74,10 +74,15 @@ class Record(metaclass=base.ServiceMeta):
 
     @export(async_mode=True)
     async def query_record(self, chatid: int, time: int):
-        if time > int(globals()["time"].time()):
+        if time > int(globals()["time"].time() * 1000):
             return []
 
-        return list(Message.select().where(Message.chat == chatid & Message.time >= time).dicts())
+        return await asyncio.get_running_loop().run_in_executor(None, lambda: [
+            {"id": str(i["id"]), **i}
+            for i in Message.select()
+            .where(Message.chat == chatid & Message.time >= time)
+            .dicts()
+        ])
 
     def __init__(self):
         self._vcc = vcc.RpcExchanger()

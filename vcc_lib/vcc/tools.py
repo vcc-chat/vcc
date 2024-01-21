@@ -87,6 +87,14 @@ class FriendRequest(TypedDict):
     time: int
     reason: str | None
 
+class MessageRecord(TypedDict):
+    id: str # uuid
+    user: int
+    chat: int
+    content: str
+    time: int
+    type: str # msg or event
+
 
 log = logging.getLogger("vcc")
 log.addHandler(logging.NullHandler())
@@ -192,5 +200,6 @@ __all__ = [
     "EventCallback",
     "RedisEvent",
     "RedisMessage",
-    "FriendRequest"
+    "FriendRequest",
+    "MessageRecord"
 ]

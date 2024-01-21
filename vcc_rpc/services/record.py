@@ -41,7 +41,7 @@ class Record(metaclass=base.ServiceMeta):
     async def record_worker(self):
         async for raw_message in self._pubsub.listen():
             if raw_message["type"] == "message":
-                self._messages.add(json.loads(raw_message["data"].decode()))
+                self._messages.append(json.loads(raw_message["data"].decode()))
 
     @timer(5)
     async def flush_worker(self):
@@ -91,7 +91,7 @@ class Record(metaclass=base.ServiceMeta):
         self._vcc = vcc.RpcExchanger()
         self._redis = self._vcc.get_redis_instance()
         self._pubsub = self._redis.pubsub()
-        self._messages: set[RedisMessage] = set()
+        self._messages: list[RedisMessage] = list()
         # asyncio.get_event_loop().create_task(self._ainit())
 
 

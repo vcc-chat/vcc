@@ -48,7 +48,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: NewMessa
   const markdownChildren = savedHTML === undefined ? req.payload : ""
   const html = savedHTML === undefined ? null : savedHTML
   const { t, i18n } = useTranslation()
-  const username = useNickname(req.chat, req.uid!, { initialData: req.username })
+  const username = useNickname(req.chat, req.uid!, req.username === null ? {} : { initialData: req.username })
   const savePlugin: any = useCallback(() => {
     return (transformer: any) => {
       if (html) {
@@ -91,7 +91,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: NewMessa
             "chat-bubble-success",
             "chat-bubble-warning",
             "chat-bubble-error"
-          ][stringToNumber(req.username) % 6]
+          ][stringToNumber(username!) % 6]
         )}
       >
         {(!!markdownChildren || !!html) && (

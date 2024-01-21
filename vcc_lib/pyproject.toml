@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vcc_lib"
-version = "0.3.5"
+version = "0.3.6"
 description = "vcc base library"
 authors = ["Calvinlin","3swordman"]
 license = "MIT"

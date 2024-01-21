@@ -130,7 +130,7 @@ class Message(Model):
     user = ForeignKeyField(User, backref="messages")
     chat = ForeignKeyField(Chat, backref="messages")
     content = TextField()
-    time = TimestampField()
+    time = BigIntegerField()
     type = CharField(max_length=16) # msg or event
     
     class Meta:

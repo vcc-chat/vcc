@@ -180,7 +180,7 @@ class RpcExchanger:
                     "payload": payload,
                     "msg_type": msg_type,
                     "chat": chat,
-                    "time": int(time.time()),
+                    "time": int(time.time() * 1000),
                     **({} if session is None else {"session": session}),
                 }
             ),
@@ -380,6 +380,11 @@ class RpcExchangerBaseClient:
     async def file_get_object_content(
         self, id: str, bucket: str = "file"
     ) -> tuple[str, str]:
+        ...
+    
+    @check(joined="chatid", error_return=[])
+    @rpc_request()
+    async def record_query(self, chatid: int, time: int) -> list[MessageRecord]:
         ...
 
     def __aiter__(self) -> RpcExchangerBaseClient:

@@ -80,7 +80,7 @@ class Record(metaclass=base.ServiceMeta):
         return await asyncio.get_running_loop().run_in_executor(
             None,
             lambda: [
-                {"id": str(i["id"]), **i}
+                {**i, "id": str(i["id"])}
                 for i in Message.select()
                 .where((Message.chat == chatid) & (Message.time >= time))
                 .dicts()

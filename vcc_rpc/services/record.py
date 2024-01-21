@@ -50,7 +50,7 @@ class Record(metaclass=base.ServiceMeta):
         with db.atomic():
             await asyncio.get_running_loop().run_in_executor(
                 None,
-                Message.insert_many(
+                lambda: Message.insert_many(
                     [
                         {
                             "user": msg["uid"],

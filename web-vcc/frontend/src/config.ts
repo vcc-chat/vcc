@@ -1,8 +1,8 @@
 export type NewMessage = {
-  username: string
-  msg_type: string
+  username: string | null
+  type: string
   payload: any
-  session: string
+  session: string | null
   chat: number
   uid: number
   id: string

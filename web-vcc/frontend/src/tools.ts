@@ -5,6 +5,7 @@ import { LoginType } from "./state/login"
 import useStore from "./store"
 import { wait } from "./loaders"
 import rpc from "./network"
+import type { NewMessageWithTime } from "./config"
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -129,7 +130,7 @@ export function useNickname(
     initialData
   }: {
     enabled?: boolean
-    initialData: string
+    initialData?: string
   }
 ) {
   const { data } = useQuery({
@@ -157,9 +158,14 @@ export function usePreload(func: () => Promise<any>) {
   }, [])
 }
 
-async function getChatRecord(chat: number) {
+async function getChatRecord(chat: number): Promise<Array<NewMessageWithTime>> {
   const { lastMessageTime } = useStore.getState()
-  return await rpc.record.query(chat, lastMessageTime)
+  return (await rpc.record.query(chat, lastMessageTime))
+    .filter(({ type }) => type == "msg")
+    .map(({ id, user, chat, content, time, type }) => ({
+      time,
+      req: { id, chat, session: null, uid: user, payload: content, type, username: null }
+    }))
 }
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -198,7 +204,6 @@ export async function registerServiceWorker() {
 let first = true
 
 export async function syncMessages() {
-  return
   if (useStore.getState().type != LoginType.LOGIN_SUCCESS) return
   const { values: chats } = await queryClient.fetchQuery({
     queryKey: ["chat-list"],

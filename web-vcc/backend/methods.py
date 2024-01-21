@@ -224,11 +224,6 @@ class Methods:
         msg: list[MessageRecord]
 
     async def record_query(self, chat: int, time: int) -> RecordQueryReturnType:
-        # self._client.check_authorized()
-        # self._client.check_joined(uid)
-        # result = await self._client._exchanger.rpc.record.query_record(chatid=uid, time=int(msg))
-        # return {"record_query", "msg": result)
-        # FIXME: Temporarily disable support for chat record
         return {"msg": await self._client.record_query(chat, time)}
 
     async def chat_get_nickname(self, chat: int, user: int) -> str:

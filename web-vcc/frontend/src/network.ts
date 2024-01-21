@@ -259,26 +259,13 @@ const rpc = {
     }
   },
   record: {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async query(chat: number, lastMessageTime: number) {
-      return []
-      // const { msg } = await makeRequest("record_query", {
-      //   uid: chat,
-      //   msg: lastMessageTime as any
-      // })
-      // return (msg as unknown as string[]).map<RequestWithTime>((dataString, index) => {
-      //   const data = JSON.parse(dataString)
-      //   return {
-      //     req: {
-      //       msg: data.msg,
-      //       usrname: data.username,
-      //       uid: data.chat,
-      //       type: "message"
-      //     },
-      //     // need to be changed
-      //     time: Date.now() + index
-      //   }
-      // })
+      return (
+        await makeRequest("record_query", {
+          chat,
+          time: lastMessageTime
+        })
+      ).msg
     }
   },
   push: {

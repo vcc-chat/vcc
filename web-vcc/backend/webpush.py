@@ -56,7 +56,7 @@ def register_recv_hook(exchanger: vcc.RpcExchanger):
                         "chatName": chat_name,
                         "username": send_nickname,
                         "chat": msg["chat"],
-                        "msg": msg["msg"],
+                        "msg": msg["payload"],
                         "session": msg.get("session"),
                     }
                 ),

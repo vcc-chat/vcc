@@ -82,7 +82,7 @@ class Record(metaclass=base.ServiceMeta):
             lambda: [
                 {"id": str(i["id"]), **i}
                 for i in Message.select()
-                .where(Message.chat == chatid & Message.time >= time)
+                .where((Message.chat == chatid) & (Message.time >= time))
                 .dicts()
             ],
         )

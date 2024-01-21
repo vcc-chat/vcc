@@ -383,7 +383,7 @@ class RpcExchangerBaseClient:
         ...
     
     @check(joined="chatid", error_return=[])
-    @rpc_request()
+    @rpc_request("record/query_record")
     async def record_query(self, chatid: int, time: int) -> list[MessageRecord]:
         ...
 

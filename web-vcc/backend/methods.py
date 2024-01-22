@@ -49,37 +49,42 @@ class Methods:
         success: bool
         token: str | None
         username: str
+        uid: int
 
     async def login(self, username: str, password: str) -> LoginReturnType:
         login_result = await self._client.login(username, password)
         if login_result is not None:
             token = login_result[1]
+            uid = login_result[0]
         else:
             token = None
+            uid = -1
         return {
             "success": login_result is not None,
             "token": token,
             "username": username,
+            "uid": uid
         }
 
     class TokenLoginReturnType(TypedDict):
         success: bool
         username: str
+        uid: int
 
     async def token_login(self, token: str) -> TokenLoginReturnType:
         login_result = await self._client.token_login(token)
         if login_result is not None:
             new_username: str = login_result[1]
-            return {"success": True, "username": new_username}
+            return {"success": True, "username": new_username, "uid": login_result[0]}
         # Since rpc hasn't implemented api of oauth's token, we try web-vcc's own token
         try:
             result = jwt.decode(token, key, ["HS512"])
             self._client._id = result["uid"]
             self._client._name = result["username"]
             await self._client.add_online()
-            return {"success": True, "username": result["username"]}
+            return {"success": True, "username": result["username"], "uid": result["uid"]}
         except (jwt.DecodeError, KeyError):
-            return {"success": False, "username": ""}
+            return {"success": False, "username": "", "uid": -1}
 
     class RequestOauthReturnType(TypedDict):
         request_id: str
@@ -91,12 +96,14 @@ class Methods:
 
     class LoginOauthReturnType(TypedDict):
         username: str | None
+        uid: int | None
         token: str
 
     async def login_oauth(self, platform: str, request_id: str) -> LoginOauthReturnType:
         uid, token = await self._client.login_oauth(platform, request_id)
         return {
             "username": self._client.name,
+            "uid": self._client.id,
             "token": token,
         }
 

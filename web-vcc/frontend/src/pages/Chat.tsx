@@ -43,7 +43,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: NewMessa
     },
     [req.payload]
   )
-  const selfUsername = useStore(state => state.username)
+  const selfUserID = useStore(state => state.userID)
   const savedHTML = markdownToHTML[req.payload]
   const markdownChildren = savedHTML === undefined ? req.payload : ""
   const html = savedHTML === undefined ? null : savedHTML
@@ -68,11 +68,9 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: NewMessa
     return () => clearInterval(interval)
   }, [])
   return (
-    <li key={nowMsg.time} className={clsx("chat", req.username == selfUsername ? "chat-end" : "chat-start")}>
+    <li key={nowMsg.time} className={clsx("chat", req.uid == selfUserID ? "chat-end" : "chat-start")}>
       <MessageAvatar name={username} />
-      <div
-        className={clsx("chat-header flex space-x-2", req.username == selfUsername ? "flex-row-reverse" : "flex-row")}
-      >
+      <div className={clsx("chat-header flex space-x-2", req.uid == selfUserID ? "flex-row-reverse" : "flex-row")}>
         {username!}
         <div className="text-xs opacity-50 mx-2 my-auto" draggable onDragStart={dragStartHandler}>
           {formatDistanceToNow(date, {
@@ -91,7 +89,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: NewMessa
             "chat-bubble-success",
             "chat-bubble-warning",
             "chat-bubble-error"
-          ][stringToNumber(username!) % 6]
+          ][req.uid % 6]
         )}
       >
         {(!!markdownChildren || !!html) && (
@@ -251,7 +249,7 @@ export const Component = memo(function Chat() {
   const chatRaw = Number(params.id)
   const chat = Number.isNaN(chatRaw) || !chats.includes(chatRaw) ? null : chatRaw
   const messageHistory = useStore(state => state.messages)
-  const messages = chat == null || messageHistory[chat] == null ? [] : messageHistory[chat]
+  const messages = chat == null || messageHistory[chat] == null ? {} : messageHistory[chat]
   const { successAlert, errorAlert } = useAlert()
   const ref = useRef<HTMLUListElement>(null)
   const fetcher = useFetcher()
@@ -282,7 +280,7 @@ export const Component = memo(function Chat() {
       errorAlert(t("The operation is failed"))
     }
   }, [result])
-  const messagesShow = messages.filter(a => a.req.session == session)
+  const messagesShow = Object.values(messages).filter(a => a.req.session == session)
   useBeforeUnload(() => {
     changeLastMessageTime()
   })

@@ -11,6 +11,7 @@ export const enum LoginType {
 interface LoginState {
   type: LoginType
   username: string
+  userID: number
   token: string | null
   success: () => void
   failed: () => void
@@ -19,11 +20,13 @@ interface LoginState {
   tokenLogin: () => void
   setToken: (token: string | null) => void
   changeUsername: (username: string) => void
+  changeUserID: (uid: number) => void
 }
 
 const createLoginSlice: StateCreator<LoginState> = set => ({
   type: LoginType.TOKEN_LOGIN,
   username: "",
+  userID: -1,
   token: null,
   success() {
     set({ type: LoginType.LOGIN_SUCCESS })
@@ -45,6 +48,9 @@ const createLoginSlice: StateCreator<LoginState> = set => ({
   },
   changeUsername(username: string) {
     set({ username: username })
+  },
+  changeUserID(uid: number) {
+    set({ userID: uid })
   }
 })
 

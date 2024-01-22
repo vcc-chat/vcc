@@ -280,7 +280,13 @@ export const Component = memo(function Chat() {
       errorAlert(t("The operation is failed"))
     }
   }, [result])
-  const messagesShow = Object.values(messages).filter(a => a.req.session == session)
+  const messagesShow = useMemo(
+    () =>
+      Object.values(messages)
+        .filter(a => a.req.session == session)
+        .sort((a, b) => a.time - b.time),
+    [session, messages]
+  )
   useBeforeUnload(() => {
     changeLastMessageTime()
   })

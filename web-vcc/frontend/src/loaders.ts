@@ -33,10 +33,11 @@ async function authLoader(jumpToLogin = true) {
   }
   const token = store.getState().token
   if (token != null) {
-    const { success, username } = await rpc.user.tokenLogin(token)
+    const { success, username, uid } = await rpc.user.tokenLogin(token)
     if (success) {
       store.setState({
-        username
+        username,
+        userID: uid
       })
       store.getState().success()
     } else {

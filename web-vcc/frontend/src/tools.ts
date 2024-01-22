@@ -72,7 +72,9 @@ export function responseToChatList(data: [number, string, number | null][]) {
         [] as [number, number[]][]
       )
       .map<[number, number[]]>(([a, b], i, arr) =>
-        a == -1 ? [a, b.filter(a => !arr.map(([a]) => a).includes(a))] : [a, b]
+        a == -1
+          ? ([a, b.filter(a => !arr.map(([a]) => a).includes(a))] as [number, number[]])
+          : ([a, b] as [number, number[]])
       )
       .reduce(
         (a, b) => [...a, ...(b[0] == -1 ? b[1].map(a => [a, []] as [number, number[]]) : [b])],

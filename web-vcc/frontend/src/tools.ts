@@ -222,3 +222,5 @@ export async function syncMessages() {
   first = false
   useStore.getState().changeLastMessageTime()
 }
+
+// window.state = () => useStore

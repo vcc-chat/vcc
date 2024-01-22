@@ -300,6 +300,7 @@ export async function loginAction({ request }: ActionFunctionArgs) {
   }
   const result = await rpc.user.login(username, password)
   store.getState().changeUsername(username)
+  store.getState().changeUserID(result.uid)
   return result
 }
 

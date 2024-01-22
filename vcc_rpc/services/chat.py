@@ -412,11 +412,13 @@ class ChatService:
         if user_id == SYSTEM_UID:
             return SYSTEM_USER_NAME
         chat_user = ChatUser.get_or_none(chat=chat_id, user=user_id)
-        if chat_user is not None:
+        if chat_user is not None and chat_user.nickname is not None:
             return chat_user.nickname
         user = User.get_or_none(user=user_id)
         if user is None:
             return None
+        if user.nickname is None:
+            return user.name
         return user.nickname
 
 

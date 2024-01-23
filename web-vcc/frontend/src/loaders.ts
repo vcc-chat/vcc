@@ -337,7 +337,8 @@ export async function registerAction({ request }: ActionFunctionArgs) {
   const result = await rpc.user.login(username, password)
   if (result.success) {
     store.setState({
-      username
+      username,
+      userID: result.uid
     })
   }
   return result

@@ -278,6 +278,17 @@ const rpc = {
       })
     }
   },
+  friend: {
+    async sendRequest(user: number, reason: string | null = null) {
+      return await makeRequest("friend_send_request", {
+        friend_id: user,
+        reason
+      })
+    },
+    async get() {
+      return await makeRequest("friend_get_friends", {})
+    }
+  },
   async send(chat: number, msg: string, session: string | null) {
     return await makeRequest("message", {
       chat,

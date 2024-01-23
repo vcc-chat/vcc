@@ -26,7 +26,7 @@ export function JoinDialog({ id }: { id: string }) {
     }
     if (chat === null) return
     if (await rpc.chat.join(chat)) {
-      await refresh()
+      refresh()
       navigate(`/chats/${chat}`)
       successAlert(t("You have joined the chat successfully. "))
     } else {
@@ -152,6 +152,69 @@ export function CreateDialog({ id }: { id: string }) {
             </label>
             <button className="btn" onClick={createHandler}>
               {t("Create")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body
+  )
+}
+
+export function AddFriendDialog({ id }: { id: string }) {
+  const [dialogValue, setDialogValue] = useState("")
+  const [reason, setReason] = useState("")
+  const { t } = useTranslation()
+
+  const navigate = useNavigate()
+  const { successAlert, errorAlert } = useAlert()
+  const { refresh } = useChatList()
+
+  const joinHandler = useCallback(async () => {
+    let user: number
+    try {
+      user = parseInt(dialogValue)
+    } catch (e) {
+      return
+    }
+    if (user === null || Number.isNaN(user)) return
+    if (await rpc.friend.sendRequest(user, reason || null)) {
+      refresh()
+      navigate(`/chats/${user}`)
+      successAlert(t("You have sent the friend request successfully. "))
+    } else {
+      errorAlert(t("The user doesn't exist or he don't accept any friend request. "))
+    }
+  }, [successAlert, errorAlert, refresh, dialogValue])
+  return createPortal(
+    <>
+      <input type="checkbox" id={id} className="modal-toggle" />
+      <div className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">{t("Add friend")}</h3>
+          <p className="py-4">{t("Enter the user id you want to make friends and send a friend request.")}</p>
+          <div className="flex flex-col gap-2">
+            <input
+              className="input"
+              autoFocus
+              placeholder={t("User id") ?? ""}
+              value={dialogValue}
+              onInput={(ev: TargetedEvent<HTMLInputElement, Event>) => setDialogValue(ev.currentTarget.value)}
+            />
+            <textarea
+              className="textarea textarea-ghost resize-none"
+              autoFocus
+              placeholder={t("Reason (optional)") ?? ""}
+              value={reason}
+              onInput={(ev: TargetedEvent<HTMLTextAreaElement, Event>) => setReason(ev.currentTarget.value)}
+            />
+          </div>
+          <div className="modal-action">
+            <label htmlFor={id} className="btn">
+              {t("Close")}
+            </label>
+            <button className="btn" onClick={joinHandler}>
+              {t("Send")}
             </button>
           </div>
         </div>

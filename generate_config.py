@@ -37,7 +37,7 @@ redirect_stderr=true
 stdout_logfile=./log/%(program_name)s.log
 
 [group:services]
-programs=login,chat,file,record,bot
+programs=login,chat,file,record,bot,friend
 priority=20
 
 [program:login]
@@ -75,6 +75,14 @@ stdout_logfile=./log/service_%(program_name)s.log
 [program:bot]
 startsecs=5
 command=python3 ./vcc_rpc/services/bot.py
+autorestart=true
+startretries=3
+redirect_stderr=true
+stdout_logfile=./log/service_%(program_name)s.log
+
+[program:friend]
+startsecs=5
+command=python3 ./vcc_rpc/services/friend.py
 autorestart=true
 startretries=3
 redirect_stderr=true

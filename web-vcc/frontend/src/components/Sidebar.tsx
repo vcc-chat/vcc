@@ -99,7 +99,10 @@ function SubChatSidebarItem({
             {fold ? <ExpandMoreIcon /> : <ExpandLessIcon />}
           </button>
         )}
-        <button className="btn btn-secondary join-item" onClick={settingsClickHandler(chat, chatNames[chatValues.indexOf(chat)])}>
+        <button
+          className="btn btn-secondary join-item"
+          onClick={settingsClickHandler(chat, chatNames[chatValues.indexOf(chat)])}
+        >
           <TuneIcon />
         </button>
       </li>
@@ -159,7 +162,10 @@ function SidebarItem({
     <>
       <li className="py-1 px-2 flex w-full join">
         <button
-          className={clsx("flex flex-1 btn font-normal normal-case join-item", chatValue == value ? "btn-primary" : "btn-ghost")}
+          className={clsx(
+            "flex flex-1 btn font-normal normal-case join-item",
+            chatValue == value ? "btn-primary" : "btn-ghost"
+          )}
           onClick={() => {
             setOpen(false)
             clickHandler(value, chatNames[chatValues.indexOf(value)])
@@ -324,7 +330,7 @@ export function UsersSidebar({ open, setOpen }: { open: boolean; setOpen: (value
   const { data: onlineData } = useQuery({
     queryKey: ["is-online", usersData],
     queryFn: async () => {
-      if (chat == null || usersData == null || !usersData.length) return []
+      if (usersData == null || !usersData.length) return []
       return await rpc.user.isOnline(usersData.map(a => a[0]))
     },
     enabled: chat != null && usersData != null && !!usersData?.length

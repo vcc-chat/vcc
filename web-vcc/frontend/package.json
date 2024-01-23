@@ -49,6 +49,7 @@
     "@babel/core": ">=7.12.10 <8.0.0",
     "@preact/preset-vite": "^2.5.0",
     "@tailwindcss/typography": "^0.5.8",
+    "@tanstack/eslint-plugin-query": "^5.17.20",
     "@tauri-apps/cli": "^1.2.3",
     "@types/dompurify": "^2.4.0",
     "@types/react-syntax-highlighter": "^15.5.6",

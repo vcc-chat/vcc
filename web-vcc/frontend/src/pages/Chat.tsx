@@ -74,7 +74,8 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: NewMessa
         {username!}
         <div className="text-xs opacity-50 mx-2 my-auto" draggable onDragStart={dragStartHandler}>
           {formatDistanceToNow(date, {
-            locale: i18n.language == "zh-TW" ? zhTW : i18n.language == "zh-CN" ? zhCN : en
+            locale: i18n.language == "zh-TW" ? zhTW : i18n.language == "zh-CN" ? zhCN : en,
+            addSuffix: true
           })}
         </div>
       </div>
@@ -89,7 +90,7 @@ const NormalMessage = memo(function NormalMessage({ nowMsg }: { nowMsg: NewMessa
             "chat-bubble-success",
             "chat-bubble-warning",
             "chat-bubble-error"
-          ][req.uid % 6]
+          ][req.uid % 7]
         )}
       >
         {(!!markdownChildren || !!html) && (

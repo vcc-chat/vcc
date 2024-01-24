@@ -250,7 +250,10 @@ class Methods:
     async def friend_get_friends(self) -> list[int]:
         return await self._client.get_friends()
 
-    async def friend_get_chat_by_id(self, friend_id: int) -> list[FriendRequest]:
+    async def friend_list_received_request(self) -> list[FriendRequest]:
+        return await self._client.list_received_friend_request()
+
+    async def friend_get_chat_by_id(self, friend_id: int) -> int | None:
         return await self._client.get_chat_by_friend_id(friend_id)
 
     async def friend_send_request(self, friend_id: int, reason: str | None) -> bool:

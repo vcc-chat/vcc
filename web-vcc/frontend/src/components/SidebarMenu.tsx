@@ -1,14 +1,17 @@
-import { useId } from "preact/hooks"
+import { useId, useState } from "preact/hooks"
 
-import GroupAddIcon from "@material-design-icons/svg/outlined/group_add.svg"
 import AddCircleIcon from "@material-design-icons/svg/outlined/add_circle_outline.svg"
+import GroupAddIcon from "@material-design-icons/svg/outlined/group_add.svg"
 import MenuIcon from "@material-design-icons/svg/outlined/menu.svg"
 import PersonAddIcon from "@material-design-icons/svg/outlined/person_add.svg"
 
-import { AddFriendDialog, CreateDialog, JoinDialog } from "./Toolbar"
-import { useTranslation } from "react-i18next"
+import { HomeIcon, UsersIcon } from "@heroicons/react/24/outline"
 
-export function SidebarMenu() {
+import clsx from "clsx"
+import { useTranslation } from "react-i18next"
+import { AddFriendDialog, CreateDialog, JoinDialog } from "./Toolbar"
+
+export function SidebarMenu({ index, setIndex }: { index: number; setIndex: (index: number) => void }) {
   const { t } = useTranslation()
   const joinChatDialogID = useId()
   const createChatDialogID = useId()
@@ -19,9 +22,30 @@ export function SidebarMenu() {
       <JoinDialog id={joinChatDialogID} />
       <CreateDialog id={createChatDialogID} />
       <AddFriendDialog id={addFriendDialogID} />
-      <div className="flex">
-        <div className="opacity-80 text-sm m-4 select-none">{t("Chat")}</div>
-        <div className="dropdown ml-auto dropdown-end">
+      <div className="flex bg-base-100 rounded-xl">
+        <ul className="menu menu-horizontal rounded-box gap-1 flex-1">
+          <li>
+            <a
+              className={clsx({ active: index == 0 })}
+              onClick={() => {
+                setIndex(0)
+              }}
+            >
+              <HomeIcon className="h-5 w-5 fill-none" />
+            </a>
+          </li>
+          <li>
+            <a
+              className={clsx({ active: index == 1 })}
+              onClick={() => {
+                setIndex(1)
+              }}
+            >
+              <UsersIcon className="h-5 w-5 fill-none" />
+            </a>
+          </li>
+        </ul>
+        <div className="dropdown dropdown-end my-auto">
           <label tabIndex={0} className="btn btn-square btn-ghost">
             <MenuIcon />
           </label>

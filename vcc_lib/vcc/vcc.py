@@ -642,7 +642,12 @@ class RpcExchangerClient(RpcExchangerBaseClient):
 
     @check()
     @rpc_request("friend/get_chat_by_friend_id", id_arg="user_id")
-    async def get_chat_by_friend_id(self, friend_id: int) -> list[FriendRequest]:
+    async def get_chat_by_friend_id(self, friend_id: int) -> int | None:
+        ...
+
+    @check()
+    @rpc_request("friend/list_received_friend_request", id_arg="user_id")
+    async def list_received_friend_request(self) -> list[FriendRequest]:
         ...
 
     @check()

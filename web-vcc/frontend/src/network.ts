@@ -285,6 +285,9 @@ const rpc = {
         reason
       })
     },
+    async listRequest() {
+      return await makeRequest("friend_list_received_request", {})
+    },
     async get() {
       return await makeRequest("friend_get_friends", {})
     }

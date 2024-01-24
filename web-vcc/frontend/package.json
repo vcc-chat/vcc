@@ -12,6 +12,7 @@
     "build:tauri": "tsc && vite build --config vite.config.tauri.mjs"
   },
   "dependencies": {
+    "@heroicons/react": "^2.1.1",
     "@material-design-icons/svg": "^0.14.2",
     "@tanstack/query-broadcast-client-experimental": "^4.22.0",
     "@tanstack/query-core": "^4.22.0",

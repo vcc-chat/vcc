@@ -204,6 +204,21 @@ function SidebarItem({
   )
 }
 
+function FriendRequestList() {
+  const { data: requests } = useQuery({
+    queryKey: ["get-friend-request"],
+    queryFn: rpc.friend.listRequest,
+    placeholderData: []
+  })
+  return (
+    <ul className="flex flex-col bg-base-200 w-56 rounded-box">
+      {requests?.map(({ sender, time, reason }) => (
+        <li key={sender}></li>
+      ))}
+    </ul>
+  )
+}
+
 export function Sidebar({ open, setOpen }: { open: boolean; setOpen: (value: boolean) => void }) {
   const { parentChats } = useChatList()
 
@@ -215,20 +230,28 @@ export function Sidebar({ open, setOpen }: { open: boolean; setOpen: (value: boo
     [parentChats, setOpen]
   )
 
+  const [index, setIndex] = useState(0)
+
   return (
     <>
       <div
         aria-hidden={!open}
         className={clsx(
-          "duration-300 overflow-x-hidden w-full transition-all no-scrollbar sm:max-w-[16rem] sm:w-[16rem] mt-1",
+          "duration-300 overflow-x-hidden w-full transition-all no-scrollbar sm:max-w-[16rem] sm:w-[16rem] mt-1 flex flex-col",
           {
             "max-w-full w-full overflow-y-auto": open,
             "max-w-0 overflow-y-hidden": !open
           }
         )}
       >
-        <SidebarMenu />
-        <ul className="flex flex-col">{sidebarItems}</ul>
+        <SidebarMenu index={index} setIndex={setIndex} />
+        <div className="divider mb-0 -mt-1" />
+        {
+          {
+            0: <ul className="flex flex-col">{sidebarItems}</ul>,
+            1: <FriendRequestList />
+          }[index]
+        }
       </div>
     </>
   )

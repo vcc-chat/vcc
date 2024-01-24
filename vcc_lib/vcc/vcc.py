@@ -474,6 +474,16 @@ class RpcExchangerClient(RpcExchangerBaseClient):
         if success and auto_login:
             await self.login(username, password)
         return cast(bool, success)
+    
+    @check()
+    @rpc_request()
+    async def login_get_name(self, id: int) -> str | None:
+        ...
+        
+    @check()
+    @rpc_request()
+    async def login_get_nickname(self, id: int) -> str | None:
+        ...
 
     @check(joined="chat")
     async def send_msg(self, msg: str, chat: int, session: str | None) -> str:

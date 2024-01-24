@@ -112,6 +112,12 @@ class Methods:
 
     async def register(self, username: str, password: str) -> bool:
         return await self._client.register(username, password)
+    
+    async def login_get_name(self, uid: int) -> str | None:
+        return await self._client.login_get_name(uid)
+    
+    async def login_get_nickname(self, uid: int) -> str | None:
+        return await self._client.login_get_nickname(uid)
 
     class MessageKwargsType(TypedDict):
         session: NotRequired[str]

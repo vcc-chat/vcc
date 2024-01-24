@@ -1,23 +1,25 @@
-import { useState, useEffect, useCallback, useMemo, useId } from "preact/hooks"
-import type { ComponentChildren } from "preact"
-import { useNavigate, Link } from "react-router-dom"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import clsx from "clsx"
+import { CheckIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import AccountCircle from "@material-design-icons/svg/filled/account_circle.svg"
-import MenuIcon from "@material-design-icons/svg/outlined/menu.svg"
-import TuneIcon from "@material-design-icons/svg/outlined/tune.svg"
-import ExpandMoreIcon from "@material-design-icons/svg/outlined/expand_more.svg"
+import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
 import ExpandLessIcon from "@material-design-icons/svg/outlined/expand_less.svg"
+import ExpandMoreIcon from "@material-design-icons/svg/outlined/expand_more.svg"
+import MenuIcon from "@material-design-icons/svg/outlined/menu.svg"
 import MoreHorizIcon from "@material-design-icons/svg/outlined/more_horiz.svg"
 import PeopleIcon from "@material-design-icons/svg/outlined/people.svg"
-import CloseIcon from "@material-design-icons/svg/outlined/close.svg"
+import TuneIcon from "@material-design-icons/svg/outlined/tune.svg"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import clsx from "clsx"
+import type { ComponentChildren } from "preact"
+import { useCallback, useEffect, useId, useMemo, useState } from "preact/hooks"
 import { useTranslation } from "react-i18next"
+import { Link, useNavigate } from "react-router-dom"
 
-import { ChangeNickname, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
-import { stringToColor, useChatList, useAlert } from "../tools"
-import useStore from "../store"
-import { SidebarMenu } from "./SidebarMenu"
 import rpc from "../network"
+import useStore from "../store"
+import { stringToColor, useAlert, useChatList } from "../tools"
+import { MessageAvatar } from "./Messages"
+import { SidebarMenu } from "./SidebarMenu"
+import { ChangeNickname, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
 
 export function NavBar({ toggle, toggleRightSidebar }: { toggle: () => void; toggleRightSidebar: () => void }) {
   const chatName = useStore(state => state.chatName)
@@ -204,6 +206,37 @@ function SidebarItem({
   )
 }
 
+function FriendRequestItem({ user, time, reason }: { user: number; time: number; reason: string | null }) {
+  const { data: nickname } = useQuery({
+    queryKey: ["get-nickname", user],
+    queryFn: async () => {
+      return (await rpc.user.getNickName(user)) ?? undefined
+    },
+    placeholderData: undefined
+  })
+
+  return (
+    <li className="flex">
+      <div className="my-auto">
+        <MessageAvatar name={nickname} className="w-10 h-10" />
+      </div>
+      <span className="my-auto m-2 text-lg">{nickname}</span>
+      <div className="join ml-auto">
+        <div className="tooltip tooltip-bottom" data-tip="Approve">
+          <button className="btn btn-outline btn-success btn-square join-item">
+            <CheckIcon className="h-6 w-6 fill-none" />
+          </button>
+        </div>
+        <div className="tooltip tooltip-bottom" data-tip="Decline">
+          <button className="btn btn-outline btn-error btn-square join-item">
+            <XMarkIcon className="h-6 w-6 fill-none" />
+          </button>
+        </div>
+      </div>
+    </li>
+  )
+}
+
 function FriendRequestList() {
   const { data: requests } = useQuery({
     queryKey: ["get-friend-request"],
@@ -211,9 +244,10 @@ function FriendRequestList() {
     placeholderData: []
   })
   return (
-    <ul className="flex flex-col bg-base-200 w-56 rounded-box">
+    <ul className="flex flex-col flex-1 p-2">
+      {/* <div>Friend requests</div> */}
       {requests?.map(({ sender, time, reason }) => (
-        <li key={sender}></li>
+        <FriendRequestItem key={sender} user={sender} time={time} reason={reason} />
       ))}
     </ul>
   )
@@ -237,7 +271,7 @@ export function Sidebar({ open, setOpen }: { open: boolean; setOpen: (value: boo
       <div
         aria-hidden={!open}
         className={clsx(
-          "duration-300 overflow-x-hidden w-full transition-all no-scrollbar sm:max-w-[16rem] sm:w-[16rem] mt-1 flex flex-col",
+          "duration-300 overflow-x-visible w-full transition-all no-scrollbar sm:max-w-[16rem] sm:w-[16rem] mt-1 flex flex-col",
           {
             "max-w-full w-full overflow-y-auto": open,
             "max-w-0 overflow-y-hidden": !open

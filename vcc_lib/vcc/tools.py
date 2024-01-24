@@ -86,6 +86,7 @@ class FriendRequest(TypedDict):
     receiver: int
     time: int
     reason: str | None
+    id: int
 
 class MessageRecord(TypedDict):
     id: str # uuid

@@ -36,6 +36,7 @@ class FriendService:
                 "receiver": i.receiver_id,
                 "time": i.time.timestamp(),
                 "reason": i.reason,
+                "id": i.id
             }
             for i in FriendRequest.select()
             .where(FriendRequest.receiver == user_id)
@@ -58,12 +59,12 @@ class FriendService:
     def accept_friend_request(self, user_id: int, request_id: int) -> bool:
         user = User.get_or_none(id=user_id)
         request = FriendRequest.get_or_none(id=request_id)
-        if user is None or request is None or user.id != request.sender_id:
+        if user is None or request is None or user.id != request.receiver_id:
             return False
         try:
             with db.atomic():
                 request.delete_instance()
-                friendship = Friendship.create(friend1=user, friend2=request.receiver)
+                friendship = Friendship.create(friend1=user, friend2=request.sender)
                 chat = Chat.create(name="friend chat", friendship=friendship)
                 for i in [user, request.receiver]:
                     ChatUser.create(user=i, chat=chat, permissions=16)
@@ -75,7 +76,7 @@ class FriendService:
     def reject_friend_request(self, user_id: int, request_id: int) -> bool:
         user = User.get_or_none(id=user_id)
         request = FriendRequest.get_or_none(id=request_id)
-        if user is None or request is None or user.id != request.sender_id:
+        if user is None or request is None or user.id != request.receiver_id:
             return False
         request.delete_instance()
         return True

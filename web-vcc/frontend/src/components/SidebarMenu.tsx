@@ -5,7 +5,7 @@ import GroupAddIcon from "@material-design-icons/svg/outlined/group_add.svg"
 import MenuIcon from "@material-design-icons/svg/outlined/menu.svg"
 import PersonAddIcon from "@material-design-icons/svg/outlined/person_add.svg"
 
-import { HomeIcon, UsersIcon } from "@heroicons/react/24/outline"
+import { HomeIcon, UserPlusIcon } from "@heroicons/react/24/outline"
 
 import clsx from "clsx"
 import { useTranslation } from "react-i18next"
@@ -41,7 +41,7 @@ export function SidebarMenu({ index, setIndex }: { index: number; setIndex: (ind
                 setIndex(1)
               }}
             >
-              <UsersIcon className="h-5 w-5 fill-none" />
+              <UserPlusIcon className="h-5 w-5 fill-none" />
             </a>
           </li>
         </ul>

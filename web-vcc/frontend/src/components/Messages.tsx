@@ -4,14 +4,14 @@ import { Link } from "react-router-dom"
 
 import { stringToColor } from "../tools"
 
-export function MessageAvatar({ name }: { name?: string }) {
+export function MessageAvatar({ name, className = "w-9 h-9" }: { name?: string; className?: string }) {
   const characters = name?.split?.(" ") ?? ""
   const letter1 = (characters[0]?.[0] ?? "").toUpperCase()
   const letter2 = (characters[1]?.[0] ?? "").toUpperCase()
-  return (
+  return name != undefined ? (
     <div className="chat-image avatar placeholder">
       <div
-        className="rounded-full w-9 h-9"
+        className={"rounded-full " + className}
         style={{
           backgroundColor: name ? stringToColor(name) : "black"
         }}
@@ -21,6 +21,10 @@ export function MessageAvatar({ name }: { name?: string }) {
           {letter2}
         </span>
       </div>
+    </div>
+  ) : (
+    <div className="chat-image avatar placeholder">
+      <div className="skeleton rounded-full w-9 h-9" />
     </div>
   )
 }

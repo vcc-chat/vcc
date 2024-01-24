@@ -219,6 +219,12 @@ const rpc = {
       return await makeRequest("token_login", {
         token
       })
+    },
+    async getName(user: number) {
+      return await makeRequest("login_get_name", { uid: user })
+    },
+    async getNickName(user: number) {
+      return await makeRequest("login_get_nickname", { uid: user })
     }
   },
   oauth: {

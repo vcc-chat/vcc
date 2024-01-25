@@ -49,6 +49,8 @@ class FriendService:
         # FIXME: Check if there is friendship between user_id & friend_id
         user = User.get_or_none(id=user_id)
         friend = User.get_or_none(id=friend_id)
+        if user_id == friend_id:
+            return False
         if user is None or friend is None:
             return False
         try:
@@ -66,7 +68,7 @@ class FriendService:
             request.delete_instance()
             friendship = Friendship.create(friend1=user, friend2=request.sender)
             chat = Chat.create(name="friend chat", friendship=friendship)
-            for i in [user, request.receiver]:
+            for i in [user, request.sender]:
                 ChatUser.create(user=i, chat=chat, permissions=16)
             return True
 

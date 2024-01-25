@@ -141,7 +141,7 @@ function SidebarItem({
 }) {
   const navigate = useNavigate()
   const chatValue = useStore(state => state.chat)
-  const { values: chatValues, names: chatNames } = useChatList()
+  const { values: chatValues, names: chatNames, isFriends } = useChatList()
   const changeValue = useStore(state => state.changeChat)
   const changeName = useStore(state => state.changeChatName)
   const changeSession = useStore(state => state.changeSession)
@@ -160,6 +160,7 @@ function SidebarItem({
       setOpen(false)
     }
   }, [])
+  const isFriend = isFriends[chatValues.indexOf(value)]
   return (
     <>
       <li className="py-1 px-2 flex w-full join">
@@ -185,12 +186,14 @@ function SidebarItem({
         >
           {fold ? <ExpandMoreIcon /> : <ExpandLessIcon />}
         </button>
-        <button
-          className="btn btn-secondary join-item"
-          onClick={settingsClickHandler(value, chatNames[chatValues.indexOf(value)])}
-        >
-          <TuneIcon />
-        </button>
+        {!isFriend && (
+          <button
+            className="btn btn-secondary join-item"
+            onClick={settingsClickHandler(value, chatNames[chatValues.indexOf(value)])}
+          >
+            <TuneIcon />
+          </button>
+        )}
       </li>
       {!fold &&
         subChats.map(chat => (

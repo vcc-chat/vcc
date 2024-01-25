@@ -174,13 +174,8 @@ const rpc = {
       })}`
     },
     async list() {
-      const data: [number, string, number | null][] = await makeRequest("chat_list", {})
-      const { values, names, parentChats } = responseToChatList(data)
-      return {
-        values,
-        names,
-        parentChats
-      }
+      const data = await makeRequest("chat_list", {})
+      return responseToChatList(data)
     },
     async getNickname(chat: number, user: number) {
       return await makeRequest("chat_get_nickname", {

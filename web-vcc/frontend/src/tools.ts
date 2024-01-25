@@ -57,12 +57,20 @@ export function stringToNumber(str: string) {
   return hash
 }
 
-export function responseToChatList(data: [number, string, number | null][]) {
-  const values = data.map(value => value[0])
-  const names = data.map(value => value[1])
+export function responseToChatList(
+  data: {
+    id: number
+    name: string
+    parent: number | null
+    is_friend: boolean
+  }[]
+) {
+  const values = data.map(value => value.id)
+  const names = data.map(value => value.name)
+  const isFriends = data.map(value => value.is_friend)
   const parentChats = Object.fromEntries(
     data
-      .map<[number, number]>(([a, , c]) => [c ?? -1, a])
+      .map<[number, number]>(({ id, parent }) => [parent ?? -1, id])
       .sort(([a], [c]) => +(a > c))
       .reduce(
         (a, [b, d]) =>
@@ -81,23 +89,25 @@ export function responseToChatList(data: [number, string, number | null][]) {
         [] as [number, number[]][]
       )
   ) as Record<number, number[]>
-  return { values, names, parentChats }
+  return { values, names, parentChats, isFriends }
 }
 
 export async function queryChatList() {
-  const { values, names, parentChats } = await rpc.chat.list()
+  const { values, names, parentChats, isFriends } = await rpc.chat.list()
   useStore.getState().changeAllChat(values, names)
   return {
     values,
     names,
-    parentChats
+    parentChats,
+    isFriends
   }
 }
 
 export const chatListPlaceholderData = {
   values: [] as number[],
   names: [],
-  parentChats: {}
+  parentChats: {},
+  isFriends: []
 }
 
 export function useChatList() {

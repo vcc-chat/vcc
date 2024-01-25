@@ -375,7 +375,7 @@ class ChatService:
                 ChatUser.select()
                 .where(~ChatUser.banned, ChatUser.user == id)
                 .join(Chat)
-                .select(Chat.id, Chat.name, Chat.parent)
+                .select(Chat.id, Chat.name, Chat.parent, Chat.friendship)
                 .execute()
             )
             return [

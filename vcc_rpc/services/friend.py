@@ -46,6 +46,7 @@ class FriendService:
     def send_friend_request(
         self, user_id: int, friend_id: int, reason: str | None
     ) -> bool:
+        # FIXME: Check if there is friendship between user_id & friend_id
         user = User.get_or_none(id=user_id)
         friend = User.get_or_none(id=friend_id)
         if user is None or friend is None:
@@ -62,12 +63,11 @@ class FriendService:
         if user is None or request is None or user.id != request.receiver_id:
             return False
         try:
-            with db.atomic():
-                request.delete_instance()
-                friendship = Friendship.create(friend1=user, friend2=request.sender)
-                chat = Chat.create(name="friend chat", friendship=friendship)
-                for i in [user, request.receiver]:
-                    ChatUser.create(user=i, chat=chat, permissions=16)
+            request.delete_instance()
+            friendship = Friendship.create(friend1=user, friend2=request.sender)
+            chat = Chat.create(name="friend chat", friendship=friendship)
+            for i in [user, request.receiver]:
+                ChatUser.create(user=i, chat=chat, permissions=16)
             return True
 
         except IntegrityError:

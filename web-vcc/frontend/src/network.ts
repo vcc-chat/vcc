@@ -285,7 +285,7 @@ const rpc = {
     }
   },
   friend: {
-    async sendRequest(user: number, reason: string | null = null) {
+    async sendRequest(user: number, reason: string | null) {
       return await makeRequest("friend_send_request", {
         friend_id: user,
         reason
@@ -296,6 +296,12 @@ const rpc = {
     },
     async get() {
       return await makeRequest("friend_get_friends", {})
+    },
+    async acceptRequest(id: number) {
+      return await makeRequest("friend_accept_request", { request_id: id })
+    },
+    async declineRequest(id: number) {
+      return await makeRequest("friend_reject_request", { request_id: id })
     }
   },
   async send(chat: number, msg: string, session: string | null) {

@@ -206,7 +206,17 @@ function SidebarItem({
   )
 }
 
-function FriendRequestItem({ user, time, reason }: { user: number; time: number; reason: string | null }) {
+function FriendRequestItem({
+  user,
+  time,
+  reason,
+  id
+}: {
+  user: number
+  time: number
+  reason: string | null
+  id: number
+}) {
   const { data: nickname } = useQuery({
     queryKey: ["get-nickname", user],
     queryFn: async () => {
@@ -214,6 +224,7 @@ function FriendRequestItem({ user, time, reason }: { user: number; time: number;
     },
     placeholderData: undefined
   })
+  const queryClient = useQueryClient()
 
   return (
     <li className="flex">
@@ -222,12 +233,26 @@ function FriendRequestItem({ user, time, reason }: { user: number; time: number;
       </div>
       <span className="my-auto m-2 text-lg">{nickname}</span>
       <div className="join ml-auto">
-        <div className="tooltip tooltip-bottom" data-tip="Approve">
+        <div
+          className="tooltip tooltip-bottom"
+          data-tip="Accept"
+          onClick={async () => {
+            await rpc.friend.acceptRequest(id)
+            queryClient.invalidateQueries(["get-friend-request"])
+          }}
+        >
           <button className="btn btn-outline btn-success btn-square join-item">
             <CheckIcon className="h-6 w-6 fill-none" />
           </button>
         </div>
-        <div className="tooltip tooltip-bottom" data-tip="Decline">
+        <div
+          className="tooltip tooltip-bottom"
+          data-tip="Decline"
+          onClick={async () => {
+            await rpc.friend.declineRequest(id)
+            queryClient.invalidateQueries(["get-friend-request"])
+          }}
+        >
           <button className="btn btn-outline btn-error btn-square join-item">
             <XMarkIcon className="h-6 w-6 fill-none" />
           </button>
@@ -246,8 +271,8 @@ function FriendRequestList() {
   return (
     <ul className="flex flex-col flex-1 p-2">
       {/* <div>Friend requests</div> */}
-      {requests?.map(({ sender, time, reason }) => (
-        <FriendRequestItem key={sender} user={sender} time={time} reason={reason} />
+      {requests?.map(({ sender, time, reason, id }) => (
+        <FriendRequestItem key={id} user={sender} time={time} reason={reason} id={id} />
       ))}
     </ul>
   )

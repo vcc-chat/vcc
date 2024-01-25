@@ -206,7 +206,7 @@ export function AddFriendDialog({ id }: { id: string }) {
               autoFocus
               placeholder={t("Reason (optional)") ?? ""}
               value={reason}
-              onInput={(ev: TargetedEvent<HTMLTextAreaElement, Event>) => setReason(ev.currentTarget.value)}
+              onChange={(ev: TargetedEvent<HTMLTextAreaElement, Event>) => setReason(ev.currentTarget.value)}
             />
           </div>
           <div className="modal-action">

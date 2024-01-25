@@ -96,6 +96,12 @@ class MessageRecord(TypedDict):
     time: int
     type: str # msg or event
 
+class ChatInfo(TypedDict):
+    id: int
+    name: str
+    parent: int | None
+    is_friend: bool
+
 
 log = logging.getLogger("vcc")
 log.addHandler(logging.NullHandler())
@@ -202,5 +208,6 @@ __all__ = [
     "RedisEvent",
     "RedisMessage",
     "FriendRequest",
-    "MessageRecord"
+    "MessageRecord",
+    "ChatInfo"
 ]

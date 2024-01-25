@@ -8,7 +8,8 @@ from vcc import (
     ChatUserPermissionName,
     ChatPermissionName,
     FriendRequest,
-    MessageRecord
+    MessageRecord,
+    ChatInfo
 )
 from webpush import *
 
@@ -145,7 +146,7 @@ class Methods:
     async def chat_get_name(self, chat: int) -> str:
         return await self._client.chat_get_name(chat)
 
-    async def chat_list(self) -> list[tuple[int, str, int | None]]:
+    async def chat_list(self) -> list[ChatInfo]:
         return await self._client.chat_list()
 
     async def chat_get_users(self, chat: int) -> list[tuple[int, str]]:

@@ -368,7 +368,7 @@ class ChatService:
         except:
             return {}
 
-    async def list_somebody_joined(self, id: int) -> list[tuple[int, str, int | None]]:
+    async def list_somebody_joined(self, id: int):
         # after json.dumps, tuple returned will become json Array
         try:
             chat_users = (
@@ -379,11 +379,12 @@ class ChatService:
                 .execute()
             )
             return [
-                (
-                    chat_user.chat.id,
-                    chat_user.chat.name,
-                    None if chat_user.chat.parent is None else chat_user.chat.parent.id,
-                )
+                {
+                    "id": chat_user.chat.id,
+                    "name": chat_user.chat.name,
+                    "parent": None if chat_user.chat.parent is None else chat_user.chat.parent.id,
+                    "is_friend": chat_user.chat.friendship is not None
+                }
                 for chat_user in chat_users
             ]
         except:

@@ -261,7 +261,7 @@ class RpcExchangerBaseClient:
     async def is_online(self, ids: list[int]) -> list[bool]:
         ...
 
-    async def chat_list(self) -> list[tuple[int, str, int | None]]:
+    async def chat_list(self) -> list[ChatInfo]:
         ...
 
     def check_authorized(self) -> None:
@@ -571,13 +571,10 @@ class RpcExchangerClient(RpcExchangerBaseClient):
         return True
 
     @check()
-    async def chat_list(self) -> list[tuple[int, str, int | None]]:
+    async def chat_list(self) -> list[ChatInfo]:
         """List all chat you joined"""
-        result: list[tuple[int, str, int | None]] = [
-            cast(Any, tuple(i))
-            for i in await self._rpc.chat.list_somebody_joined(id=self._id)
-        ]
-        result_set = {i[0] for i in result}
+        result: list[ChatInfo] = await self._rpc.chat.list_somebody_joined(id=self._id)
+        result_set = {i["id"] for i in result}
         self._chat_list_inited = True
         async with self._chat_list_lock:
             self._chat_list = result_set

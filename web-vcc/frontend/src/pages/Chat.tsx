@@ -21,7 +21,7 @@ import SendIcon from "@material-design-icons/svg/filled/send.svg"
 import { type NewMessageWithTime, MESSAGE_MIME_TYPE } from "../config"
 import { MessageAvatar, MessageLink } from "../components/Messages"
 import useStore from "../store"
-import { stringToNumber, useChatList, useAlert, useNickname, useTitle } from "../tools"
+import { stringToNumber, useChatList, useAlert, useNickname, useTitle, useChatName } from "../tools"
 import { useChatActionData } from "../loaders"
 import rpc from "../network"
 
@@ -261,7 +261,9 @@ export const Component = memo(function Chat() {
   const ready = useStore(state => state.ready)
   const changeLastMessageTime = useStore(state => state.changeLastMessageTime)
 
-  useTitle(session ?? chatNames[chats.indexOf(chat!)])
+  const chatName = useChatName(chat)
+
+  useTitle(session ?? chatName)
 
   useLayoutEffect(() => {
     if (ref.current == null) return

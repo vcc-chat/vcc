@@ -134,6 +134,27 @@ export function useChatList() {
   )
 }
 
+export function useChatName(chat: number | null = null) {
+  const { values, names, isFriends } = useChatList()
+  const userID = useStore(state => state.userID)
+  const isFriend = chat === null ? false : isFriends[values.indexOf(chat)]
+  const { data: users } = useQuery({
+    queryKey: ["user-list", chat],
+    queryFn: async () => {
+      if (chat == null) return []
+      return await rpc.chat.getUsers(chat)
+    },
+    enabled: isFriend
+  })
+  if (chat === null) {
+    return ""
+  }
+  if (isFriend && users) {
+    return users!.find(value => value[0] != userID)![1]
+  }
+  return names[values.indexOf(chat)]
+}
+
 export function useNickname(
   chat: number,
   uid: number,

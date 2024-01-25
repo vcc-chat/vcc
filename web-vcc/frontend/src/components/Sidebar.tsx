@@ -16,13 +16,14 @@ import { Link, useNavigate } from "react-router-dom"
 
 import rpc from "../network"
 import useStore from "../store"
-import { stringToColor, useAlert, useChatList } from "../tools"
+import { stringToColor, useAlert, useChatList, useChatName } from "../tools"
 import { MessageAvatar } from "./Messages"
 import { SidebarMenu } from "./SidebarMenu"
 import { ChangeNickname, EditPermissionDialog as ModifyPermissionDialog } from "./Toolbar"
 
 export function NavBar({ toggle, toggleRightSidebar }: { toggle: () => void; toggleRightSidebar: () => void }) {
-  const chatName = useStore(state => state.chatName)
+  const chat = useStore(state => state.chat)
+  const chatName = useChatName(chat)
   const session = useStore(state => state.session)
   const { t } = useTranslation()
   return (
@@ -70,12 +71,12 @@ function SubChatSidebarItem({
   settingsClickHandler: (value: number, name: string) => () => void
 }) {
   const chatValue = useStore(state => state.chat)
-  const { values: chatValues, names: chatNames } = useChatList()
   const sessions = useStore(state => state.sessions)
     .filter(([id]) => id == chat)
     .map(([, session]) => session)
   const currentSession = useStore(state => state.session)
   const [fold, setFold] = useState(true)
+  const chatName = useChatName(chat)
   return (
     <>
       <li className="py-1 px-2 flex w-full join">
@@ -86,10 +87,10 @@ function SubChatSidebarItem({
           )}
           onClick={() => {
             setOpen(false)
-            clickHandler(chat, chatNames[chatValues.indexOf(chat)], null)
+            clickHandler(chat, chatName, null)
           }}
         >
-          <div className="ml-2 text-base my-auto mr-auto">{chatNames[chatValues.indexOf(chat)]}</div>
+          <div className="ml-2 text-base my-auto mr-auto">{chatName}</div>
         </button>
         {!!sessions.length && (
           <button
@@ -101,10 +102,7 @@ function SubChatSidebarItem({
             {fold ? <ExpandMoreIcon /> : <ExpandLessIcon />}
           </button>
         )}
-        <button
-          className="btn btn-secondary join-item"
-          onClick={settingsClickHandler(chat, chatNames[chatValues.indexOf(chat)])}
-        >
+        <button className="btn btn-secondary join-item" onClick={settingsClickHandler(chat, chatName)}>
           <TuneIcon />
         </button>
       </li>
@@ -119,7 +117,7 @@ function SubChatSidebarItem({
               )}
               onClick={() => {
                 setOpen(false)
-                clickHandler(chat, chatNames[chatValues.indexOf(chat)], session)
+                clickHandler(chat, chatName, session)
               }}
             >
               <div className="ml-4 text-base my-auto mr-auto">{session}</div>
@@ -141,7 +139,7 @@ function SidebarItem({
 }) {
   const navigate = useNavigate()
   const chatValue = useStore(state => state.chat)
-  const { values: chatValues, names: chatNames, isFriends } = useChatList()
+  const { values: chatValues, isFriends } = useChatList()
   const changeValue = useStore(state => state.changeChat)
   const changeName = useStore(state => state.changeChatName)
   const changeSession = useStore(state => state.changeSession)
@@ -161,6 +159,7 @@ function SidebarItem({
     }
   }, [])
   const isFriend = isFriends[chatValues.indexOf(value)]
+  const chatName = useChatName(value)
   return (
     <>
       <li className="py-1 px-2 flex w-full join">
@@ -171,26 +170,23 @@ function SidebarItem({
           )}
           onClick={() => {
             setOpen(false)
-            clickHandler(value, chatNames[chatValues.indexOf(value)])
+            clickHandler(value, chatName)
           }}
         >
-          <div className="text-base my-auto mr-auto">{chatNames[chatValues.indexOf(value)]}</div>
+          <div className="text-base my-auto mr-auto">{chatName}</div>
         </button>
-        <button
-          className={clsx("btn btn-accent join-item", {
-            hidden: !subChats.length
-          })}
-          onClick={() => {
-            setFold(!fold)
-          }}
-        >
-          {fold ? <ExpandMoreIcon /> : <ExpandLessIcon />}
-        </button>
-        {!isFriend && (
+        {!!subChats.length && (
           <button
-            className="btn btn-secondary join-item"
-            onClick={settingsClickHandler(value, chatNames[chatValues.indexOf(value)])}
+            className="btn btn-accent join-item"
+            onClick={() => {
+              setFold(!fold)
+            }}
           >
+            {fold ? <ExpandMoreIcon /> : <ExpandLessIcon />}
+          </button>
+        )}
+        {!isFriend && (
+          <button className="btn btn-secondary join-item" onClick={settingsClickHandler(value, chatName)}>
             <TuneIcon />
           </button>
         )}
@@ -337,6 +333,9 @@ function UserItem({
   menu: ComponentChildren
 }) {
   const characters = name.split(" ")
+  const chat = useStore(state => state.chat)!
+  const userID = useStore(state => state.userID)
+  const { isFriends, values: chats } = useChatList()
   const letter1 = (characters[0]?.[0] ?? "").toUpperCase()
   const letter2 = (characters[1]?.[0] ?? "").toUpperCase()
   const { t } = useTranslation()
@@ -346,6 +345,7 @@ function UserItem({
     setHandleUsername(name)
     setHandleUserID(id)
   }, [show, name, id])
+  const isFriend = isFriends[chats.indexOf(chat)]
   return (
     <>
       {!first && <div className="divider my-0" />}
@@ -367,12 +367,14 @@ function UserItem({
           <div className="break-normal [overflow-wrap:anywhere]">{name}</div>
           <span className="opacity-50 text-sm mt-1">{t(online ? "Online" : "Offline")}</span>
         </div>
-        <div className="dropdown dropdown-end">
-          <label tabIndex={0} onClick={centerIconButtonClickHandler} className="btn btn-ghost btn-square my-auto">
-            <MoreHorizIcon />
-          </label>
-          {menu}
-        </div>
+        {(!isFriend || id == userID) && (
+          <div className="dropdown dropdown-end">
+            <label tabIndex={0} onClick={centerIconButtonClickHandler} className="btn btn-ghost btn-square my-auto">
+              <MoreHorizIcon />
+            </label>
+            {menu}
+          </div>
+        )}
       </li>
     </>
   )
@@ -381,7 +383,7 @@ function UserItem({
 export function UsersSidebar({ open, setOpen }: { open: boolean; setOpen: (value: boolean) => void }) {
   const chat = useStore(state => state.chat)
   const { successAlert, errorAlert } = useAlert()
-  const { refresh: refreshChats, values: chatValues, isLoading: chatValuesLoading } = useChatList()
+  const { refresh: refreshChats, values: chatValues, isLoading: chatValuesLoading, isFriends } = useChatList()
   const navigate = useNavigate()
   const { t } = useTranslation()
   useEffect(() => {
@@ -467,21 +469,26 @@ export function UsersSidebar({ open, setOpen }: { open: boolean; setOpen: (value
 
   const modifyPermissionDialogID = useId()
   const changeNicknameID = useId()
+  const isFriend = chat == null ? false : isFriends[chatValues.indexOf(chat)]
 
   const menu = (
     <ul className="menu mt-4 bg-base-100 flex-1 ml-auto dropdown-content whitespace-nowrap" tabIndex={0}>
       <li>
         <a onClick={handleKickButtonClick}>{t(handleUsername == username ? "Quit" : "Kick")}</a>
       </li>
-      <li>
-        <a onClick={handleBanButtonClick}>{t(permissionRawData?.[handleUserID]?.banned ? "Unban" : "Ban")}</a>
-      </li>
-      <li>
-        <label htmlFor={modifyPermissionDialogID}>{t("Modify Permission")}</label>
-      </li>
-      <li>
-        <label htmlFor={changeNicknameID}>{t("Change Nickname")}</label>
-      </li>
+      {!isFriend && (
+        <>
+          <li>
+            <a onClick={handleBanButtonClick}>{t(permissionRawData?.[handleUserID]?.banned ? "Unban" : "Ban")}</a>
+          </li>
+          <li>
+            <label htmlFor={modifyPermissionDialogID}>{t("Modify Permission")}</label>
+          </li>
+          <li>
+            <label htmlFor={changeNicknameID}>{t("Change Nickname")}</label>
+          </li>
+        </>
+      )}
     </ul>
   )
 
